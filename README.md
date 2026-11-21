@@ -1,5 +1,8 @@
 # SpaceGod
 
+> This repo is **SpaceGod.Unreal** (renamed from `SpaceGod`, US-T451). Its development tools live in the sibling repo
+> **SpaceGod.Studio**.
+
 The real Sol system in Unreal Engine 5, played co-op, written in **C++**. The planets, dwarf planets, moons and
 asteroids sit where they really are for today's date, placed from JPL orbital elements, and you and your friends fly
 around them together on one shared clock.
