@@ -8,6 +8,7 @@
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
 #include "Combat/Diplomacy.h"
+#include "Combat/VehicleData.h"
 #include "Fleet.h"
 #include "Ships.h"
 #include "World.h"
@@ -65,11 +66,14 @@ namespace SpaceGod::Core
 		}
 	}
 
-	const cs::Ref<CombatSpec>& LocalTraffic::BusDesign() { static const cs::Ref<CombatSpec> d = Design("Orbital bus", 0.06, 1.5, 45, 600, 200, 0.22, 12, 3, 1.0); return d; }
-	const cs::Ref<CombatSpec>& LocalTraffic::TaxiDesign() { static const cs::Ref<CombatSpec> d = Design("Taxi", 0.02, 0.2, 8, 250, 80, 0.3, 24, 1, 2.0); return d; }
-	const cs::Ref<CombatSpec>& LocalTraffic::SkiffDesign() { static const cs::Ref<CombatSpec> d = Design("Single-seat skiff", 0.008, 0.02, 1, 120, 40, 0.34, 32, 1, 3.0); return d; }
-	const cs::Ref<CombatSpec>& LocalTraffic::RunaboutDesign() { static const cs::Ref<CombatSpec> d = Design("Four-seat runabout", 0.015, 0.08, 3, 200, 60, 0.3, 26, 1, 2.0); return d; }
-	const cs::Ref<CombatSpec>& LocalTraffic::TourerDesign() { static const cs::Ref<CombatSpec> d = Design("Six-seat tourer", 0.025, 0.15, 5, 300, 90, 0.27, 20, 2, 1.5); return d; }
+	// US-T452: each craft's hardpoints where the vehicle data file puts them (layout id civil/<craft>).
+	static cs::Ref<CombatSpec> Placed(const char* id, cs::Ref<CombatSpec> d) { VehicleData::ApplyTo(id, d->Layout); return d; }
+
+	const cs::Ref<CombatSpec>& LocalTraffic::BusDesign() { static const cs::Ref<CombatSpec> d = Placed("civil/Bus", Design("Orbital bus", 0.06, 1.5, 45, 600, 200, 0.22, 12, 3, 1.0)); return d; }
+	const cs::Ref<CombatSpec>& LocalTraffic::TaxiDesign() { static const cs::Ref<CombatSpec> d = Placed("civil/Taxi", Design("Taxi", 0.02, 0.2, 8, 250, 80, 0.3, 24, 1, 2.0)); return d; }
+	const cs::Ref<CombatSpec>& LocalTraffic::SkiffDesign() { static const cs::Ref<CombatSpec> d = Placed("civil/Skiff", Design("Single-seat skiff", 0.008, 0.02, 1, 120, 40, 0.34, 32, 1, 3.0)); return d; }
+	const cs::Ref<CombatSpec>& LocalTraffic::RunaboutDesign() { static const cs::Ref<CombatSpec> d = Placed("civil/Runabout", Design("Four-seat runabout", 0.015, 0.08, 3, 200, 60, 0.3, 26, 1, 2.0)); return d; }
+	const cs::Ref<CombatSpec>& LocalTraffic::TourerDesign() { static const cs::Ref<CombatSpec> d = Placed("civil/Tourer", Design("Six-seat tourer", 0.025, 0.15, 5, 300, 90, 0.27, 20, 2, 1.5)); return d; }
 
 	cs::Ref<CombatSpec> LocalTraffic::Design(const cs::String& name, double lengthKm, double massKt, double thrustMN, double hull, double shield, double maxSpeed,
 		double turnDegS, double crew, double agility)

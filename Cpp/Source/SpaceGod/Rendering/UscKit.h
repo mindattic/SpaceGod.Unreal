@@ -2,6 +2,9 @@
 // US-T142: every ship drawn from Ebal Studios' Ultimate Spaceships Creator (docs/ThirdPartyArt.md).
 
 #include "UnityCompat/UnityRenderingTypes.h"
+#include "Rendering/EnginePorts.h"
+
+#include <vector>
 
 namespace SpaceGod::Core
 {
@@ -77,6 +80,13 @@ namespace SpaceGod::Rendering
 		/// <summary>US-T133: the object path of every mesh and material instance the game draws from the pack, so the area
 		/// streaming can load them in the background.</summary>
 		static cs::List<cs::String> AssetPaths();
+
+		/// <summary>US-T452: a model's id in the vehicle data file (docs/Vehicles.md), "usc:" and its name.</summary>
+		static cs::String VehicleId(const cs::String& model);
+
+		/// <summary>US-T432/US-T452: the engine nozzles a model draws, in the model frame (one unit long, nose +Z): the vehicle
+		/// data file's when it lists the model (SpaceGod.Studio's edits), else the generated table's (tools/usc_ports.py).</summary>
+		static std::vector<EnginePort> PortsOf(const cs::String& model);
 
 		/// <summary>One model by name, whole, nose +Z and <paramref name="length"/> long (the lineup).</summary>
 		static bool Piece(const cs::Ref<Transform>& parent, const cs::String& model, float length, const cs::Ref<Core::Faction>& faction,

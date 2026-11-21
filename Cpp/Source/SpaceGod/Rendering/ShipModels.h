@@ -9,6 +9,8 @@ namespace SpaceGod::Core
 {
 	class Ship;
 	class Faction;
+	enum class ShipClass : int;
+	enum class CivilCraft : int;
 }
 
 namespace SpaceGod::Rendering
@@ -55,6 +57,10 @@ namespace SpaceGod::Rendering
 
 		/// <summary>The Kenney craft a ship is drawn as, or null for a procedural hull.</summary>
 		static cs::String KenneyModelFor(const cs::Ref<Core::Ship>& ship);
+
+		/// <summary>The Kenney craft a class (or local-traffic craft) is drawn as when neither kit is there, or empty (US-T452:
+		/// the vehicle export reads it too).</summary>
+		static cs::String KenneyModelOf(Core::ShipClass cls, Core::CivilCraft civil, int id);
 
 		/// <summary>The seamless sci-fi panel texture every hull is plated with (see Ship.shader): set on the material
 		/// as soon as it has loaded in the background (at once if it already has).</summary>

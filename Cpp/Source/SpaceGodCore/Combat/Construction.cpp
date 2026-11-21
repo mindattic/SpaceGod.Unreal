@@ -9,6 +9,7 @@
 #include "Combat/Facilities.h"
 #include "Combat/FireCones.h"
 #include "Combat/Outfitting.h"
+#include "Combat/VehicleData.h"
 #include "Combat/War.h"
 #include "Economy/CargoHold.h"
 #include "Economy/Economy.h"
@@ -291,6 +292,7 @@ namespace SpaceGod::Core
 				cs::New<SubsystemDef>(SubsystemKind::Hangar, 0, -0.1, 0),
 				cs::New<SubsystemDef>(SubsystemKind::Reactor, 0, 0, 0),
 			};
+			VehicleData::ApplyTo("station/orbital-station", s->Layout); // US-T452
 			return s;
 		}();
 		return field;
@@ -321,6 +323,7 @@ namespace SpaceGod::Core
 				cs::New<SubsystemDef>(SubsystemKind::ShieldGenerator, 0, 0, 0),
 				cs::New<SubsystemDef>(SubsystemKind::Reactor, 0, 0, -0.3),
 			};
+			VehicleData::ApplyTo("satellite/weapons", s->Layout); // US-T452
 			return s;
 		}();
 		return field;
@@ -349,6 +352,7 @@ namespace SpaceGod::Core
 				cs::New<SubsystemDef>(SubsystemKind::ShieldGenerator, 0, 0, 0),
 				cs::New<SubsystemDef>(SubsystemKind::Reactor, 0, 0, -0.3),
 			};
+			VehicleData::ApplyTo("satellite/sensor", s->Layout); // US-T452
 			return s;
 		}();
 		return field;

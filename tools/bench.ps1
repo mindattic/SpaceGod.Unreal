@@ -33,6 +33,11 @@ $results = Join-Path $bench 'results'
 $expected = Get-Content (Join-Path $bench 'expected-digests.json') -Raw | ConvertFrom-Json
 New-Item -ItemType Directory -Force $results | Out-Null
 
+# US-T452: the Core reads hardpoint placements from the vehicle data file, as the game does (docs/Vehicles.md); the bench
+# passes the repo's own, so matching the expected digests proves the committed file reproduces the built-in layouts.
+$vehicles = Join-Path $root 'Data\Vehicles\Vehicles.json'
+$vehicleArgs = if (Test-Path -LiteralPath $vehicles) { @('--vehicles', $vehicles) } else { @() }
+
 $names = if ($Scenario) { $Scenario | ForEach-Object { $_ -split ',' } | Where-Object { $_ } }
          else { (Get-Content $scenarios -Raw | ConvertFrom-Json).scenarios | ForEach-Object { $_.name } }
 
@@ -44,7 +49,7 @@ if ($Rewind) {
     $exe = Join-Path $root 'Cpp\Intermediate\CoreStandalone\Release\Bench.Rewind.exe'
     $bad = @()
     foreach ($n in $names) {
-        & $exe --scenario $n --scenarios $scenarios --out $results --rewind-probe --rewind-samples $RewindSamples
+        & $exe --scenario $n --scenarios $scenarios --out $results --rewind-probe --rewind-samples $RewindSamples @vehicleArgs
         if ($LASTEXITCODE -ne 0) { $bad += $n }
         $j = Get-Content (Join-Path $results "rewind-$n.json") -Raw | ConvertFrom-Json
         if ($j.plainDigest -ne $expected.$n) { Write-Host "$n : the plain pass gave $($j.plainDigest), expected $($expected.$n)" -ForegroundColor Red; $bad += $n }
@@ -63,7 +68,7 @@ if (-not $Compare) {
     }
     $exe = Join-Path $root 'Cpp\Intermediate\CoreStandalone\Release\Bench.Cpp.exe'
     foreach ($n in $names) {
-        $runArgs = @('--scenario', $n, '--scenarios', $scenarios, '--out', $results)
+        $runArgs = @('--scenario', $n, '--scenarios', $scenarios, '--out', $results) + $vehicleArgs
         if ($Ticks -gt 0) { $runArgs += @('--ticks', "$Ticks") }
         & $exe @runArgs
         if ($LASTEXITCODE -ne 0) { throw "scenario '$n' failed (exit $LASTEXITCODE)" }

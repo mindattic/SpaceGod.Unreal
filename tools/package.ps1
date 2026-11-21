@@ -26,6 +26,8 @@ Steps:
  3. Renames the launcher exe (see below).
  4. dotnet publish of the MindAttic.Capture host (Capture/SpaceGod.Capture) into <archive>/Capture/ (US-T72).
  5. Data/Lore (the applied Prose texts, docs/PROSE.md) into <archive>/Lore/, where the game reads them (US-T236).
+ 6. Data/Vehicles/Vehicles.json (engine ports and hardpoint placements, docs/Vehicles.md) into <archive>/Vehicles/,
+    where the game reads it (US-T452).
 
 Exe name. UE names a game exe after its target, and a target name is a C# class name, so it cannot contain dots:
 UAT writes <archive>/<Target>.exe, a small bootstrap launcher, plus the real game in
@@ -92,6 +94,15 @@ foreach ($kindDir in Get-ChildItem -LiteralPath (Join-Path $repo 'Data\Lore') -D
   $dest = Join-Path $loreOut $kindDir.Name
   New-Item -ItemType Directory -Force $dest | Out-Null
   Copy-Item -Path (Join-Path $kindDir.FullName '*.json') -Destination $dest -Force
+}
+
+# 6. The vehicle data (US-T452; docs/Vehicles.md): Data/Vehicles/Vehicles.json beside the package's Engine/ folder, where
+#    VehicleExport::FindData (Source/SpaceGod/VehicleExport.cpp) looks first. Only the file: the meshes are Studio's.
+$vehiclesFile = Join-Path $repo 'Data\Vehicles\Vehicles.json'
+if (Test-Path -LiteralPath $vehiclesFile) {
+  $vehiclesOut = Join-Path $archive 'Vehicles'
+  New-Item -ItemType Directory -Force $vehiclesOut | Out-Null
+  Copy-Item -LiteralPath $vehiclesFile -Destination $vehiclesOut -Force
 }
 }
 

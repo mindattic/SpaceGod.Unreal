@@ -169,9 +169,14 @@ namespace SpaceGod::Rendering
 	{
 		// US-T110, US-T142: with either pack every hull is the pack's (nothing to stream in the background).
 		if (UscKit::Available() || StarSparrowKit::Available()) return cs::String();
+		return KenneyModelOf(ship->Spec->Class, ship->Civil, ship->Id);
+	}
+
+	cs::String ShipModels::KenneyModelOf(ShipClass cls, CivilCraft civil, int id)
+	{
 		// Local traffic (U.SPC-T375): a boxy bus, nippy taxis and skiffs, and a roomier six-seat tourer, each drawn
 		// at its own design's length.
-		switch (ship->Civil)
+		switch (civil)
 		{
 			case CivilCraft::Bus: return "craft_cargoB";
 			case CivilCraft::Taxi: return "craft_speederA";
@@ -180,10 +185,10 @@ namespace SpaceGod::Rendering
 			case CivilCraft::Tourer: return "craft_cargoA";
 			default: break;
 		}
-		switch (ship->Spec->Class)
+		switch (cls)
 		{
 			case ShipClass::Miner: return "craft_miner";
-			case ShipClass::Courier: return ship->Id % 2 == 0 ? "craft_speederA" : "craft_racer";
+			case ShipClass::Courier: return id % 2 == 0 ? "craft_speederA" : "craft_racer";
 			case ShipClass::Explorer: return "craft_speederA";
 			default: return cs::String();
 		}

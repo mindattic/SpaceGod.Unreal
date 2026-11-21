@@ -12,6 +12,7 @@
 #include "Combat/Radiators.h"
 #include "Combat/SpinalMounts.h"
 #include "Combat/TachyonLances.h"
+#include "Combat/VehicleData.h"
 
 namespace SpaceGod::Core
 {
@@ -1385,6 +1386,8 @@ namespace SpaceGod::Core
 				design->Marines = FacilityLayouts::Complement(key, design);
 				// The spinal power plants it is designed with (U.SPC-T490).
 				design->SpinalPlants = FacilityLayouts::CountOf(FacilityLayouts::For(key), FacilityKinds::SpinalPlant);
+				// US-T452: its hardpoints where the vehicle data file (SpaceGod.Studio's edits) puts them, by the hull frame's id.
+				VehicleData::ApplyTo(cs::Cat("ship/", ToString(key), "/", design->DesignName), design->Layout);
 				// A big ship's radiator panels (U.SPC-T491) go on after its own hardpoints, so theirs keep their places.
 				design->Layout = Radiators::Fit(key, design->Layout);
 			}
@@ -1451,6 +1454,7 @@ namespace SpaceGod::Core
 				cs::New<SubsystemDef>(SubsystemKind::ShieldGenerator, -0.25, 0.25, 0),
 				cs::New<SubsystemDef>(SubsystemKind::Reactor, 0, 0, 0),
 			};
+			VehicleData::ApplyTo("station/defence-platform", s->Layout); // US-T452
 			return s;
 		}();
 		return field;

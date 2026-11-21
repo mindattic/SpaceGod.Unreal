@@ -365,6 +365,7 @@ namespace SpaceGod::Views
 			v.Exhaust = j.Exhaust;
 			v.Width = j.Width;
 			v.Level = j.Level;
+			v.Kind = static_cast<int>(j.K);
 			(j.K == Kind::Main ? outMains : others).Add(v);
 		}
 	}

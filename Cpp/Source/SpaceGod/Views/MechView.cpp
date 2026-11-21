@@ -151,6 +151,30 @@ namespace SpaceGod::Views
 		if (fx != nullptr) Destroy(fx);
 	}
 
+	void MechView::RestPose(const cs::Ref<Transform>& parent, cs::List<cs::Ref<Renderer>>& renderers)
+	{
+		// The parts as BuildMeshes makes them, each at its joint at rest (unturned), legs straight under the hips.
+		static cs::Ref<Mesh> meshes[13];
+		// Alive, not just set: the meshes are owned (Materials::Own), so an app teardown destroys them under the cache.
+		if (!Alive(meshes[0]))
+		{
+			MechView scratch;
+			scratch.BuildMeshes();
+			for (int p = 0; p < 13; p++) meshes[p] = scratch.meshes[p];
+		}
+		const Vector3 at[13] = { Pelvis, Torso, Canopy, Arm[0], Arm[1], Hip[0], Knee[0], Ankle[0], Foot[0], Hip[1], Knee[1], Ankle[1], Foot[1] };
+		for (int p = 0; p < 13; p++)
+		{
+			auto g = NewGameObject(cs::String(MechParts[p].Name));
+			g->transform->SetParent(parent, false);
+			g->transform->localPosition = U(at[p]);
+			AddComponent<MeshFilter>(g)->sharedMesh = meshes[p];
+			auto mr = AddComponent<MeshRenderer>(g);
+			mr->SetSharedMaterial(ShipModels::ProceduralMaterial());
+			renderers.Add(mr);
+		}
+	}
+
 	void MechView::BuildMeshes()
 	{
 		for (int p = 0; p < 13; p++)

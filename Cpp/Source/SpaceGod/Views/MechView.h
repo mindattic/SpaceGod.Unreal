@@ -74,8 +74,16 @@ namespace SpaceGod::Views
 		void Pose(Rig& rig, const cs::Ref<Core::MechWalker>& m, Anim& a, float dt);
 		void Sprite(Vector3 c, float radius, Color color, Vector3 right, Vector3 up);
 
+		/// Only for RestPose's meshes.
+		MechView() : app(nullptr) {}
+
 	public:
 		MechView(UnitySpaceApp* app, const cs::Ref<Transform>& parent);
+
+		/// <summary>US-T452: the mech standing at rest (every part at its joint, unturned), under <paramref name="parent"/> in
+		/// the view's frame (x right, y up, z forward, one unit the mech's height, the origin on the ground under the hips),
+		/// for the vehicle export (sg.ExportVehicles).</summary>
+		static void RestPose(const cs::Ref<Transform>& parent, cs::List<cs::Ref<Renderer>>& renderers);
 		~MechView();
 
 		void Update();

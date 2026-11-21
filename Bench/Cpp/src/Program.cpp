@@ -3,7 +3,7 @@
 // (+ .digest.txt). A port of Bench/CSharp/src/Program.cs: same arguments, same startup, same scenarios, same digest.
 //
 //   Bench.Cpp --list
-//   Bench.Cpp --scenario sol-idle [--scenarios path] [--out dir] [--ticks N] [--trace N] [--dump-at T]
+//   Bench.Cpp --scenario sol-idle [--scenarios path] [--out dir] [--ticks N] [--trace N] [--dump-at T] [--vehicles path]
 //
 // --trace N writes cpp-<scenario>.trace.txt: every N ticks (and at tick 0, after the setup) one line of FNV-1a hashes
 // of the digest's head and of each system's block (Digest::TraceLine); --dump-at T also writes the full digest at tick T
@@ -25,6 +25,7 @@
 #include "Combat/Battle.h"
 #include "Systems/Galaxy.h"
 #include "Shared/Json/JsonObject.h"
+#include "Combat/VehicleData.h"
 
 #include <algorithm>
 #include <atomic>
@@ -469,6 +470,9 @@ namespace Bench
 			else if (a == "--trace") trace.Every = std::stoi(next());
 			else if (a == "--dump-at") trace.DumpAt = std::stoi(next());
 			else if (a == "--list") list = true;
+			// US-T452: the vehicle data file (Data/Vehicles/Vehicles.json) the game reads hardpoint placements from; without
+			// it the Core keeps its built-in layouts. tools/bench.ps1 passes the repo's file, so 5/5 proves it reproduces them.
+			else if (a == "--vehicles") SpaceGod::Core::VehicleData::SetPath(next());
 #if defined(BENCH_REWIND)
 			else if (a == "--rewind-probe") rewind = true;
 			else if (a == "--selfdestruct-probe") selfDestruct = true; // US-T114
@@ -490,6 +494,13 @@ namespace Bench
 			}
 #endif
 			else { std::cerr << "unknown argument " << a << "\n"; return 2; }
+		}
+		{
+			const auto& vehicles = SpaceGod::Core::VehicleData::Get();
+			if (vehicles.Loaded())
+				std::cerr << "vehicle data: " << vehicles.Path() << " (" << vehicles.VehicleCount() << " port rows, " << vehicles.LayoutCount() << " layouts, hash " << vehicles.Hash() << ")\n";
+			else
+				std::cerr << "vehicle data: " << vehicles.Problem() << " (hash " << vehicles.Hash() << ")\n";
 		}
 		if (scenariosPath.empty()) scenariosPath = FindScenarios(argv[0]);
 		if (scenariosPath.empty()) { std::cerr << "Bench/scenarios.json not found; pass --scenarios\n"; return 2; }

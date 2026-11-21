@@ -62,6 +62,8 @@ namespace SpaceGod::Views
 		{
 			Vector3 At, Exhaust;
 			float Width = 0, Level = 0;
+			/// <summary>US-T452: 0 a main engine, 1 a retro, 2 an RCS jet (the vehicle export names them).</summary>
+			int Kind = 0;
 		};
 
 		/// <summary>US-T447: the main engines' nozzles, and every other jet (RCS and retros), with how lit each is now.</summary>

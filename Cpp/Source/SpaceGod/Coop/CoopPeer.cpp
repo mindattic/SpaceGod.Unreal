@@ -15,6 +15,7 @@
 #include "Session/Commands.h"
 #include "Session/LocalSession.h"
 #include "Session/PlayerId.h"
+#include "Combat/VehicleData.h" // US-T452
 
 #include "HAL/FileManager.h"
 #include "HAL/PlatformProcess.h"
@@ -581,6 +582,22 @@ namespace SpaceGod::Coop
 	void CoopPeer::Hello(Remote& r, cs::String name)
 	{
 		if (r.Seat >= 0) return;
+		// US-T452: hardpoint placements come from the vehicle data file (docs/Vehicles.md) and are simulation data, so a
+		// client must run on the same one: its hash rides on the hello's second line ("vehicles <hash>").
+		cs::String theirs;
+		if (size_t nl = name.find('\n'); nl != cs::String::npos)
+		{
+			cs::String extra = name.substr(nl + 1);
+			name = name.substr(0, nl);
+			if (Wire::StartsWith(extra, "vehicles ")) theirs = Trimmed(extra.substr(9));
+		}
+		const cs::String& ours = Core::VehicleData::Get().Hash();
+		if (theirs != ours)
+		{
+			r.Link->Send(cs::Cat("refused vehicle data differs: the host runs ", ours, ", you ", theirs.empty() ? cs::String("(none sent)") : theirs));
+			Warn(cs::Cat("refused ", name, ": vehicle data ", theirs.empty() ? cs::String("(none sent)") : theirs, " is not the host's ", ours));
+			return;
+		}
 		int seat = -1;
 		for (int i = 1; i < MaxPlayers; i++)
 			if (Players[i] == nullptr) { seat = i; break; }
@@ -683,7 +700,7 @@ namespace SpaceGod::Coop
 
 	void CoopPeer::ClientHello()
 	{
-		if (hostLink) hostLink->Send(cs::Cat("hello ", localName));
+		if (hostLink) hostLink->Send(cs::Cat("hello ", localName, "\nvehicles ", Core::VehicleData::Get().Hash())); // US-T452
 	}
 
 	void CoopPeer::ClientFrameDone(UnitySpaceApp* app)
@@ -785,6 +802,11 @@ namespace SpaceGod::Coop
 			{
 				refused = true;
 				Warn("the host's seats are all taken");
+			}
+			else if (kind == "refused") // US-T452: e.g. the vehicle data differs
+			{
+				refused = true;
+				Warn(cs::Cat("the host refused: ", sp == cs::String::npos ? cs::String() : msg.substr(sp + 1)));
 			}
 			else if (kind == "sync")
 			{

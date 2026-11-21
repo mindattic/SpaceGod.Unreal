@@ -8,6 +8,7 @@
 #include "SpaceGodLog.h"
 
 #include "Combat/CombatSpecs.h"
+#include "Combat/VehicleData.h"
 #include "Economy/LocalTraffic.h"
 #include "Ships.h"
 
@@ -321,16 +322,12 @@ namespace SpaceGod::Rendering
 			return rows;
 		}
 
-		/// Marks a model's own nozzles on the section each is in.
+		/// Marks a model's own nozzles on the section each is in: US-T452, the vehicle data file's (SpaceGod.Studio's edits)
+		/// when it lists the model, else the generated table's.
 		void MarkPorts(const cs::String& model, bool split, const cs::Ref<Transform>& stern, const cs::Ref<Transform>& bow)
 		{
-			for (const auto& row : PortTable())
-			{
-				if (model != row.Model) continue;
-				for (const auto& p : row.Ports)
-					EnginePorts::Mark(split && p.Position.z >= ShipMeshFactory::SplitZ ? bow : stern, p.Position, p.Exhaust, p.Radius);
-				return;
-			}
+			for (const auto& p : UscKit::PortsOf(model))
+				EnginePorts::Mark(split && p.Position.z >= ShipMeshFactory::SplitZ ? bow : stern, p.Position, p.Exhaust, p.Radius);
 		}
 
 		/// Where a thruster module's glowing mouth sits along its own length, from its middle (aft is negative), found by
@@ -585,6 +582,29 @@ namespace SpaceGod::Rendering
 			paths.Add(MeshPath(cs::Cat("SM_USC_Mod_", mod)));
 		paths.Add(GameMaterial);
 		return paths;
+	}
+
+	cs::String UscKit::VehicleId(const cs::String& model) { return cs::Cat("usc:", model); }
+
+	std::vector<EnginePort> UscKit::PortsOf(const cs::String& model)
+	{
+		std::vector<EnginePort> ports;
+		// US-T452: the vehicle data file's ports (SpaceGod.Studio's edits) when it lists the model.
+		if (const auto* edited = VehicleData::Get().PortsOf(VehicleId(model)))
+		{
+			for (const auto& p : *edited)
+			{
+				EnginePort e;
+				e.Position = Vector3(static_cast<float>(p.Pos[0]), static_cast<float>(p.Pos[1]), static_cast<float>(p.Pos[2]));
+				e.Exhaust = Vector3(static_cast<float>(p.Exhaust[0]), static_cast<float>(p.Exhaust[1]), static_cast<float>(p.Exhaust[2]));
+				e.Radius = static_cast<float>(p.Radius);
+				ports.push_back(e);
+			}
+			return ports;
+		}
+		for (const auto& row : PortTable())
+			if (model == row.Model) return row.Ports;
+		return ports;
 	}
 
 	bool UscKit::Piece(const cs::Ref<Transform>& parent, const cs::String& model, float length, const cs::Ref<Faction>& faction, cs::List<cs::Ref<Renderer>>& into)
