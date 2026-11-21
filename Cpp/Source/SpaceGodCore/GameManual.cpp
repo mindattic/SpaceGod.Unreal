@@ -1123,7 +1123,8 @@ namespace SpaceGod::Core
 				  "lane, jump gate, void stop and fight aboard; Settings > Controls > Tutorial hints turns them off."),
 				T("The showcase tour", // US-T147
 				  "One guided run through every feature, so nothing has to be launched as a demo of its own: Showcase Tour under "
-				  "the main menu's Extras, the dev menu's Showcase category, or sg.Tour in the console. It plays in chapters (Flight and "
+				  "the main menu's Extras, the pause menu in a game already running, the dev menu's Showcase category, sg.Tour in the "
+				  "console, or launching the game with -tour (-tour=<chapter or stop number> to start there). It plays in chapters (Flight and "
 				  "combat, Embodiment, Places, Threats, Presentation, Ships, Travel), each stop set up for you (the trip, the "
 				  "helm, the fight, the scale) with a line at the bottom saying what to look at. Right or N goes on, Left or B "
 				  "back, S skips the rest of the chapter, Space pauses, 1 to 9 jump to a chapter, O shows every stop again at "

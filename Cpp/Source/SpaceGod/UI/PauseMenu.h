@@ -94,7 +94,7 @@ namespace SpaceGod::UI
 
 		/// US-T311: the first page's button the keys have picked (-1 until Up / Down is pressed), and the leave question's
 		/// (0 leave, 1 stay; Stay first), shown only once the keys have been used on it.
-		static constexpr int MainCount = 9;
+		static constexpr int MainCount = 10; // US-T450: Showcase Tour
 		int mainPick = -1, leavePick = 1;
 		bool leaveKeyed = false;
 

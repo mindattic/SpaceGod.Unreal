@@ -15,6 +15,8 @@
 #include "UI/UiInput.h" // US-T311
 #include "UnityCompat/GuiPadNav.h" // US-T437
 
+#include "Engine/Engine.h" // US-T450: GEngine->Exec("sg.Tour")
+
 using namespace SpaceGod::Core;
 
 namespace SpaceGod::UI
@@ -194,8 +196,9 @@ namespace SpaceGod::UI
 	void PauseMenu::DrawMain()
 	{
 		// US-T271: one more button, the Encyclopedia; US-T293: and Society; US-T311: and the keys' hint under them.
-		static const char* const labels[MainCount] = { "Resume", "Help", "Encyclopedia", "Society", "Save / Load", "Settings", "Credits", "Main Menu", "Quit" };
-		const float w = 320, h = 498;
+		// US-T450: and the showcase tour, from inside the game.
+		static const char* const labels[MainCount] = { "Resume", "Help", "Encyclopedia", "Society", "Save / Load", "Settings", "Showcase Tour", "Credits", "Main Menu", "Quit" };
+		const float w = 320, h = 542;
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
 		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "PAUSED", title);
@@ -228,13 +231,17 @@ namespace SpaceGod::UI
 				if (ShowSaves) ShowSaves();
 				break;
 			case 5: page = Page::Settings; break;
-			case 6: // US-T246
+			case 6: // US-T450: the showcase tour from its first stop, in the game already running (sg.Tour, as the main menu's Extras)
+				Close();
+				if (GEngine) GEngine->Exec(nullptr, TEXT("sg.Tour"));
+				break;
+			case 7: // US-T246
 				if (!credits) credits = cs::New<CreditsScreen>();
 				credits->Restart();
 				page = Page::Credits;
 				break;
-			case 7: AskLeave(Leave::MainMenu, keyed); break;
-			case 8: AskLeave(Leave::Quit, keyed); break;
+			case 8: AskLeave(Leave::MainMenu, keyed); break;
+			case 9: AskLeave(Leave::Quit, keyed); break;
 			default: break;
 		}
 	}

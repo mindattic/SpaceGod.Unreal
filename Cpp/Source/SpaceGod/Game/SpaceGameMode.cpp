@@ -75,6 +75,23 @@ void ASpaceGameMode::StartPlay()
 		}
 	}
 
+	// US-T450: -tour starts the showcase tour on launch in every build (a Shipping game has no console, and may ignore
+	// -ExecCmds): a new game straight into its first stop, as the main menu's Extras > Showcase Tour. -tour=<chapter or
+	// stop number> starts there instead (-tour="Flight" or -tour=12). Once, from the first standalone start.
+	static bool bTourLaunched = false;
+	if (!bTourLaunched && GetNetMode() == NM_Standalone && GEngine)
+	{
+		bTourLaunched = true;
+		FString From;
+		const bool bFrom = FParse::Value(FCommandLine::Get(), TEXT("-tour="), From) && !From.IsEmpty();
+		if (bFrom || FParse::Param(FCommandLine::Get(), TEXT("tour")))
+		{
+			From.ReplaceInline(TEXT("\""), TEXT(""));
+			UE_LOG(LogSpaceGod, Display, TEXT("-tour: starting the showcase tour%s%s"), bFrom ? TEXT(" at ") : TEXT(""), *From);
+			GEngine->Exec(GetWorld(), *(bFrom ? FString::Printf(TEXT("sg.Tour %s"), *From) : FString(TEXT("sg.Tour"))));
+		}
+	}
+
 	// SceneManager.LoadScene: reopen this (empty) map for the other scene; a listen server keeps listening, and takes
 	// its co-op clients along (ServerTravel) when it has any (US-T44).
 	TWeakObjectPtr<UWorld> WeakWorld = GetWorld();
