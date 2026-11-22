@@ -7,6 +7,7 @@
 #include "Systems/AlphaCentauri.h"
 #include "Systems/NearbySystems.h"
 #include "Systems/FrontierSystems.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/VoidStations.h"
 #include "Systems/CatalogueStars.h"
 #include "Systems/ProceduralSystems.h"
@@ -42,6 +43,7 @@ namespace SpaceGod::Core
 		static cs::List<cs::Ref<SystemSource>> list
 		{
 			cs::New<HandBuiltSystems>(),
+			cs::New<ManalithSystem>(), // US-T458
 			cs::New<VoidStations>(),
 			cs::New<CatalogueStars>(),
 			cs::New<ProceduralSystems>(),
@@ -133,6 +135,8 @@ namespace SpaceGod::Core
 		auto source = star == nullptr ? nullptr : Find(star->Source);
 		auto spec = source ? source->Define(star, seed) : nullptr;
 		if (spec == nullptr) return nullptr;
+		// US-T458: Nightglass is for looking only; no derelict, ruin or station is laid into it.
+		if (ManalithSystem::ObservationOnly(spec->Name)) return spec;
 		for (const auto& c : Content().ToArray()) c->Furnish(star, spec, seed);
 		return spec;
 	}

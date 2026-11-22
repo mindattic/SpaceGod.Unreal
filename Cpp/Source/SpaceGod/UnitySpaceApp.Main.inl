@@ -411,6 +411,8 @@ public:
 
 	/// <summary>Every body's scene position this frame.</summary>
 	const cs::List<Core::DVec3>& BodyScenes() const { return bodyScene; }
+	/// <summary>Every body's drawn radius this frame (scene units).</summary>
+	const cs::List<double>& BodyRadii() const { return bodyRadius; }
 
 	/// <summary>1 = gameplay, 0 = realistic; the value the scale is animating toward.</summary>
 	double ScaleGoal = 1;

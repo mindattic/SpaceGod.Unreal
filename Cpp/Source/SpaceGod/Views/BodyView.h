@@ -4,7 +4,9 @@
 #include "UnityCompat/UnityRenderingTypes.h"
 #include "GasGiantWeather.h"
 #include "Rendering/VoidSiteModel.h"
+#include "Views/ManalithView.h"
 
+#include <memory>
 #include <vector>
 
 namespace SpaceGod::Core
@@ -50,6 +52,9 @@ namespace SpaceGod::Views
 		/// <summary>US-T143: the Space Station Creator model drawn in place of the procedural one (a station, a Void
 		/// Station's frame, a megastructure), when the pack is there; shown and hidden with the body.</summary>
 		cs::Ref<GameObject> sscRoot;
+
+		/// <summary>US-T458: the Manalith's model, tumble and shards (it draws under sscRoot), when the body is it.</summary>
+		std::unique_ptr<ManalithView> manalith;
 
 		// A void station's generator (US-T84): a metal Dyson sphere (see VoidStationModel). The root's own renderer draws
 		// the far shell; the near shell, the dark core, the accretion ring and the two gimbal rings are its children.

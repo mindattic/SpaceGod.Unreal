@@ -28,6 +28,7 @@
 #include "Systems/Galaxy.h"
 #include "Systems/GateNetwork.h"
 #include "Systems/InterstellarWars.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/JumpGate.h"
 #include "Systems/MilitarySupply.h"
 #include "Systems/PirateClans.h"
@@ -124,7 +125,8 @@ namespace SpaceGod::Core
 	{
 		s->World->ReachedGate += [this, s](cs::Ref<Ship> ship, double when) { OnReachedGate(s, ship, when); };
 		s->World->VoyageOrders = [this, s](cs::Ref<Ship> ship, int here, double when) { return Orders(s, ship, here, when); };
-		Clans->Watch(s);
+		// US-T458: no pirate clan raids or nests in Nightglass (observation only).
+		if (!ManalithSystem::ObservationOnly(s->Name)) Clans->Watch(s);
 	}
 
 	cs::Ref<GateNetwork> InterstellarTraffic::Network() const { return galaxy->Network; }

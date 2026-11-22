@@ -16,6 +16,7 @@
 #include "BodyOrientation.h"
 #include "ScaleModel.h"
 #include "Systems/Frontier.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/VoidSites.h"
 
 #include <algorithm>
@@ -75,6 +76,7 @@ namespace SpaceGod::Views
 		if (!quadMesh()) quadMesh() = MeshFactory::Quad();
 
 		station = body->Kind == BodyKind::Station;
+		bool manalithBody = station && ManalithSystem::IsSatellite(*body);
 		bool generator = body->IsVisible() && body->IsStar() && body->Singularity;
 		AddComponent<MeshFilter>(Root)->sharedMesh = station ? ShipMeshFactory::GetStationBody(body->Name)
 			: generator ? VoidStationModel::Shell(false) : sphereMesh();
@@ -101,6 +103,21 @@ namespace SpaceGod::Views
 		{
 			material = ShipModels::ProceduralMaterial();
 			renderer->SetSharedMaterial(material);
+			if (manalithBody)
+			{
+				// US-T458: the Manalith from its own model (falls back to a plain station when it is not imported).
+				auto holder = NewGameObject("Manalith");
+				holder->transform->SetParent(Root->transform, false);
+				manalith = std::make_unique<ManalithView>();
+				if (manalith->Build(holder->transform))
+				{
+					sscRoot = holder;
+					renderer->enabled = false;
+					return;
+				}
+				Destroy(holder);
+				manalith.reset();
+			}
 			// US-T143: one of Space Station Creator's big complexes when the pack is there, radius one, its plane across the
 			// spine the view turns it about.
 			auto holder = NewGameObject("Station");
@@ -234,6 +251,13 @@ namespace SpaceGod::Views
 		bool ember = Body->IsStar() && !Body->Singularity && Body->Gm < 1e-6;
 		if (ember) radius *= EmberScale;
 		t->localScale = Vector3::one() * radius;
+		if (manalith)
+		{
+			// US-T458: the Manalith tumbles on its own clock; its meridian faces Wendmere, which is where its shards fall.
+			t->localRotation = Quaternion::identity();
+			manalith->Apply(ToUnity(primeMeridian));
+			return;
+		}
 		if (station)
 		{
 			// Spine along the station's pole, turning slowly about it.

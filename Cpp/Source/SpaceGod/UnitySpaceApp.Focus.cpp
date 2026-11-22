@@ -8,6 +8,8 @@
 #include "ShipLod.h"
 #include "Ships.h"
 #include "Combat/Battle.h"
+#include "Systems/Galaxy.h"
+#include "Systems/ManalithSystem.h"
 #include "Camera/SpaceCamera.h"
 #include "Rendering/Materials.h"
 #include "Rendering/Pipeline/RenderBackend.h"
@@ -28,6 +30,8 @@ namespace SpaceGod
 	bool UnitySpaceApp::TargetValid(const Target& target)
 	{
 		if (target.IsNone()) return false;
+		// US-T458: Nightglass's bodies are for looking at only, never a target or a Focus.
+		if (target.IsBody() && ManalithSystem::ObservationOnly(ActiveSystem->Name)) return false;
 		if (target.IsBody()) return target.Body >= 0 && target.Body < bodyScene.Count() && target.Body < bodyRadius.Count();
 		if (target.IsShip())
 		{

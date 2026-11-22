@@ -32,6 +32,7 @@
 #include "Views/GraveyardView.h"
 #include "Views/HarvesterView.h"
 #include "Systems/Graveyards.h"
+#include "Systems/ManalithSystem.h" // US-T458
 #include "Views/SpaceFeaturesView.h"
 #include "Views/EmbeddedPods.h"
 #include "Views/FighterViews.h"
@@ -894,6 +895,7 @@ namespace SpaceGod
 		auto target = Target::OfBody(body->Index);
 		bool repeat = key == lastNumberKey && Time::unscaledTime - lastNumberTime < 0.45f;
 		Select(target);
+		if (Selected != target) return; // US-T458: refused (observation only)
 		if (repeat || SpaceCamera->Mode != Cameras::SpaceCamera::CameraMode::Free) SpaceCamera->FocusOn(target);
 		lastNumberKey = key;
 		lastNumberTime = Time::unscaledTime;
@@ -915,6 +917,12 @@ namespace SpaceGod
 
 	void UnitySpaceApp::Select(const Target& target)
 	{
+		// US-T458: Nightglass is for looking only: its planet, moon and Manalith are never targets.
+		if (target.IsBody() && Core::ManalithSystem::ObservationOnly(ActiveSystem->Name))
+		{
+			ShowToast(cs::Cat(ActiveSystem->Name, " is for looking only: nothing here can be targeted"));
+			return;
+		}
 		Selected = target;
 	}
 

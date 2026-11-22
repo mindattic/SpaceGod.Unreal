@@ -17,6 +17,7 @@
 #include "Systems/FrontierSystems.h"
 #include "Systems/Galaxy.h"
 #include "Systems/GateNetwork.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/JumpGate.h"
 #include "Systems/Polities.h"
 #include "Systems/StarSystemSpec.h"
@@ -478,7 +479,8 @@ namespace SpaceGod::Core
 			{
 				// A Void Base is a relay for the network's gaps (U.SPC-T372), no place for a state to reach out to: nothing there to
 				// open or hold, and a gate it built in would hand the lawless relay to the builder.
-				if (t == s || t->IsVoidBase || galaxy->Network->Between(s, t) != nullptr || Targeted(s, t->Name)) continue;
+				// US-T458: Nightglass is reached by a ship's own FTL only; nobody ever builds a gate to it.
+				if (t == s || t->IsVoidBase || ManalithSystem::Gateless(t->Name) || galaxy->Network->Between(s, t) != nullptr || Targeted(s, t->Name)) continue;
 				double d = Galaxy::DistanceLy(s, t);
 				if (d > MaxLinkLy || !SiteClear(s, t->PositionLy) || !SiteClear(t, s->PositionLy)) continue;
 				auto round = galaxy->Network->Route(s, t);

@@ -158,7 +158,6 @@ namespace SpaceGod::Core
 		/// </summary>
 		static cs::Ref<StarSystem> Create(const cs::Ref<SystemSpec>& spec, double jd, cs::Func<cs::Ref<SpaceGod::Core::World>, cs::Ref<SpaceGod::Core::Ephemeris>, double, int> world = nullptr, const cs::Ref<Polities>& polities = nullptr);
 
-	private:
 		/// <summary>Alpha Centauri keeps the seed its world was tuned with; the others get one from their names.</summary>
 		static int SeedOf(const cs::String& name);
 

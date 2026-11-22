@@ -24,6 +24,8 @@ Builds/
 # Creator (US-T143), and any added later.
 Cpp/SourceArt/ThirdParty/
 Cpp/Content/ThirdParty/
+# US-T458: the Manalith's prepared pieces (tools/import-manalith.ps1 rebuilds them); its imported assets are committed.
+Cpp/SourceArt/Manalith/
 # US-T452: sg.ExportVehicles' meshes of the kits' ships and stations (their geometry, for SpaceGod.Studio): local only.
 Data/Vehicles/Meshes/Kit/
 Cpp/Content/ThirdParty/USC/
