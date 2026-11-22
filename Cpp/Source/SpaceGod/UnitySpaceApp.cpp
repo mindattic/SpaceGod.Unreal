@@ -315,7 +315,11 @@ namespace SpaceGod
 		// US-T459: GLMZ's Ascension Tether rises from the Galapagos (Sol's Earth only).
 		{
 			cs::Ref<BodyDefinition> earth;
-			if (Catalog()->Root()->Name == "Sun" && Catalog()->TryGet("Earth", earth)) bodyViews[earth->Index]->AttachTether(this, systemRoot);
+			if (Catalog()->Root()->Name == "Sun" && Catalog()->TryGet("Earth", earth))
+			{
+				bodyViews[earth->Index]->AttachTether(this, systemRoot);
+				bodyViews[earth->Index]->AttachBiomass(this); // US-T461: the Biomass, GLMZ's, on the old south-east US
+			}
 		}
 		shipViews = cs::List<cs::Ref<Views::ShipView>>(); // C#: null (the old views went with systemRoot)
 		// US-T131: the place's graveyards are laid the first time a player comes (their hulks are wrecks in its fleet).

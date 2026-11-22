@@ -6,6 +6,7 @@
 #include "Rendering/VoidSiteModel.h"
 #include "Views/ManalithView.h"
 #include "Views/TetherView.h"
+#include "Views/EarthBiomassView.h"
 
 #include <memory>
 #include <vector>
@@ -59,6 +60,9 @@ namespace SpaceGod::Views
 
 		/// <summary>US-T459: the Ascension Tether, on the Earth's view only (see <see cref="AttachTether"/>).</summary>
 		std::unique_ptr<TetherView> tether;
+
+		/// <summary>US-T461: the Biomass on the Earth's south-east United States, on the Earth's view only.</summary>
+		std::unique_ptr<EarthBiomassView> biomass;
 
 		// A void station's generator (US-T84): a metal Dyson sphere (see VoidStationModel). The root's own renderer draws
 		// the far shell; the near shell, the dark core, the accretion ring and the two gimbal rings are its children.
@@ -158,6 +162,12 @@ namespace SpaceGod::Views
 		void AttachTether(UnitySpaceApp* app, const cs::Ref<Transform>& parent)
 		{
 			tether = std::make_unique<TetherView>(app, Body, parent);
+		}
+
+		/// <summary>US-T461: lays the Biomass on this body (the Earth): under its own transform, so it turns and scales with it.</summary>
+		void AttachBiomass(UnitySpaceApp* app)
+		{
+			biomass = std::make_unique<EarthBiomassView>(app, Root->transform);
 		}
 
 		/// <summary>

@@ -523,7 +523,12 @@ namespace SpaceGod::Core
 				  "eats the wrecks it touches and grows, gnaws at a hull it touches and eats into a station it reaches, and a "
 				  "big one buds in two, but each system holds only ten and none grows past a few megatonnes. The HUD brackets "
 				  "every globule in red with its size, health and range, and warns of one within 2 million km. The console "
-				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic).")),
+				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic). It came to "
+				  "Earth from the dark: a piece fell near Huntsville, Alabama around 2147, was taken in secret to an "
+				  "underground Pinnacle BioSynthetics lab, and got loose. Officially it was a lab leak of a growth factor, "
+				  "ZD-7741. It has eaten and grown ever since, and covers the old south-east of the United States from "
+				  "central Alabama into southern Kentucky, short of the Ohio; look for it from orbit, red as meat, breathing. "
+				  "The corporations fly their waste south and drop it in, and it eats that too.")),
 
 			cs::New<ManualChapter>("Trade", "Markets, cargo, contracts, the trade desk and outfitting", Keys("TRADE"),
 				T("The economy",

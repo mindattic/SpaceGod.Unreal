@@ -508,3 +508,13 @@ proposal format and `tools/prose-outbox.ps1` are gone (never used): story arrive
 | 7 | The graph merges same-named entities | Open (PRS-T916): graph nodes are still keyed by name |
 | 8 | Outbox noise | **Done**: one notice per import session |
 | 9 | Edge provenance per consumer | Open (PRS-T916) |
+
+## 8. One universe with GLMZ (US-T461)
+
+SpaceGod and Prose's GLMZ are one universe. Sol's Earth is GLMZ's Earth: the Ascension Tether rises from Isla Isabela
+(US-T459), and the Biomass covers the old south-east United States (US-T461, `Views/EarthBiomassView`, `sg.EarthBiomass`).
+The game's Bio Mass and GLMZ's Biomass are one organism. It came out of the dark between the stars; on Earth a piece fell
+near Huntsville, Alabama around 2147, was recovered in secret by Pinnacle BioSynthetics and got loose in its underground
+lab. The ZD-7741 lab leak is the cover story GLMZ's people know. The mapper carries this as a universe rule and the
+`concept-earth-biomass` entity, and the manual's Bio Mass entry tells it. A change to either side's Biomass lore is made
+in both (Prose `docs/universes/GLMZ.md`).

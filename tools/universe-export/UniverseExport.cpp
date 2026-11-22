@@ -352,6 +352,7 @@ namespace
 			if (args.Pilots) PilotsAll();
 			if (args.Society) People();
 			Politics();
+			SharedUniverse();
 			Prune();
 			Manifest();
 		}
@@ -1317,6 +1318,22 @@ namespace
 				}), e.Relations.end());
 		}
 
+		void SharedUniverse()
+		{
+			// US-T461: the Biomass on Earth, the one place GLMZ's canon and the game's Bio Mass meet (EarthBiomassView draws it).
+			Entity e{ "concept-earth-biomass", "concept", "The Biomass (Earth)",
+				"The Bio Mass on Earth: a living mass of flesh across the old south-east United States, from central Alabama "
+				"through Tennessee into southern Kentucky, short of the Ohio. It fell near Huntsville, Alabama around 2147, was "
+				"recovered in secret by Pinnacle BioSynthetics and got loose in its underground lab; officially a ZD-7741 lab "
+				"leak. It eats whatever it touches, breathes about six times a minute, and the corporations dump their waste in it." };
+			e.Details.S("kind", "biomass").S("body", "Earth").N("centreLatDeg", 34.7).N("centreLonDeg", -86.6).N("areaKm2", 78000)
+				.I("arrivedYear", 2147).S("coverStory", "ZD-7741 lab leak, Pinnacle BioSynthetics, Huntsville")
+				.S("glmz", "The Biomass (Prose GLMZ place c55d61df-8b58-fc6b-a3b3-6bf72d04321b)");
+			e.Relations = { { "planet-sol-earth", "located-on" } };
+			e.Tags = { "concept", "biomass", "glmz", "earth" };
+			Add(std::move(e), false);
+		}
+
 		void Manifest()
 		{
 			// The export's own record (round-trips through Prose as an ordinary entity, so a pull shows which build and seed
@@ -1358,6 +1375,7 @@ namespace
 			"Sol is kept as it really is; beyond Sol every system and void station is its own wild, painted place with a biome.",
 			"Every feature reads right at real scale and at game scale.",
 			"Void stations are lawless: no state ever holds one.",
+			"SpaceGod shares one universe with Prose's GLMZ (US-T461): Sol's Earth is GLMZ's Earth, and the Bio Mass is GLMZ's Biomass, one organism. It came out of the dark between the stars; on Earth a piece fell near Huntsville, Alabama around 2147, was recovered in secret by Pinnacle BioSynthetics and got loose in its underground lab (the ZD-7741 lab leak is the cover story), and it has covered the old south-east United States ever since. A change to either side's Biomass lore is made in both.",
 		};
 		for (size_t i = 0; i < std::size(rules); i++) o << "      " << Esc(rules[i]) << (i + 1 < std::size(rules) ? ",\n" : "\n");
 		o << "    ]\n  },\n  \"entities\": [\n";
