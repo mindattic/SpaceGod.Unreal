@@ -73,6 +73,32 @@ namespace SpaceGod::Views
 		}
 	}
 
+	namespace
+	{
+		ManalithView*& Live()
+		{
+			static ManalithView* live = nullptr;
+			return live;
+		}
+	}
+
+	ManalithView::~ManalithView()
+	{
+		if (Live() == this) Live() = nullptr;
+	}
+
+	ManalithView* ManalithView::Current() { return Live(); }
+
+	Quaternion ManalithView::PoseAt(float t)
+	{
+		// The starting pose, then a constant rate about the local axes (one rotation about the rate vector, so it is truly
+		// constant), then the precession wobble on local X.
+		Vector3 rate(RateX, RateY, RateZ);
+		float wobble = WobbleDeg * std::sin(2 * Mathf::PI * t / WobblePeriodS);
+		return Quaternion::Euler(StartPitch, StartYaw, StartRoll) * Quaternion::AngleAxis(rate.magnitude() * t, rate.normalized())
+			* Quaternion::AngleAxis(wobble, Vector3::right());
+	}
+
 	float ManalithView::Next()
 	{
 		rng ^= rng << 13;
@@ -113,10 +139,16 @@ namespace SpaceGod::Views
 		tumble = Child(root, "Manalith tumble");
 		auto model = Child(tumble, "Manalith model");
 		model->localScale = Vector3::one() * k;
-		model->localPosition = -(mn + mx) * 0.5f * k;
+		// US-T462: Blender's default FBX export imports into Unity as Blender (-x, z, -y) and here (through Unreal's
+		// importer and UnrealSpace) as (x, z, y): the same shape half a turn apart about Y, so the tumble showed the
+		// Unity Manalith's far side. Turned to Unity's frame, the same pose shows the same face in both engines.
+		Quaternion toUnity = Quaternion::AngleAxis(180.0f, Vector3::up());
+		model->localRotation = toUnity;
+		model->localPosition = -(toUnity * ((mn + mx) * 0.5f)) * k;
 		AddComponent<MeshFilter>(model->gameObject())->sharedMesh = mesh;
 		auto mr = AddComponent<MeshRenderer>(model->gameObject());
-		mr->SetSharedMaterial(Materials::MarkShared(cs::New<Material>(Shader::Find(LitMaterial), "Manalith")));
+		lit = Materials::MarkShared(cs::New<Material>(Shader::Find(LitMaterial), "Manalith"));
+		mr->SetSharedMaterial(lit);
 		mr->shadowCastingMode = ShadowCastingMode::On;
 		mr->receiveShadows = true;
 
@@ -144,7 +176,43 @@ namespace SpaceGod::Views
 			shards[i].R = r;
 		}
 		nextBurst = Range(BurstMinS, BurstMaxS);
+		Live() = this;
 		return true;
+	}
+
+	void ManalithView::Reset()
+	{
+		for (auto& s : shards)
+		{
+			s.Live = false;
+			s.R->enabled = false;
+		}
+		rng = Seed;
+		emitDebt = 0;
+		nextBurst = Range(BurstMinS, BurstMaxS);
+	}
+
+	void ManalithView::BeginReference(float t)
+	{
+		referenceT = Mathf::Max(0.0f, t);
+		referenceRun = false;
+	}
+
+	void ManalithView::EndReference()
+	{
+		referenceT = -1;
+		referenceRun = false;
+		started = -1;
+	}
+
+	void ManalithView::SetRim(float intensity, float exponent, float rimLight, float ambientFloor, float glowIntensity)
+	{
+		if (!lit) return;
+		lit->SetFloat("RimIntensity", intensity);
+		lit->SetFloat("RimExponent", exponent);
+		lit->SetFloat("RimLight", rimLight);
+		lit->SetFloat("AmbientFloor", ambientFloor);
+		if (glow) glow->SetFloat("GlowIntensity", glowIntensity);
 	}
 
 	void ManalithView::Spawn(float sizeMin, float sizeMax)
@@ -178,20 +246,33 @@ namespace SpaceGod::Views
 	void ManalithView::Apply(Vector3 down)
 	{
 		if (!root) return;
+		if (referenceT >= 0)
+		{
+			if (!referenceRun)
+			{
+				// The Unity rig's frame (US-T462): screen-down is world-down there, carried into the root's frame here.
+				Reset();
+				Vector3 localDown = Quaternion::Inverse(root->rotation()) * Vector3::down();
+				constexpr float StepS = 1.0f / 30.0f;
+				int steps = Mathf::RoundToInt(referenceT / StepS);
+				for (int i = 0; i < steps; i++) Step(StepS, localDown);
+				referenceRun = true;
+			}
+			tumble->SetRotation(PoseAt(referenceT));
+			return;
+		}
 		float now = Time::unscaledTime;
 		if (started < 0) started = last = now;
 		float t = now - started;
 		// A hitch (a load, the editor pausing) is not a burst of shards.
 		float dt = Mathf::Clamp(now - last, 0.0f, 0.25f);
 		last = now;
+		tumble->localRotation = PoseAt(t);
+		Step(dt, down);
+	}
 
-		// The tumble: the starting pose, then a constant rate about the local axes (one rotation about the rate vector, so
-		// it is truly constant), then the precession wobble on local X.
-		Vector3 rate(RateX, RateY, RateZ);
-		float wobble = WobbleDeg * std::sin(2 * Mathf::PI * t / WobblePeriodS);
-		tumble->localRotation = Quaternion::Euler(StartPitch, StartYaw, StartRoll) * Quaternion::AngleAxis(rate.magnitude() * t, rate.normalized())
-			* Quaternion::AngleAxis(wobble, Vector3::right());
-
+	void ManalithView::Step(float dt, Vector3 down)
+	{
 		Vector3 fall = (down.sqrMagnitude() > 1e-8f ? down.normalized() : Vector3::down()) * (FallD * 2);
 		emitDebt += EmitPerSecond * dt;
 		while (emitDebt >= 1)

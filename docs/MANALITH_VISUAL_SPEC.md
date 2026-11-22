@@ -127,10 +127,27 @@ truth. The constants live in `Cpp/Source/SpaceGod/Views/ManalithView.h`.
   orbital speed they would be left behind at once. The random stream is a xorshift seeded 1337, not C#'s
   `System.Random`, so counts and look match, not positions or burst times.
 - **Bloom:** the game's own grade, not the reference rig's threshold 1 / intensity 1.
-- **Reference frame:** `docs/images/manalith-unreal-00.png`, shot by `sg.Manalith shot <file> quit` (offscreen works,
-  e.g. `UnrealEditor.exe Cpp/SpaceGod.uproject /Engine/Maps/Entry -game -RenderOffScreen -ExecCmds="sg.Manalith shot
-  <abs path> quit"`). It is taken 20 s after the view first draws the Manalith, with the sim clock paused so the orbit
-  holds still. Differences from the Unity frame: the game's own field of view (about 60°, eased every frame by pace
-  and cruise), with D framed at 70% of the height for it; the game sky behind instead of black; the warm G4 star of
-  Nightglass as the key instead of a white view-space key, which makes it read redder than Unity's lavender; and the
-  game's grading and bloom. Same model, maps, rim colour, tumble, shard rates and shard colours.
+- **Model frame (US-T462):** Blender's default FBX export imports into Unity as Blender (−x, z, −y) and here, through
+  Unreal's importer and UnrealSpace, as (x, z, y): the same shape half a turn apart about Y. The model is turned 180°
+  about its Y under the tumble, so the same pose shows the same face in both engines (before this the Unreal frames
+  showed the Unity Manalith's far side).
+- **Reference frame:** `docs/images/manalith-unreal-00.png`, shot by `sg.Manalith shot <file> reference quit`
+  (offscreen: `UnrealEditor.exe Cpp/SpaceGod.uproject /Engine/Maps/Entry -game -RenderOffScreen -ExecCmds="sg.Manalith
+  shot <abs path> reference quit"`). `reference` rebuilds GridGame's rig: a 768 × 768 scene capture of the Manalith
+  alone on black, 30° held, D at 70% of the height, the camera unrotated down world +Z; the pose and the shards at
+  t = 20 s (GaidenBuild's shot), the shards re-run from t = 0 in 1/30 s steps falling screen-down; the spec's white key
+  from view (−0.5, 0.7, 0.5) and a real mana-blue rim light from (0.4, 0.3, −1) in place of the star and the sky (the
+  lighting override, no shadows, no ambient occlusion); no tone curve. Without `reference` it is the in-game view as
+  before (the game's field of view, sky, Nightglass's warm star and grading). `key= fill= rim= exp= rimlight= ambient=
+  glow= bloom= t=` override the reference values for a tuning pass.
+- **Parity result (US-T462):** against `Unity.GridGame/docs/images/manalith-unity-00.png`, the same face, pose and
+  framing (bounding boxes within 8 px), and close colour: mean of the lit pixels (101, 101, 155) against Unity's
+  (103, 99, 140); luminance median 98 against 88, 90th percentile 197 against 187, 99th 248 against 255. To get there
+  the spec's numbers are carried from Unity's gamma colour space (k there is k^2.2 in linear light, hue kept: the rim
+  light 0.4 becomes 0.133), and then the key (1.3), the material's ambient floor (0.6), the rim (5.5, exponent 2.5) and
+  the glowing shards (8) stand in for what Unity's rig gets for free: its default skybox's ambient and reflections on
+  the fairly metallic model, and a bloom that whitens the rim. Still different: the Unreal frame is a little bluer and
+  more saturated inside, its deepest folds darker (10th percentile 29 against 45), and the capture draws no bloom
+  (BloomIntensity had no effect), so the glowing shards are small blue-white points where Unity's are blooming white
+  sparks and the silhouette has no halo. Normal play is unchanged apart from the model frame: Nightglass's star stays
+  the warm key, with the spec's own rim values.
