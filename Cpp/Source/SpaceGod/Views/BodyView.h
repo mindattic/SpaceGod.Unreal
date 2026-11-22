@@ -5,6 +5,7 @@
 #include "GasGiantWeather.h"
 #include "Rendering/VoidSiteModel.h"
 #include "Views/ManalithView.h"
+#include "Views/TetherView.h"
 
 #include <memory>
 #include <vector>
@@ -55,6 +56,9 @@ namespace SpaceGod::Views
 
 		/// <summary>US-T458: the Manalith's model, tumble and shards (it draws under sscRoot), when the body is it.</summary>
 		std::unique_ptr<ManalithView> manalith;
+
+		/// <summary>US-T459: the Ascension Tether, on the Earth's view only (see <see cref="AttachTether"/>).</summary>
+		std::unique_ptr<TetherView> tether;
 
 		// A void station's generator (US-T84): a metal Dyson sphere (see VoidStationModel). The root's own renderer draws
 		// the far shell; the near shell, the dark core, the accretion ring and the two gimbal rings are its children.
@@ -149,6 +153,12 @@ namespace SpaceGod::Views
 		void UpdateWeather(double jd, double simSecondsPerSecond);
 
 		void SetVisible(bool visible);
+
+		/// <summary>US-T459: hangs the Ascension Tether off this body (the Earth): placed with it, hidden with it.</summary>
+		void AttachTether(UnitySpaceApp* app, const cs::Ref<Transform>& parent)
+		{
+			tether = std::make_unique<TetherView>(app, Body, parent);
+		}
 
 		/// <summary>
 		/// US-T442: the free (god) camera inside the sphere, <paramref name="fade"/> 0 (outside, drawn as ever) to 1 (well

@@ -277,6 +277,7 @@ namespace SpaceGod::Views
 		// reflection, which turns the right-handed (meridian, north, east) triad into a proper rotation.
 		DVec3 east = DVec3::Cross(mapNorth, primeMeridian);
 		t->localRotation = Quaternion::LookRotation(ToUnity(east), ToUnity(mapNorth));
+		if (tether) tether->Apply(relative, radius, mapNorth, primeMeridian); // US-T459
 		if (ring)
 		{
 			// Rings lie in the equator and must not spin with the surface.
@@ -762,6 +763,7 @@ namespace SpaceGod::Views
 	{
 		renderer->enabled = visible && Body->IsVisible() && !sscRoot;
 		if (sscRoot) sscRoot->SetActive(visible);
+		if (tether) tether->SetVisible(visible);
 	}
 	// ---------------------------------------------------------------- US-T442: inside, from the god view
 

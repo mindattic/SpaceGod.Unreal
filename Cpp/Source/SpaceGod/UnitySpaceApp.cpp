@@ -312,6 +312,11 @@ namespace SpaceGod
 			bodyViews[i] = cs::New<Views::BodyView>((*Catalog())[i], systemRoot);
 			if ((*Catalog())[i]->ParentIndex >= 0) orbitLines[i] = cs::New<Views::LineStrip>(cs::Cat("Orbit ", (*Catalog())[i]->Name), systemRoot);
 		}
+		// US-T459: GLMZ's Ascension Tether rises from the Galapagos (Sol's Earth only).
+		{
+			cs::Ref<BodyDefinition> earth;
+			if (Catalog()->Root()->Name == "Sun" && Catalog()->TryGet("Earth", earth)) bodyViews[earth->Index]->AttachTether(this, systemRoot);
+		}
 		shipViews = cs::List<cs::Ref<Views::ShipView>>(); // C#: null (the old views went with systemRoot)
 		// US-T131: the place's graveyards are laid the first time a player comes (their hulks are wrecks in its fleet).
 		Core::Graveyards::Populate(World(), Clock->Jd);
