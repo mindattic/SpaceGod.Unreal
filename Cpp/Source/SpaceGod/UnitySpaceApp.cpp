@@ -354,7 +354,9 @@ namespace SpaceGod
 		Hovered = Target::None();
 		Scale()->Layout(Ephemeris(), bodyScene);
 		UpdateRadii();
+		ResetHandOffSettle(); // US-T481: a new system starts with nothing carried
 		UpdateShips(0);
+		SettleHandOff(0);
 		Structures->Layout();
 		// A new system starts level with the ecliptic again (auto-reorient then swings to its own plane).
 		SpaceCamera->SetUpFrame(Quaternion::identity());
@@ -526,6 +528,7 @@ namespace SpaceGod
 			Scale()->Layout(Ephemeris(), bodyScene);
 			UpdateRadii();
 			UpdateShips(dt);
+			SettleHandOff(dt); // US-T481: a hand-off's jumps eased out, view only
 			Structures->Layout();
 			if (!Travel->Active && !InFtlCruise())
 			{
@@ -583,6 +586,7 @@ namespace SpaceGod
 		UpdateSeat(dt);
 		ShowLawNotices();
 		UpdateShips(dt);
+		SettleHandOff(dt); // US-T481: a hand-off's jumps eased out, view only
 		Structures->Layout();
 		raceSim = Race::Probe::Now(); // US-T46
 		CoopUpdateAdventures(!Travel->Active && !InFtlCruise()); // US-T44: was `if (that) World()->UpdateAdventures(Clock->Jd, PlayerHelioKm());`, the host's call in co-op
@@ -596,6 +600,9 @@ namespace SpaceGod
 		else if (InFtlCruise()) UpdateFtlCruiseView(dt);
 		else
 		{
+			// US-T481: a ship spawned since UpdateShips (an adventure's) is placed now, not by TargetScene's raw UpdateShips(0)
+			if (SyncShipViews()) UpdateShips(0.0f);
+			ReapplyHandOffSettle();
 			KeepReoriented();
 			// US-T90: at the controls the camera follows the craft and takes none of its keys (the wheel zooms the chase).
 			SpaceCamera->Update(dt, AtControls() ? Input.ForChaseCamera() : Input);
@@ -604,6 +611,7 @@ namespace SpaceGod
 		UpdateStreaming(dt);
 		Sky->Update(dt);
 		UpdateSkyTravel(dt); // US-T145
+		ReapplyHandOffSettle(); // US-T481: after any mid-frame UpdateShips(0)
 		UpdateViews(dt);
 		UpdateOccluderGhost(); // US-T185: the model hiding the focused target is drawn as a ghost
 		UpdateGodInterior(); // US-T442: inside a body or a hull, the god view draws it from within

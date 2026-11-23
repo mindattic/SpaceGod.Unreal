@@ -259,6 +259,23 @@ private:
 	// the player saw rather than the raw schedule or battle position (U.SPC-T568).
 	Core::DVec3 DrawnScene(int i);
 
+	// US-T481: the hand-off settle, view only (UnitySpaceApp.HandOffSettle.cpp). When the hull flown changes (a take, a
+	// switch, a let-go) its drawn place jumps to the helm's pinned point or back to its schedule, and the other free hulls'
+	// keep-clear sidesteps re-solve a Fleet::Update or two later; each such jump is carried here and eased out, so nothing
+	// pops. Run after every UpdateShips that ends a frame's placing; ReapplyHandOffSettle puts the carry back after an
+	// extra UpdateShips (a ship spawned mid-frame) has redrawn the raw places.
+	void SettleHandOff(float dt);
+	void ReapplyHandOffSettle();
+	void ResetHandOffSettle();
+	cs::List<Core::DVec3> handOffCarry;    // per ship: scene offset added to its raw place, decaying to zero
+	cs::List<Core::DVec3> handOffLastDrawn; // per ship: where it was drawn last frame (raw + carry)
+	cs::List<Core::DVec3> handOffLastOff;   // per ship: its keep-clear sidestep in scene units last frame
+	cs::List<bool> handOffLastOffValid;
+	cs::List<Core::DVec3> handOffSettled;   // per ship: shipScene as this settle left it
+	cs::Ref<Core::Ship> handOffLastPiloted;
+	int handOffFrames = 0;                  // frames (dt > 0) left in the settle window
+	bool handOffPrimed = false;
+
 public:
 	/// <summary>Scene position of a transiting ship at a fraction of its path (see <see cref="ScaleModel.TransitScene"/>).</summary>
 	Core::DVec3 TransitScene(const cs::Ref<Core::Ship>& ship, double progress, Core::DVec3& travelDirection);
