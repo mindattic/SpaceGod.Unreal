@@ -130,6 +130,8 @@ namespace SpaceGod::Cameras
 		static constexpr double PilotViewLift = 0.22;
 
 		static constexpr float TravelSeconds = 1.6f;
+		/// <summary>US-T472: the most one frame advances a glide, so a hitch slows it rather than skipping part of it.</summary>
+		static constexpr float MaxTravelStep = 1.0f / 30.0f;
 		static constexpr float LevelSeconds = 1.4f;
 		/// <summary>Mouse look, in degrees a count at the default sensitivity; the free, focus and pilot views alike.</summary>
 		static constexpr float BaseLookSensitivity = 0.12f;

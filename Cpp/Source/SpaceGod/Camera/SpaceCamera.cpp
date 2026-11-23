@@ -320,7 +320,9 @@ namespace SpaceGod::Cameras
 
 	void SpaceCamera::UpdateTravel(float dt)
 	{
-		travelT = Mathf::Min(1.0f, travelT + dt / travelSeconds);
+		// US-T472: a frame's step is capped (MaxTravelStep), so a hitch (a 100 ms frame) slows the glide for a frame rather
+		// than skipping a tenth of it: sg.Feel read those as 20-30 degree look snaps mid fly-in.
+		travelT = Mathf::Min(1.0f, travelT + Mathf::Min(dt, MaxTravelStep) / travelSeconds);
 		float e = SmootherStep(travelT);
 
 		auto target = OrbitCentre(FocusTarget);
@@ -367,7 +369,10 @@ namespace SpaceGod::Cameras
 			auto eye = PilotEye();
 			ScenePosition = ScenePosition + (eye - ScenePosition) * e;
 		}
-		Rotation = Quaternion::Slerp(travelStartRotation, lookAt, SmootherStep(Mathf::Min(1.0f, travelT * 1.8f)));
+		// The turn lands ahead of the glide (x1.8), except on a hurried seat switch: its 0.3 s glide turned the view 90-120
+		// degrees in under 0.17 s, 15-20 degrees a frame (sg.Feel, 'fighter again'); there the turn spans the whole glide.
+		float turnRate = travelSeconds < TravelSeconds ? 1.0f : 1.8f;
+		Rotation = Quaternion::Slerp(travelStartRotation, lookAt, SmootherStep(Mathf::Min(1.0f, travelT * turnRate)));
 
 		if (travelT >= 1.0f)
 		{
