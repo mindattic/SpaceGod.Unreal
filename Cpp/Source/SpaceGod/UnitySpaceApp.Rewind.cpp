@@ -30,6 +30,8 @@
 #include "Persistence/InterventionLog.h"
 #include "Persistence/SaveGame.h"
 #include "Session/Commands.h"
+#include "Systems/DiscoveryLog.h" // US-T497
+#include "Systems/Frontier.h" // US-T497
 #include "Systems/FtlNavigation.h"
 #include "Systems/Galaxy.h"
 #include "Systems/HelmFtl.h"
@@ -138,6 +140,10 @@ namespace SpaceGod
 			rewindKeySerial[k.Id] = rewindNextSerial;
 			for (auto it = rewindKeySerial.begin(); it != rewindKeySerial.end();)
 				it = Rewind.Find(it->first) == nullptr ? rewindKeySerial.erase(it) : std::next(it);
+			// US-T497: the system it was taken in, for the scrub preview.
+			rewindKeySystem[k.Id] = RewindKeySystem{ k.SessionS, RewindWatchedSystem() };
+			for (auto it = rewindKeySystem.begin(); it != rewindKeySystem.end();)
+				it = Rewind.Find(it->first) == nullptr ? rewindKeySystem.erase(it) : std::next(it);
 		}
 		catch (const std::exception& e)
 		{
@@ -414,6 +420,7 @@ namespace SpaceGod
 		f.JdAfter = Clock->Jd;
 		f.Intervened = rewindFrameIntervened;
 		f.Unlogged = rewindFrameUnlogged;
+		f.System = RewindWatchedSystem(); // US-T497
 		if (f.Serial % RewindCheckEvery == 0) f.Check = RewindWorldCheck();
 		rewindFrames.push_back(f);
 		while (rewindFrames.size() > RewindMaxFrames) rewindFrames.pop_front();
@@ -845,7 +852,7 @@ namespace SpaceGod
 				line = off ? cs::String("Release here to drop the scrub (nothing changes)")
 					: cs::Cat("Release to go back ", RewindSpan(rewindSessionS - s), " to ", Astro::ToDateTime(jd).ToString("yyyy-MM-dd HH:mm"),
 						logged ? "" : " (about)", " UTC", exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)");
-				DrawRewindScrubPreview(panel, jd, logged);
+				DrawRewindScrubPreview(panel, jd, logged, RewindSystemAt(s));
 			}
 			else
 				line = cs::Cat("Click to go back ", RewindSpan(rewindSessionS - s), exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)",
@@ -884,12 +891,41 @@ namespace SpaceGod
 		return jd0 + (jd1 - jd0) * cs::Math::Clamp((sessionS - s0) / (s1 - s0), 0.0, 1.0);
 	}
 
-	void UnitySpaceApp::DrawRewindScrubPreview(const Rect& under, double jd, bool logged)
+	int UnitySpaceApp::RewindWatchedSystem() const
 	{
-		if (Event::current().type != EventType::Repaint || ActiveSystem == nullptr || Clock == nullptr) return;
-		auto catalog = Catalog();
-		auto eph = Ephemeris();
+		if (Galaxy == nullptr || ActiveSystem == nullptr) return -1;
+		return Galaxy->Systems.IndexOf(ActiveSystem);
+	}
+
+	cs::Ref<StarSystem> UnitySpaceApp::RewindSystemAt(double sessionS) const
+	{
+		int index = -1;
+		if (!rewindFrames.empty() && sessionS >= rewindFrames.front().SessionS && sessionS <= rewindFrames.back().SessionS)
+		{
+			auto next = std::upper_bound(rewindFrames.begin(), rewindFrames.end(), sessionS,
+				[](double s, const RewindFrame& f) { return s < f.SessionS; });
+			index = std::prev(next)->System;
+		}
+		else if (const RewindKeyframe* k = Rewind.Before(sessionS + 1e-6))
+		{
+			auto it = rewindKeySystem.find(k->Id);
+			if (it != rewindKeySystem.end() && it->second.SessionS == k->SessionS) index = it->second.System;
+		}
+		if (Galaxy != nullptr && index >= 0 && index < Galaxy->Systems.Count()) return Galaxy->Systems[index];
+		return ActiveSystem;
+	}
+
+	void UnitySpaceApp::DrawRewindScrubPreview(const Rect& under, double jd, bool logged, const cs::Ref<StarSystem>& shown)
+	{
+		// US-T497: the system the moment was in, which a star trip since may have left; drawn from its own catalog and
+		// ephemeris (HelioAt reads either without touching the frame).
+		const cs::Ref<StarSystem>& system = shown != nullptr ? shown : ActiveSystem;
+		if (Event::current().type != EventType::Repaint || system == nullptr || Clock == nullptr) return;
+		bool watched = system == ActiveSystem;
+		auto catalog = system->Catalog;
+		auto eph = system->Ephemeris;
 		if (catalog == nullptr || eph == nullptr) return;
+		bool uncharted = !watched && Frontier::IsUncharted(*system);
 
 		// The star(s) and what orbits them directly (a moon would sit on its world at this scale).
 		struct Mark { DVec3 Then, Now; Color Tint; bool Star; };
@@ -898,8 +934,9 @@ namespace SpaceGod
 		for (int i = 0; i < catalog->Count(); i++)
 		{
 			auto b = (*catalog)[i];
-			if (b == nullptr || !b->IsVisible() || BodyUncharted(i)) continue;
+			if (b == nullptr || !b->IsVisible()) continue;
 			bool star = b->IsStar();
+			if (watched ? BodyUncharted(i) : (uncharted && !star && !Discoveries().HasBody(system->Name, b->Name))) continue;
 			auto parent = b->ParentIndex >= 0 && b->ParentIndex < catalog->Count() ? (*catalog)[b->ParentIndex] : nullptr;
 			if (!star && (parent == nullptr || !parent->IsStar())) continue;
 			Mark m{ eph->HelioAt(i, jd), eph->HelioAt(i, Clock->Jd), Color(b->Color.R, b->Color.G, b->Color.B, 1), star };
@@ -908,6 +945,28 @@ namespace SpaceGod
 		}
 		if (marks.empty()) return;
 		if (reach <= 0) reach = 1;
+
+		// US-T495: the ships where their flight plans put them then (a conic transfer, a burn, a lane ride, parked or
+		// at a ring), read off each one's schedule alone (Fleet::PlannedHelioAt: no sidestep, nothing changed). A ship
+		// whose current leg began after the moment has no plan recorded for it then and is left out. US-T497: only when the
+		// moment was in the watched system: the fleet is that system's, and its ships were nowhere in the one shown.
+		struct Hull { DVec3 Then, Now; bool HaveNow, Piloted; };
+		std::vector<Hull> hulls;
+		int unplanned = 0;
+		cs::Ref<Core::Fleet> fleet;
+		if (watched && World() != nullptr) fleet = Fleet();
+		cs::Ref<Core::Ship> piloted;
+		if (World() != nullptr) piloted = World()->PilotedShip;
+		if (fleet != nullptr)
+			for (const auto& ship : fleet->Ships())
+			{
+				if (ship == nullptr || ship->Destroyed) continue;
+				Hull hull{};
+				if (!fleet->PlannedHelioAt(ship, jd, hull.Then)) { unplanned++; continue; }
+				hull.HaveNow = fleet->PlannedHelioAt(ship, Clock->Jd, hull.Now);
+				hull.Piloted = ship == piloted;
+				hulls.push_back(hull);
+			}
 
 		float side = 200;
 		auto box = Rect(under.center().x - side / 2, under.yMax() + 6, side, side);
@@ -919,7 +978,7 @@ namespace SpaceGod
 		{
 			double r = p.Length();
 			if (r <= 0) return c;
-			double k = cs::Math::Sqrt(r / reach) * radius / r;
+			double k = cs::Math::Sqrt(cs::Math::Min(1.0, r / reach)) * radius / r;
 			return Vector2(c.x + static_cast<float>(p.X * k), c.y - static_cast<float>(p.Y * k));
 		};
 		auto old = GUI::color;
@@ -933,8 +992,27 @@ namespace SpaceGod
 			GUI::color = Color(m.Tint.r, m.Tint.g, m.Tint.b, logged ? 1.0f : 0.75f);
 			GUI::DrawTexture(Rect(then.x - size / 2, then.y - size / 2, size, size), tex);
 		}
+		// Ships over the bodies: small cyan ticks (the piloted hull gold and larger), dim now, bright then.
+		for (const auto& hull : hulls)
+		{
+			Color tint = hull.Piloted ? Color(1.0f, 0.82f, 0.35f, 1) : Color(0.55f, 0.9f, 1.0f, 1);
+			float size = hull.Piloted ? 4.0f : 2.0f;
+			if (hull.HaveNow)
+			{
+				Vector2 now = at(hull.Now);
+				GUI::color = Color(tint.r, tint.g, tint.b, 0.3f);
+				GUI::DrawTexture(Rect(now.x - size / 2, now.y - size / 2, size, size), tex);
+			}
+			Vector2 then = at(hull.Then);
+			GUI::color = Color(tint.r, tint.g, tint.b, logged ? 1.0f : 0.75f);
+			GUI::DrawTexture(Rect(then.x - size / 2, then.y - size / 2, size, size), tex);
+		}
 		GUI::color = old;
-		GUI::Label(Rect(box.x, box.yMax() - 20, box.width, 18), cs::Cat(ActiveSystem->Name, ": bright then, dim now"), rewindBarText);
+		GUI::Label(Rect(box.x, box.yMax() - 20, box.width, 18), watched ? cs::Cat(system->Name, ": bright then, dim now")
+			: cs::Cat(system->Name, " (before the trip): bright then, dim now"), rewindBarText);
+		if (!hulls.empty() || unplanned > 0)
+			GUI::Label(Rect(box.x, box.y + 2, box.width, 18), unplanned > 0 ? cs::Cat(hulls.size(), " ships on plan, ", unplanned, " not yet on theirs")
+				: cs::Cat(hulls.size(), " ships on their plans"), rewindBarText);
 	}
 
 	cs::String UnitySpaceApp::DescribeRewind() const

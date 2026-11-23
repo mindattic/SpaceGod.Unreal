@@ -72,7 +72,19 @@ private:
 		/// restored view that stands elsewhere spawns nothing different.</summary>
 		bool Adventures = false;
 		Core::DVec3 AdventurePoint;
+		/// <summary>US-T497: the watched system when the frame was logged (its index in Galaxy->Systems; -1: none), so the
+		/// scrub preview draws the system the moment was in.</summary>
+		int System = -1;
 	};
+	/// <summary>US-T497: each keyframe's watched system when it was taken (index in Galaxy->Systems), with the keyframe's
+	/// session second so an entry left by a cleared ring is not read for a new keyframe that reuses its id.</summary>
+	struct RewindKeySystem { double SessionS = 0; int System = -1; };
+	std::unordered_map<int, RewindKeySystem> rewindKeySystem;
+	/// <summary>US-T497: the watched system's index in Galaxy->Systems now (-1: none).</summary>
+	int RewindWatchedSystem() const;
+	/// <summary>US-T497: the system watched at session second <paramref name="sessionS"/>: the logged frame's where the frame
+	/// log covers it, else the keyframe's at or before it, else the one watched now.</summary>
+	cs::Ref<Core::StarSystem> RewindSystemAt(double sessionS) const;
 	/// <summary>US-T99: the frame whose adventures this frame's CoopUpdateAdventures notes (live) or reads (replay); -1: none.</summary>
 	long long rewindAdventureSerial = -1;
 	bool rewindAdventureFromLog = false;
@@ -186,8 +198,10 @@ private:
 	double RewindJdAt(double sessionS, bool& logged) const;
 	/// <summary>US-T457: the scrub preview under the bar: the watched system's star and the bodies round it, each where its
 	/// Kepler orbit puts it at <paramref name="jd"/> (bright) and now (dim), worked out analytically (Ephemeris::HelioAt,
-	/// which leaves the cached frame alone): the world is not touched.</summary>
-	void DrawRewindScrubPreview(const Rect& under, double jd, bool logged);
+	/// which leaves the cached frame alone): the world is not touched. US-T495: and its ships where their current legs put
+	/// them then and now (Fleet::PlannedHelioAt, a pure schedule read). US-T497: <paramref name="system"/> is the system the
+	/// moment was in (RewindSystemAt), drawn from its own catalog and ephemeris; the ships only when it is the watched one.</summary>
+	void DrawRewindScrubPreview(const Rect& under, double jd, bool logged, const cs::Ref<Core::StarSystem>& system);
 
 	/// <summary>The logged frame with this serial, or null.</summary>
 	const RewindFrame* RewindFrameAt(long long serial) const;

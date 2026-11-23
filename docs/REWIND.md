@@ -302,8 +302,13 @@ The owner approved the build on 2026-11-19. The phases below each land on their 
   it covers the moment, else between the keyframes on either side, marked "about"), and a panel under the bar draws
   the watched system's star(s) and the bodies orbiting them where their Kepler orbits put them then (bright) and now
   (dim), via `Ephemeris::HelioAt` (the cached frame is left alone). Releasing seeks there; releasing well off the bar
-  drops the scrub. Not yet: ships' flight plans in the preview, and bodies of another system when the moment predates
-  a star trip (the preview always draws the system watched now).
+  drops the scrub. The panel also draws the system's ships (US-T495) where their flight plans put them then and now
+  (cyan, the piloted hull gold), read off each schedule alone by `Fleet::PlannedHelioAt` (a conic transfer, a
+  flip-and-burn, a lane ride, parked or at a ring; no sidestep, nothing changed). The schedule holds only the leg a
+  ship is on, so a ship whose leg began after the moment is left out and counted ("not yet on theirs"). Each logged
+  frame and each keyframe records the watched system (its index in the galaxy, US-T497), so a moment before a star
+  trip draws the system it was in, from that system's own catalog and ephemeris, labelled "(before the trip)", with
+  no ships (the fleet drawn is the watched system's).
 - *Replay checks.* Every 60th logged frame also keeps a hash of the world just after it (FNV-1a over co-op's desync
   digest, `CoopDigest`: the clock, every system's counts and treasuries, the watched system's ships and settlements).
   A seek's replay recomputes it at the same frames (the headless fast-forward too, at the point the live log takes it:
