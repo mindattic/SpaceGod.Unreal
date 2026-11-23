@@ -9,7 +9,11 @@
 
 #include "UnitySpaceApp.h"
 
+#include "BodyCatalog.h"
+#include "BodyDefinition.h"
+#include "Ephemeris.h"
 #include "Fleet.h"
+#include "ScaleModel.h"
 #include "Ships.h"
 #include "World.h"
 #include "Combat/Battle.h"
@@ -47,11 +51,28 @@ namespace SpaceGod
 		}
 	}
 
+	int UnitySpaceApp::HandOffAnchorBody(const cs::Ref<Ship>& ship, DVec3 helio)
+	{
+		// The body a hull's drawn place rides, picked as KmToSceneNear does: its ring's body while queued or planetside,
+		// else its orbit's, the root outside that body's neighbourhood.
+		// The hull flown is drawn at PilotedScene, which rides the helm's frame body.
+		if (ship == nullptr) return -1;
+		if (ship == World()->PilotedShip && IsPiloting())
+			return pilotOffsetKm().Length() <= ScaleModel::NeighbourhoodKm((*Catalog())[pilotFrameBody]) ? pilotFrameBody : 0;
+		auto c = ship->Controller();
+		if (c == nullptr) return -1;
+		int b = c->Ring != nullptr && (c->Phase == ShipPhase::Queued || c->Planetside()) ? c->Ring->Body : (c->Orbit ? c->Orbit->Body : 0);
+		if ((helio - Ephemeris()->Helio(b)).Length() > ScaleModel::NeighbourhoodKm((*Catalog())[b])) b = 0;
+		return b;
+	}
+
 	void UnitySpaceApp::ResetHandOffSettle()
 	{
 		handOffCarry = cs::List<DVec3>();
 		handOffLastDrawn = cs::List<DVec3>();
-		handOffLastOff = cs::List<DVec3>();
+		handOffLastAnchor = cs::List<int>();
+		handOffLastAnchorScene = cs::List<DVec3>();
+		handOffLastOff =cs::List<DVec3>();
 		handOffLastOffValid = cs::List<bool>();
 		handOffSettled = cs::List<DVec3>();
 		handOffLastPiloted = nullptr;
@@ -67,6 +88,9 @@ namespace SpaceGod
 		{
 			HandOffResize(handOffCarry, n);
 			HandOffResize(handOffLastDrawn, n);
+			HandOffResize(handOffLastAnchor, n);
+			HandOffResize(handOffLastAnchorScene, n);
+			for (int i = 0; i < n; i++) handOffLastAnchor[i] = -1;
 			HandOffResize(handOffLastOff, n);
 			HandOffResize(handOffLastOffValid, n);
 			HandOffResize(handOffSettled, n);
@@ -88,11 +112,16 @@ namespace SpaceGod
 		if (handOff)
 		{
 			handOffFrames = HandOffWindowFrames;
-			// The hull taken or let go stays where it was drawn last frame and eases to its new place from there.
+			// The hull taken or let go stays where it was drawn last frame, carried on with the body it rode (at real scale
+			// the planet's orbit moves the whole neighbourhood several hull radii a frame: pinning last frame's scene point
+			// would freeze it for a frame while everything round it drifts), and eases to its new place from there.
 			auto flipped = [&](const cs::Ref<Ship>& s)
 			{
 				if (s == nullptr || s->Destroyed || s->Id < 0 || s->Id >= n) return;
-				handOffCarry[s->Id] = handOffLastDrawn[s->Id] - shipScene[s->Id];
+				DVec3 from = handOffLastDrawn[s->Id];
+				int anchor = handOffLastAnchor[s->Id];
+				if (anchor >= 0 && anchor < bodyScene.Count()) from += bodyScene[anchor] - handOffLastAnchorScene[s->Id];
+				handOffCarry[s->Id] = from - shipScene[s->Id];
 			};
 			flipped(handOffLastPiloted);
 			flipped(piloted);
@@ -133,7 +162,14 @@ namespace SpaceGod
 		{
 			shipScene[i] += applied[i];
 			handOffSettled[i] = shipScene[i];
-			if (stepping || !handOffPrimed) handOffLastDrawn[i] = shipScene[i];
+			if (stepping || !handOffPrimed)
+			{
+				handOffLastDrawn[i] = shipScene[i];
+				int anchor = i < shipStates.Count() ? HandOffAnchorBody(ships[i], shipStates[i].HelioKm) : -1;
+				if (anchor >= bodyScene.Count()) anchor = -1;
+				handOffLastAnchor[i] = anchor;
+				handOffLastAnchorScene[i] = anchor >= 0 ? bodyScene[anchor] : DVec3::Zero;
+			}
 		}
 		if (stepping || !handOffPrimed)
 		{
