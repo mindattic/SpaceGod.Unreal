@@ -110,6 +110,10 @@ private:
 	void RecordClockIntervention();
 	/// <summary>Empties the intervention log and forgets the clock it last recorded.</summary>
 	void ClearInterventions();
+	/// <summary>US-T476: an executive order (a panel's or the map's action, as its co-op wire text "<verb> <args>") as an
+	/// Order entry keyed by this machine's seat, while recording. From CoopSends, the one seam every order passes, only
+	/// for an order given here (not one carried out from the frames, a shared step or a peer's entry being applied).</summary>
+	void RecordOrderIntervention(const cs::String& verb, const cs::String& args);
 
 	bool rewindFrameStarted = false;
 	float rewindFrameDt = 0;

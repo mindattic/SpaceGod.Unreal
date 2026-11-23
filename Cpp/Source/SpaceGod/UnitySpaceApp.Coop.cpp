@@ -891,6 +891,7 @@ namespace SpaceGod
 	bool UnitySpaceApp::CoopSends(const cs::String& verb, const cs::String& args)
 	{
 		CoopPeer* peer = CoopPeer::Current();
+		if (coopExecuting == 0 && coopShared == 0 && (peer == nullptr || !peer->Applying())) RecordOrderIntervention(verb, args); // US-T476: an order given here
 		if (peer == nullptr || coopExecuting > 0 || coopShared > 0 || peer->Applying()) return false;
 		peer->Submit(cs::Cat("x ", Wire::I(peer->LocalSeat()), " ", verb, args.empty() ? cs::String() : cs::Cat(" ", args)));
 		return true;

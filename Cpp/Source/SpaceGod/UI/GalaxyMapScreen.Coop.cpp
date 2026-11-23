@@ -77,8 +77,7 @@ namespace SpaceGod::UI
 
 	bool GalaxyMapScreen::CoopSendsText(UnitySpaceApp* app, const cs::String& verb, const cs::String& args)
 	{
-		if (CoopPeer::Current() == nullptr) return false;
-		return app->CoopSends(verb, args);
+		return app->CoopSends(verb, args); // false in single-player (US-T476: which records the order there too)
 	}
 
 	// ---------------------------------------------------------------- the speaker

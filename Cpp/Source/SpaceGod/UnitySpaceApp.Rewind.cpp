@@ -282,6 +282,20 @@ namespace SpaceGod
 		interventionWarp = interventionSlow = interventionPause = -1;
 	}
 
+	void UnitySpaceApp::RecordOrderIntervention(const cs::String& verb, const cs::String& args)
+	{
+		if (!interventions.Recording) return;
+		Coop::CoopPeer* peer = Coop::CoopPeer::Current();
+		int seat = peer != nullptr ? peer->LocalSeat() : session != nullptr ? session->LocalPlayer().Seat : 0;
+		try { interventions.Add(interventions.Tick, InterventionKind::Order, seat, args.empty() ? verb : cs::Cat(verb, " ", args)); }
+		catch (const std::exception&)
+		{
+			// As LocalSession::Record: a log that cannot take it costs the rewind, never the order (recording stops until
+			// the next frame's RewindFrameStart).
+			interventions.Recording = false;
+		}
+	}
+
 	void UnitySpaceApp::RecordClockIntervention()
 	{
 		if (Clock == nullptr) return;

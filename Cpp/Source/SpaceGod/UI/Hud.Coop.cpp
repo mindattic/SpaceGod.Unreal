@@ -46,8 +46,7 @@ namespace SpaceGod::UI
 
 	bool Hud::CoopSendsText(const cs::String& verb, const cs::String& args)
 	{
-		if (CoopPeer::Current() == nullptr) return false;
-		return app->CoopSends(verb, args);
+		return app->CoopSends(verb, args); // false in single-player (US-T476: which records the order there too)
 	}
 
 	cs::String Hud::CoopArg(int v) { return Wire::I(v); }
