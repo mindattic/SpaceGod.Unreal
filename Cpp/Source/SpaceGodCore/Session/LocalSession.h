@@ -10,6 +10,7 @@ namespace SpaceGod::Core
 	class IEmbodiable;
 	class IGameCommand;
 	class IGameEvent;
+	class InterventionLog;
 	class SeatAuthority;
 	class World;
 
@@ -55,6 +56,11 @@ namespace SpaceGod::Core
 		/// <summary>Whether to keep <see cref="Log"/>; the shipped game leaves it off so a long session does not grow it.</summary>
 		bool Logging = false;
 
+		/// <summary>US-T475: the rewind's intervention log (not owned; null: none). While it is Recording, every command
+		/// applied is added to it at its Tick: a SeatControlCommand as a Control entry keyed by the held seat's id
+		/// (SeatIdOf the player), anything else as its CommandCodec line keyed by the player's seat.</summary>
+		InterventionLog* Interventions = nullptr;
+
 		void Submit(const cs::Ref<IGameCommand>& command) override;
 
 		/// <summary>The world the embody gate weighs takes against (US-T140, <see cref="SeatAuthority.GateWorld"/>).</summary>
@@ -79,5 +85,7 @@ namespace SpaceGod::Core
 
 	private:
 		void Raise(const cs::Ref<IGameEvent>& e);
+		/// <summary>US-T475: adds <paramref name="c"/> to <see cref="Interventions"/> at its tick.</summary>
+		void Record(const cs::Ref<IGameCommand>& c);
 	};
 }

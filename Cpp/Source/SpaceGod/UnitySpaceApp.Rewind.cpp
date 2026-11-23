@@ -199,7 +199,11 @@ namespace SpaceGod
 		// than the log starts it afresh.
 		auto serial = rewindKeySerial.find(id);
 		if (serial != rewindKeySerial.end()) rewindNextSerial = serial->second;
-		else rewindFrames.clear();
+		else
+		{
+			rewindFrames.clear();
+			ClearInterventions(); // US-T475: what it held was the replaced future's
+		}
 		rewindReplaying = false;
 		ShowRewindBar(8);
 		ShowSaves = false;
@@ -218,6 +222,7 @@ namespace SpaceGod
 		rewindLastJd = Clock != nullptr ? Clock->Jd : std::numeric_limits<double>::quiet_NaN();
 		rewindFrames.clear();
 		rewindKeySerial.clear();
+		ClearInterventions();
 		rewindReplaying = false;
 		rewindFrameStarted = false;
 	}
@@ -229,6 +234,17 @@ namespace SpaceGod
 		rewindAdventureSerial = -1;
 		rewindAdventureFromLog = false;
 		rewindFrameStarted = Clock != nullptr;
+		// US-T475: the session records into the intervention log while the frame log logs (single player, not replaying),
+		// at the serial this frame will be logged with.
+		if (session != nullptr) session->Interventions = &interventions;
+		interventions.Recording = Clock != nullptr && !rewindReplaying && rewindEnabled && Coop::CoopPeer::Current() == nullptr;
+		interventions.Tick = rewindNextSerial;
+		if (interventions.Recording)
+		{
+			// Play went on from an earlier moment: what the log held from here on was the old future.
+			interventions.DropFrom(rewindNextSerial);
+			RecordClockIntervention();
+		}
 		if (Clock == nullptr) return false;
 		if (!rewindReplaying)
 		{
@@ -260,6 +276,27 @@ namespace SpaceGod
 		return true;
 	}
 
+	void UnitySpaceApp::ClearInterventions()
+	{
+		interventions.Clear();
+		interventionWarp = interventionSlow = interventionPause = -1;
+	}
+
+	void UnitySpaceApp::RecordClockIntervention()
+	{
+		if (Clock == nullptr) return;
+		int pause = Clock->PauseHeld() ? 1 : 0;
+		const RewindFrame* previous = RewindFrameAt(rewindNextSerial - 1);
+		bool setByHand = previous != nullptr && Clock->Jd != previous->JdAfter;
+		if (!setByHand && Clock->WarpIndex == interventionWarp && Clock->SlowIndex == interventionSlow && pause == interventionPause) return;
+		interventionWarp = Clock->WarpIndex;
+		interventionSlow = Clock->SlowIndex;
+		interventionPause = pause;
+		// "<warp index> <slow index> <pause held> <jd>", the Jd exact (Wire's round-trip form).
+		interventions.Add(rewindNextSerial, InterventionKind::Clock, -1, cs::Cat(Coop::Wire::I(interventionWarp), " ",
+			Coop::Wire::I(interventionSlow), " ", Coop::Wire::I(pause), " ", Coop::Wire::D(Clock->Jd)));
+	}
+
 	void UnitySpaceApp::LogRewindFrame()
 	{
 		bool logging = rewindFrameStarted && rewindEnabled && Coop::CoopPeer::Current() == nullptr;
@@ -278,6 +315,7 @@ namespace SpaceGod
 		if (f.Serial % RewindCheckEvery == 0) f.Check = RewindWorldCheck();
 		rewindFrames.push_back(f);
 		while (rewindFrames.size() > RewindMaxFrames) rewindFrames.pop_front();
+		interventions.DropBefore(rewindFrames.front().Serial); // US-T475: the intervention log follows the frame log's horizon
 		rewindAdventureSerial = f.Serial; // this frame's adventures, later in it, are noted on it
 	}
 
@@ -483,6 +521,8 @@ namespace SpaceGod
 		text += rewindFrames.empty() ? cs::String("\n  frame log: empty (co-op, or nothing played yet)")
 			: cs::Cat("\n  frame log: ", rewindFrames.size(), " frames, ", RewindSpan(rewindFrames.back().SessionS - rewindFrames.front().SessionS),
 				" of game time (from ", RewindSpan(rewindSessionS - rewindFrames.front().SessionS), " back), ", acted, " with your input");
+		text += cs::Cat("\n  intervention log: ", interventions.Count(), " entries, ", interventions.ByteSize(), " bytes",
+			interventions.Recording ? "" : " (not recording)");
 		if (!rewindLastVerdict.empty()) text += cs::Cat("\n  last replay: ", rewindLastVerdict);
 		for (const auto& k : frames)
 		{

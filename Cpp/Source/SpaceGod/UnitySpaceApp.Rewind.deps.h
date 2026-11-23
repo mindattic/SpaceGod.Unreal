@@ -2,6 +2,7 @@
 
 // What UnitySpaceApp.Rewind.inl's members need (US-T99: time reversal, phases 2 and 3).
 
+#include "Persistence/InterventionLog.h"
 #include "Persistence/RewindRing.h"
 #include "Coop/CoopWire.h"
 

@@ -1,9 +1,13 @@
 // Port of Unity.SpaceGod Core/Session/LocalSession.cs (US-T21, see docs/MIGRATION.md).
 
 #include "Session/LocalSession.h"
+#include "Persistence/InterventionLog.h"
+#include "Session/CommandCodec.h"
 #include "Session/Commands.h"
 #include "Session/SeatAuthority.h"
 #include "Session/SessionEvents.h"
+
+#include <exception>
 
 namespace SpaceGod::Core
 {
@@ -42,7 +46,26 @@ namespace SpaceGod::Core
 		{
 			auto c = pending.Dequeue();
 			if (Logging) Log.Add(c);
+			if (Interventions != nullptr && Interventions->Recording) Record(c);
 			authority->Apply(c, raise);
+		}
+	}
+
+	void LocalSession::Record(const cs::Ref<IGameCommand>& c)
+	{
+		// US-T475: before it is applied, so a control frame is keyed by the seat it steers (applying it changes no seat).
+		try
+		{
+			if (cs::Is<SeatControlCommand>(c))
+				Interventions->Add(Interventions->Tick, InterventionKind::Control, authority->SeatIdOf(c->Player()), CommandCodec::Write(c));
+			else
+				Interventions->AddCommand(Interventions->Tick, c);
+		}
+		catch (const std::exception&)
+		{
+			// A log that cannot take it costs the rewind, never the game: recording stops until the owner starts it again
+			// (the next frame's RewindFrameStart).
+			Interventions->Recording = false;
 		}
 	}
 

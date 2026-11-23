@@ -99,6 +99,18 @@ private:
 	/// <summary>A seek replays at most this many real seconds of play (replay runs at the speed it was played).</summary>
 	static constexpr double RewindMaxReplayS = 90;
 
+	/// <summary>US-T475: what the player did, frame by frame, stamped with the frame log's serials: the session's commands
+	/// (LocalSession::ApplyPending records them while Recording) and the clock's changes. Recording only while the frame
+	/// log logs; trimmed with it, the replaced future dropped as play goes on after a rewind.</summary>
+	Core::InterventionLog interventions;
+	/// <summary>The clock as the intervention log last recorded it (warp index, slow index, pause held; -1: none yet).</summary>
+	int interventionWarp = -1, interventionSlow = -1, interventionPause = -1;
+	/// <summary>Adds a clock entry when the clock's warp, slow motion or pause differ from the last recorded, or its Jd
+	/// from the previous frame's JdAfter (a clock set by hand). From RewindFrameStart, while recording.</summary>
+	void RecordClockIntervention();
+	/// <summary>Empties the intervention log and forgets the clock it last recorded.</summary>
+	void ClearInterventions();
+
 	bool rewindFrameStarted = false;
 	float rewindFrameDt = 0;
 	Coop::ClockState rewindFrameClock;

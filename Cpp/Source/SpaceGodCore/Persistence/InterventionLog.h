@@ -3,7 +3,8 @@
 // and not only land on a keyframe. Each entry is stamped with the tick it happened on: the frame serial of the app's
 // RewindFrame log (UnitySpaceApp.Rewind), so the frame log holds each tick's dt and clock and this log what was done on it.
 //
-// No callers yet. The log only stores and serialises; it never touches the world.
+// The log only stores and serialises; it never touches the world. US-T475: the game keeps one (UnitySpaceApp.Rewind) and
+// hands it to its LocalSession, which records each command it applies at Tick while Recording is on.
 //
 // Text form (Write / Read), one entry a line, each ending in '\n':
 // <code>
@@ -55,6 +56,12 @@ namespace SpaceGod::Core
 	class SPACEGODCORE_API InterventionLog final
 	{
 	public:
+		/// <summary>US-T475: the tick a recorder (LocalSession::ApplyPending) stamps what it adds with: the owner sets it
+		/// each frame. Not part of the log's text or its equality.</summary>
+		long long Tick = 0;
+		/// <summary>US-T475: whether a recorder adds to the log now (the owner turns it off when nothing is to be kept).</summary>
+		bool Recording = false;
+
 		/// <summary>Adds an entry at tick (not before the last entry's tick; throws ArgumentException if it is, or if the
 		/// text holds a line break). A Control entry identical to its seat's previous control frame is dropped: a stick
 		/// stays where it is put. Returns whether the entry was kept.</summary>
