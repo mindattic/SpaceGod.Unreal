@@ -96,7 +96,9 @@ def main():
             db = sub(q['hull']['battleship'][0], p['hull']['battleship'][0])
             shift = da if norm(da) > 0 and norm(sub(da, db)) < 0.05 * norm(da) else [0.0, 0.0, 0.0]
             move = norm(sub(dc, shift)) / rad
-        out.append(dict(i=i, step=q['step'], dt=q['dt'], look=look, roll=roll, move=move, dfov=q['fov'] - p['fov'],
+        # US-T479: the row's dt is the wall time since the last sample, which the engine hands the *next* frame's update:
+        # the motion between rows p and q was made with p's dt (a 210 ms row is followed by the 10x move, not paired with it).
+        out.append(dict(i=i, step=q['step'], dt=p['dt'] if i > 1 else q['dt'], look=look, roll=roll, move=move, dfov=q['fov'] - p['fov'],
                         mode=q['mode'], held=q['held'] if subj is not None or q['held'] != 'god' else 'god(scene)', show=q['show'], pv=q['pv'], fmode=p['mode'] + '>' + q['mode'] if p['mode'] != q['mode'] else q['mode']))
 
     def spikes(key, floor, k=4.0, w=6):
@@ -126,10 +128,22 @@ def main():
     print()
     for key, floor, label in (('look', 1.5, 'look snaps (deg)'), ('roll', 1.0, 'roll snaps (deg)'), ('move', 0.08, 'position pops (radii)')):
         found = spikes(key, floor)
-        print(f'{label}: {len(found)}')
+        # US-T479: a hitch is a long frame whose motion is its rate held through it (per second it is no spike): the
+        # frame stalled, the view did not jolt. Named apart from the real jolts.
+        def hitch(o):
+            j = o['i'] - 1
+            near = [out[m]['dt'] for m in range(max(0, j - 6), min(len(out), j + 7)) if m != j]
+            mdt = statistics.median(near) if near else o['dt']
+            if o['dt'] < 2.0 * mdt:
+                return False
+            rates = [out[m][key] / max(out[m]['dt'], 1e-6) for m in range(max(0, j - 6), min(len(out), j + 7)) if m != j]
+            return o[key] / max(o['dt'], 1e-6) < 2.0 * max(statistics.median(rates), 1e-9)
+        real = [(o, med) for o, med in found if not hitch(o)]
+        print(f'{label}: {len(real)} (+{len(found) - len(real)} hitch)')
         for o, med in found[: (999 if show_all else 25)]:
+            tag = f'  HITCH ({o["dt"] * 1000:.0f} ms)' if hitch(o) else ''
             print(f'  frame {o["i"]:5d} [{o["step"]}] {o[key]:.3f} vs median {med:.3f}  mode {o["fmode"]} held {o["held"]}'
-                  f'{" show" if o["show"] else ""}{" pilotView" if o["pv"] else ""}')
+                  f'{" show" if o["show"] else ""}{" pilotView" if o["pv"] else ""}{tag}')
     fovj = [o for o in out if abs(o['dfov']) > 1.0]
     print(f'fov jumps > 1 deg/frame: {len(fovj)}')
     for o in fovj[:25]:

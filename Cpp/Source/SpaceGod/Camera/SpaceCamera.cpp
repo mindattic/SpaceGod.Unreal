@@ -205,7 +205,20 @@ namespace SpaceGod::Cameras
 	void SpaceCamera::Update(float dt, const Input::InputState& input)
 	{
 		bool moving = input.Move.sqrMagnitude() > 0.01f;
-		if (Mode != CameraMode::Free && moving && !PilotLocked) ExitFocus();
+		if (Mode != CameraMode::Free && moving && !PilotLocked)
+		{
+			// US-T479: let go from where this frame's follow would put the camera, not last frame's: the target has moved since
+			// (at real scale a planet's orbit carries the hulls ~8 fighter radii a frame), and the free camera left behind by
+			// that step read as an 8-radius pop on the first swim frame (sg.Feel, 'god swim').
+			if (!world->TargetValid(FocusTarget)) {}
+			else if (Mode == CameraMode::Travel) UpdateTravel(0.0f);
+			else
+			{
+				auto back = Rotation * Vector3::back();
+				ScenePosition = OrbitCentre(FocusTarget) + DVec3(back.x, back.y, back.z) * (zoom * world->TargetRadius(FocusTarget));
+			}
+			ExitFocus();
+		}
 		// US-T185: the focused thing went (despawned, left the system): let go rather than orbit the origin or a stale slot.
 		if (Mode != CameraMode::Free && !PilotLocked && !world->TargetValid(FocusTarget)) ExitFocus();
 
