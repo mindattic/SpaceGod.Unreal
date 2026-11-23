@@ -20,7 +20,9 @@
 #include "SimClock.h"
 #include "World.h"
 #include "Combat/War.h"
+#include "Persistence/InterventionLog.h"
 #include "Persistence/SaveGame.h"
+#include "Session/Commands.h"
 #include "Systems/FtlNavigation.h"
 #include "Systems/Galaxy.h"
 #include "Systems/HelmFtl.h"
@@ -154,6 +156,7 @@ namespace SpaceGod
 			// The rest of this frame (its adventures) reads the logged frame's.
 			rewindAdventureSerial = f->Serial;
 			rewindAdventureFromLog = true;
+			RewindReplayInterventions(f->Serial, f->Intervened); // US-T488: what the player did on it
 			if (Clock->Jd != f->JdAfter) rewindReplayDrift++;
 			// The world itself, where the play kept a check: the replay is exact only while every one matches. US-T487: the
 			// first that differs gates the replay (its callers finish it here): past it the world is no longer the play's.
@@ -334,6 +337,9 @@ namespace SpaceGod
 				touched = key.isPressed || key.wasPressedThisFrame || key.wasReleasedThisFrame;
 			}
 			rewindFrameIntervened = touched || Input::GamepadDevice::current().Touched() || !Input.HandsIdle();
+			// US-T488: the log replays the session's commands and sticks; the helm's keys and a cockpit's own keys it does not keep.
+			rewindFrameUnlogged = rewindFrameIntervened && (!Piloted.IsNone() || Input.ToggleFlightAssist || Input.LockTarget ||
+				Input.LockAttacker || Input.DropMine || Input.NumberKey >= 0);
 			return false;
 		}
 		// Esc stops the replay where it is: that moment is as real as the one aimed at.
@@ -398,6 +404,7 @@ namespace SpaceGod
 		f.Before = rewindFrameClock;
 		f.JdAfter = Clock->Jd;
 		f.Intervened = rewindFrameIntervened;
+		f.Unlogged = rewindFrameUnlogged;
 		if (f.Serial % RewindCheckEvery == 0) f.Check = RewindWorldCheck();
 		rewindFrames.push_back(f);
 		while (rewindFrames.size() > RewindMaxFrames) rewindFrames.pop_front();
@@ -477,7 +484,15 @@ namespace SpaceGod
 			const RewindFrame* f = RewindFrameAt(stop);
 			if (f == nullptr) { rewindReplayWhy = "the log ends there"; break; }
 			if (f->SessionS >= targetS - 1e-9) break;
-			if (f->Intervened) { rewindReplayWhy = "you acted there (your input is not replayed yet)"; break; }
+			// US-T488: the player's commands and sticks replay from the intervention log (and camera-only input needs none);
+			// the replay stops only where the player did what the log cannot replay. The world checks report any drift.
+			if (f->Unlogged) { rewindReplayWhy = "you flew the helm or worked a cockpit there (not replayed yet)"; break; }
+			if (const InterventionEntry* e = RewindUnreplayable(stop))
+			{
+				rewindReplayWhy = e->Kind == InterventionKind::Order ? cs::Cat("you gave an order there ('", e->Text, "', not replayed yet)")
+					: cs::String("the log holds a command there that does not read back");
+				break;
+			}
 			wallS += f->Dt; // US-T486: no cap but the log (RewindMaxFrames): the replay runs headless, faster than played
 		}
 		if (stop == start)
@@ -493,13 +508,77 @@ namespace SpaceGod
 		rewindReplayChecks = rewindReplayMismatches = 0;
 		rewindReplayFirstMismatchS = -1;
 		rewindReplayFirstMismatchSerial = -1;
-		ShowToast(cs::Cat("Replaying ", RewindSpan(wallS), " of play to the moment picked  (Esc stops here)"));
+		// US-T488: each seat's stick as it stood when the keyframe's world stepped on (a control frame is kept only on change).
+		rewindReplayControls.clear();
+		for (const auto& e : interventions.Entries())
+		{
+			if (e.Tick >= start) break;
+			if (e.Kind != InterventionKind::Control) continue;
+			try { rewindReplayControls[e.Seat] = InterventionLog::CommandOf(e); }
+			catch (const std::exception&) { rewindReplayControls.erase(e.Seat); }
+		}
+		ShowToast(cs::Cat("Replaying ",RewindSpan(wallS), " of play to the moment picked  (Esc stops here)"));
+		return true;
+	}
+
+	const InterventionEntry* UnitySpaceApp::RewindUnreplayable(long long tick) const
+	{
+		const auto& entries = interventions.Entries();
+		auto it = std::lower_bound(entries.begin(), entries.end(), tick, [](const InterventionEntry& e, long long t) { return e.Tick < t; });
+		for (; it != entries.end() && it->Tick == tick; ++it)
+		{
+			if (it->Kind == InterventionKind::Clock) continue; // the logged frame's clock (RewindFrame::Before)
+			if (it->Kind == InterventionKind::Order) return &*it; // US-T488 split: orders need a peer-less CoopExecute
+			try
+			{
+				if (InterventionLog::CommandOf(*it) == nullptr) return &*it;
+			}
+			catch (const std::exception&) { return &*it; }
+		}
+		return nullptr;
+	}
+
+	void UnitySpaceApp::RewindReplayInterventions(long long tick, bool intervened)
+	{
+		if (session == nullptr) return;
+		const auto& entries = interventions.Entries();
+		auto it = std::lower_bound(entries.begin(), entries.end(), tick, [](const InterventionEntry& e, long long t) { return e.Tick < t; });
+		bool applied = false;
+		for (; it != entries.end() && it->Tick == tick; ++it)
+		{
+			if (it->Kind != InterventionKind::Control && it->Kind != InterventionKind::Command) continue;
+			cs::Ref<IGameCommand> c;
+			try { c = InterventionLog::CommandOf(*it); }
+			catch (const std::exception& e)
+			{
+				Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay: entry '", it->Text, "' does not read back: ", e.what()));
+				continue;
+			}
+			if (it->Kind == InterventionKind::Control) rewindReplayControls[it->Seat] = c;
+			else if (intervened && c != nullptr)
+			{
+				session->Submit(c);
+				applied = true;
+			}
+		}
+		if (applied) session->ApplyPending(); // Recording is off while replaying: nothing is logged again
+	}
+
+	bool UnitySpaceApp::RewindReplayedControl(EmbodimentInput& input) const
+	{
+		if (!rewindReplaying || session == nullptr) return false;
+		auto found = rewindReplayControls.find(session->State()->SeatIdOf(session->LocalPlayer()));
+		if (found == rewindReplayControls.end()) return false;
+		auto control = cs::As<SeatControlCommand>(found->second);
+		if (control == nullptr) return false;
+		input = control->Input;
 		return true;
 	}
 
 	void UnitySpaceApp::FinishRewindReplay(bool stopped)
 	{
 		rewindReplaying = false;
+		rewindReplayControls.clear();
 		// Play goes on from here: the frames after it are the old future, dropped as the log goes on.
 		rewindNextSerial = rewindReplayNext;
 		if (rewindReplayDrift > 0)

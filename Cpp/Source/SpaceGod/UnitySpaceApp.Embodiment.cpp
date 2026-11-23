@@ -651,6 +651,8 @@ namespace SpaceGod
 		input.PowerSplit = CraftPower::After(held, Input.PowerKey);
 		// Shift+Backspace, the self-destruct (US-T97): held a second it arms, pressed again it aborts.
 		input.SelfDestruct = SelfDestructCommand(held);
+		// US-T488: while a seek replays, the stick the play logged for this seat (the live hands are idle then).
+		if (RewindReplayedControl(input)) seatAim = ToVector(input.Aim.SwapYZ());
 		// The keys a profile adds on top of the shared hands (US-T135): a cockpit's lock, flares and wing orders. A worker's
 		// torch is the trigger itself (its timing judged in Core, RepairWorker), so it needs nothing here.
 		if (held->InputProfile() == EmbodimentInputProfile::Cockpit)

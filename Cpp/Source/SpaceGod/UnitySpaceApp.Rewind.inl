@@ -62,6 +62,9 @@ private:
 		Coop::ClockState Before;
 		double JdAfter = 0;
 		bool Intervened = false;
+		/// <summary>US-T488: the player's input this frame reached the world by a way the intervention log does not keep
+		/// (the helm flown by the keys, a cockpit's lock, flight assist, mine or number keys): a seek stops short of it.</summary>
+		bool Unlogged = false;
 		/// <summary>A hash of the world just after the frame (CoopDigest), on every RewindCheckEvery-th frame (0: none).</summary>
 		unsigned long long Check = 0;
 		/// <summary>US-T99: whether the frame ran the world's adventures, and round which point (the camera's, PlayerHelioKm):
@@ -127,11 +130,24 @@ private:
 	/// for an order given here (not one carried out from the frames, a shared step or a peer's entry being applied).</summary>
 	void RecordOrderIntervention(const cs::String& verb, const cs::String& args);
 
+	/// <summary>US-T488: the entry a seek cannot replay at this tick (an Order, or a command that does not read back), or
+	/// null when every one there replays (a Clock entry is the logged frame's clock already).</summary>
+	const Core::InterventionEntry* RewindUnreplayable(long long tick) const;
+	/// <summary>US-T488: a replayed frame's intervention entries: Control entries become each seat's stick (UpdateSeat
+	/// reads it), Command entries are submitted and applied (only on a frame the player acted on: one on an idle frame came
+	/// from the world, which the replay runs into again). Recording is off while replaying, so nothing is logged twice.</summary>
+	void RewindReplayInterventions(long long tick, bool intervened);
+	/// <summary>US-T488: while a seek replays, the logged stick of the seat the local player holds into input (true), so
+	/// UpdateSeat steps it as the play did.</summary>
+	bool RewindReplayedControl(Core::EmbodimentInput& input) const;
+	/// <summary>US-T488: each seat's last logged control frame as the replay has reached it.</summary>
+	std::map<int, cs::Ref<Core::IGameCommand>> rewindReplayControls;
+
 	bool rewindFrameStarted = false;
 	float rewindFrameDt = 0;
 	Coop::ClockState rewindFrameClock;
 	double rewindFrameSessionS = 0;
-	bool rewindFrameIntervened = false;
+	bool rewindFrameIntervened = false, rewindFrameUnlogged = false;
 
 	bool rewindReplaying = false;
 	long long rewindReplayNext = 0, rewindReplayStart = 0, rewindReplayStop = 0;
