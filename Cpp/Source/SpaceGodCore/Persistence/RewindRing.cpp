@@ -5,6 +5,9 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <random>
 #include <utility>
 
 #include "Persistence/ObjectGraph.h"
@@ -82,6 +85,55 @@ namespace SpaceGod::Core
 		}
 
 		uint32_t KfSlot(uint32_t h, uint32_t mask) { return (((h ^ (h >> 15)) * 0x9E3779B1u) >> 7) & mask; }
+
+		// US-T484: the disk spill.
+		namespace fs = std::filesystem;
+
+		/// A UTF-8 path as a path (a narrow string would be read in the ANSI code page on Windows).
+		fs::path KfPath(const std::string& s) { return fs::path(std::u8string(s.begin(), s.end())); }
+
+		std::string KfUtf8(const fs::path& p)
+		{
+			auto u = p.u8string();
+			return std::string(u.begin(), u.end());
+		}
+
+		bool KfReady(const std::shared_future<std::vector<uint8_t>>& f)
+		{
+			return f.valid() && f.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+		}
+
+		bool KfWrite(const std::string& path, const std::vector<uint8_t>& bytes)
+		{
+			std::ofstream f(KfPath(path), std::ios::binary | std::ios::trunc);
+			if (!f) return false;
+			f.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+			f.close();
+			return !f.fail();
+		}
+
+		std::vector<uint8_t> KfRead(const std::string& path)
+		{
+			std::ifstream f(KfPath(path), std::ios::binary | std::ios::ate);
+			if (!f) throw cs::IOException("Rewind keyframe spill file is missing: " + path);
+			std::streamoff size = f.tellg();
+			std::vector<uint8_t> bytes(size > 0 ? size_t(size) : 0);
+			f.seekg(0);
+			f.read(reinterpret_cast<char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+			if (size < 0 || f.gcount() != static_cast<std::streamsize>(bytes.size())) throw cs::IOException("Rewind keyframe spill file is short: " + path);
+			return bytes;
+		}
+
+		void KfRemove(const std::string& path)
+		{
+			std::error_code ec;
+			fs::remove(KfPath(path), ec);
+		}
+	}
+
+	RewindBlob::~RewindBlob()
+	{
+		if (!SpillPath.empty()) KfRemove(SpillPath);
 	}
 
 	std::vector<uint8_t> RewindRing::Diff(const std::vector<uint8_t>& base, const std::vector<uint8_t>& target)
@@ -185,8 +237,18 @@ namespace SpaceGod::Core
 
 	std::vector<uint8_t> RewindRing::Decode(const RewindBlob& blob)
 	{
-		std::shared_future<std::vector<uint8_t>> mine = blob.Packed;
-		const std::vector<uint8_t>& packed = mine.get();
+		// US-T484: the simulation thread may spill this blob (drop Packed) while a worker decodes it: take one or the
+		// other under its lock. The file lives as long as the blob, which the caller holds.
+		std::shared_future<std::vector<uint8_t>> mine;
+		std::string path;
+		{
+			std::lock_guard<std::mutex> lock(blob.Lock);
+			if (blob.Spilled) path = blob.SpillPath;
+			else mine = blob.Packed;
+		}
+		std::vector<uint8_t> fromDisk;
+		if (!path.empty()) fromDisk = KfRead(path);
+		const std::vector<uint8_t>& packed = path.empty() ? mine.get() : fromDisk;
 		std::vector<uint8_t> bytes = SaveGame::Inflate(packed.data(), packed.size());
 		if (blob.Base == nullptr) return bytes;
 		return Patch(Decode(*blob.Base), bytes.data(), bytes.size());
@@ -338,8 +400,135 @@ namespace SpaceGod::Core
 	size_t RewindRing::Bytes() const
 	{
 		size_t total = 0;
-		for (const auto& k : frames) total += k->StoredBytes();
+		for (const auto& k : frames)
+			if (!k->OnDisk()) total += k->StoredBytes();
 		return total + (lastRaw != nullptr ? lastRaw->size() : 0); // US-T454: the dictionary held raw counts too
+	}
+
+	size_t RewindRing::DiskBytes() const
+	{
+		size_t total = 0;
+		for (const auto& k : frames)
+			if (k->OnDisk()) total += k->StoredBytes();
+		return total;
+	}
+
+	RewindRing::~RewindRing()
+	{
+		frames.clear();
+		lastBlob = nullptr;
+		lastRaw = nullptr;
+		for (SpillJob& j : spills)
+		{
+			if (j.Done.valid()) j.Done.wait();
+			KfRemove(j.Path);
+		}
+		spills.clear();
+		if (!runFolder.empty())
+		{
+			std::error_code ec;
+			fs::remove_all(KfPath(runFolder), ec);
+		}
+	}
+
+	bool RewindRing::EnsureRunFolder()
+	{
+		if (!runFolder.empty()) return true;
+		try
+		{
+			fs::path root = KfPath(SpillFolder);
+			std::error_code ec;
+			fs::create_directories(root, ec);
+			if (ec) throw fs::filesystem_error("Rewind spill folder", root, ec);
+			// Run folders a day old are left from runs that ended without cleaning up (a crash, a kill).
+			auto now = fs::file_time_type::clock::now();
+			for (fs::directory_iterator it(root, ec), end; !ec && it != end; it.increment(ec))
+			{
+				std::error_code ec2;
+				if (!it->is_directory(ec2) || it->path().filename().u8string().rfind(u8"run-", 0) != 0) continue;
+				auto at = fs::last_write_time(it->path(), ec2);
+				if (!ec2 && now - at > std::chrono::hours(24)) fs::remove_all(it->path(), ec2);
+			}
+			auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+			std::random_device rd;
+			fs::path run = root / (std::string("run-") + std::to_string(ms) + "-" + std::to_string(rd() & 0xFFFF));
+			if (!fs::create_directory(run, ec) || ec) throw fs::filesystem_error("Rewind run folder", run, ec);
+			runFolder = KfUtf8(run);
+			return true;
+		}
+		catch (const std::exception&)
+		{
+			spillFailed = true;
+			return false;
+		}
+	}
+
+	void RewindRing::CollectSpills()
+	{
+		for (auto it = spills.begin(); it != spills.end();)
+		{
+			if (it->Done.wait_for(std::chrono::seconds(0)) != std::future_status::ready)
+			{
+				++it;
+				continue;
+			}
+			bool ok = false;
+			try { ok = it->Done.get(); }
+			catch (const std::exception&) { ok = false; }
+			std::shared_ptr<const RewindBlob> blob = it->Blob.lock();
+			if (ok && blob != nullptr)
+			{
+				blob->PackedSize = it->Bytes;
+				std::lock_guard<std::mutex> lock(blob->Lock);
+				blob->SpillPath = it->Path;
+				blob->Spilled = true;
+				blob->Packed = {};
+			}
+			else
+			{
+				KfRemove(it->Path);
+				if (!ok) spillFailed = true; // the disk is full or gone: RAM thinning takes over
+			}
+			it = spills.erase(it);
+		}
+	}
+
+	bool RewindRing::Spill()
+	{
+		size_t pending = 0;
+		for (const SpillJob& j : spills) pending += j.Bytes;
+		size_t ram = Bytes();
+		ram -= std::min(ram, pending); // being written: on its way out of RAM
+		if (ram <= BudgetBytes) return true;
+		if (!Spilling() || !EnsureRunFolder()) return false;
+		size_t disk = DiskBytes() + pending;
+		bool waiting = false;
+		// The oldest first (furthest back, least likely to be restored); never the newest, the next delta's parent.
+		for (size_t i = 0; i + 1 < frames.size() && ram > BudgetBytes; i++)
+		{
+			const std::shared_ptr<const RewindBlob>& blob = frames[i]->Blob;
+			if (blob == nullptr || blob->Spilled) continue;
+			bool writing = false;
+			for (const SpillJob& j : spills)
+				if (j.Blob.lock() == blob) { writing = true; break; }
+			if (writing) continue;
+			if (!KfReady(blob->Packed))
+			{
+				waiting = true; // still compressing: it can spill at a later pass
+				continue;
+			}
+			size_t size = frames[i]->StoredBytes();
+			if (disk + size > DiskBudgetBytes) return false;
+			SpillJob job;
+			job.Blob = blob;
+			job.Path = KfUtf8(KfPath(runFolder) / (std::string("kf-") + std::to_string(nextSpill++) + ".bin"));
+			job.Bytes = size;
+			job.Done = std::async(std::launch::async, [packed = blob->Packed, path = job.Path]() { return KfWrite(path, packed.get()); });
+			spills.push_back(std::move(job));
+			ram -= std::min(ram, size);
+			disk += size;
+		}
+		return ram <= BudgetBytes || waiting;
 	}
 
 	bool RewindRing::ThinPass(double nowSessionS, double scale)
@@ -365,9 +554,17 @@ namespace SpaceGod::Core
 	void RewindRing::Thin(double nowSessionS)
 	{
 		ThinPass(nowSessionS, 1);
-		// Over budget: thin everything further (never cut off: the start stays, so the horizon is always the whole session).
-		for (double scale = 2; Bytes() > BudgetBytes && scale <= 1 << 20; scale *= 2)
+		// US-T484: over the RAM budget the oldest keyframes go to disk first. Only when nothing more can spill (spilling is
+		// off or failed, or what is left is the newest) or the disk budget is spent is everything thinned further (never cut
+		// off: the start stays, so the horizon is always the whole session).
+		CollectSpills();
+		for (double scale = 2; scale <= 1 << 20; scale *= 2)
+		{
+			bool ramOver = !Spill(); // never starts a write past the disk budget
+			bool diskOver = DiskBytes() > DiskBudgetBytes;
+			if (!ramOver && !diskOver) break;
 			if (!ThinPass(nowSessionS, scale) && frames.size() <= 2) break;
+		}
 		Relink();
 		Rebase();
 	}

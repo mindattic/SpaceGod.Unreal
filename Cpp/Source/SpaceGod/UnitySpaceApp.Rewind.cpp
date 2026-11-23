@@ -26,6 +26,9 @@
 
 #include "Bootstrap.h"
 #include "Camera/StarTravel.h"
+#include "ActiveProfile.h"
+#include "Shared/Profiles/ProfileStore.h"
+#include "Shared/Profiles/SharedIo.h"
 
 using namespace SpaceGod::Core;
 
@@ -59,6 +62,15 @@ namespace SpaceGod
 		{
 			rewindInit = true;
 			rewindEnabled = !Bootstrap::HasCommandLineFlag("-norewind") && !Bootstrap::HasCommandLineFlag("-demo") && !Bootstrap::HasCommandLineFlag("-capture");
+			// US-T484: keyframes past the RAM budget spill to the profile's saves folder (no profile: RAM thinning only).
+			try
+			{
+				if (auto profile = ActiveProfile::Current()) Rewind.SpillFolder = Shared::Io::Combine(profile->SavesFolder(), "Rewind");
+			}
+			catch (const std::exception& e)
+			{
+				Debug::LogWarning(cs::Cat("[Rewind] no spill folder: ", e.what()));
+			}
 		}
 		if (Clock == nullptr || Galaxy == nullptr)
 		{
@@ -528,7 +540,9 @@ namespace SpaceGod
 	cs::String UnitySpaceApp::DescribeRewind() const
 	{
 		const auto& frames = Rewind.Keyframes();
-		cs::String text = cs::Cat("Rewind: ", frames.size(), " keyframes, ", RewindMb(Rewind.Bytes()), " of ", RewindMb(Rewind.BudgetBytes),
+		cs::String text = cs::Cat("Rewind: ", frames.size(), " keyframes, RAM ", RewindMb(Rewind.Bytes()), " of ", RewindMb(Rewind.BudgetBytes),
+			", disk ", RewindMb(Rewind.DiskBytes()), " of ", RewindMb(Rewind.DiskBudgetBytes),
+			Rewind.Spilling() ? "" : (Rewind.SpillFolder.empty() ? " (no spill folder)" : " (spill off: a write failed)"),
 			", now ", RewindSpan(rewindSessionS), " into the session", rewindEnabled ? "" : " (off in this run)");
 		size_t acted = 0;
 		for (const auto& f : rewindFrames) acted += f.Intervened ? 1 : 0;
@@ -541,7 +555,7 @@ namespace SpaceGod
 		for (const auto& k : frames)
 		{
 			text += cs::Cat("\n  #", k->Id, "  ", Astro::ToDateTime(k->Jd).ToString("yyyy-MM-dd HH:mm:ss"), "  ", RewindSpan(rewindSessionS - k->SessionS),
-				rewindSessionS >= k->SessionS ? " back" : " ahead", "  ", RewindMb(k->StoredBytes()), k->Whole() ? " whole" : " delta", "  capture ", cs::Fmt(k->CaptureMs, "F0"), " ms",
+				rewindSessionS >= k->SessionS ? " back" : " ahead", "  ", RewindMb(k->StoredBytes()), k->Whole() ? " whole" : " delta", k->OnDisk() ? " [disk]" : "", "  capture ", cs::Fmt(k->CaptureMs, "F0"), " ms",
 				k->Pinned ? "  [start]" : "", k->Battle ? "  [battle]" : "", k->Id == Rewind.Head() ? "  <- here" : "");
 		}
 		return text;

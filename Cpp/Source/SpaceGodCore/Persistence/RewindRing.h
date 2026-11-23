@@ -12,7 +12,11 @@
 // new parent on a worker. Every delta carries hashes of the graph it was made from and the graph it rebuilds, so a
 // delta applied to the wrong base fails loudly instead of loading a wrong world.
 //
-// What this does not do yet (docs/REWIND.md, "Build phases"): no disk spill; one timeline. The storage is already
+// US-T484: past the RAM budget the oldest packed keyframes are written to SpillFolder/run-<id>/kf-<n>.bin on a worker and
+// dropped from RAM (read back when decoded); only when nothing more can spill, or the disk budget is spent, does thinning
+// widen the spacing. A failed write turns spilling off for the ring (RAM thinning takes over).
+//
+// What this does not do yet (docs/REWIND.md, "Build phases"): one timeline. The storage is already
 // branch-friendly: every keyframe carries a branch id (0) and a parent link to the retained keyframe before it, and is
 // keyed by session game time, not by date.
 //
@@ -25,6 +29,8 @@
 #include <cstdint>
 #include <future>
 #include <memory>
+#include <mutex>
+#include <string>
 #include <vector>
 
 namespace SpaceGod::Core
@@ -36,9 +42,23 @@ namespace SpaceGod::Core
 	/// re-encoding a keyframe makes a new blob rather than changing this one. Whole: the graph DEFLATEd as a save file
 	/// holds it. Delta: <see cref="RewindRing::Diff"/> against <c>Base</c>'s graph, DEFLATEd.
 	/// </summary>
-	struct RewindBlob
+	struct SPACEGODCORE_API RewindBlob
 	{
-		std::shared_future<std::vector<uint8_t>> Packed;
+		RewindBlob() = default;
+		RewindBlob(const RewindBlob&) = delete;
+		RewindBlob& operator=(const RewindBlob&) = delete;
+		/// <summary>US-T484: deletes its spill file, if it has one.</summary>
+		~RewindBlob();
+
+		/// <summary>The packed bytes (a worker's result). US-T484: dropped once they are on disk (<see cref="SpillPath"/>);
+		/// changed on the simulation thread only, under <see cref="Lock"/>, and read by a worker under it.</summary>
+		mutable std::shared_future<std::vector<uint8_t>> Packed;
+		/// <summary>US-T484: guards <see cref="Packed"/> and <see cref="SpillPath"/> against workers decoding this blob.</summary>
+		mutable std::mutex Lock;
+		/// <summary>US-T484: the file holding the packed bytes once spilled (empty: in RAM).</summary>
+		mutable std::string SpillPath;
+		/// <summary>US-T484: the packed bytes are on disk, not in RAM (written on the simulation thread).</summary>
+		mutable bool Spilled = false;
 		/// <summary>The blob whose graph this one is a delta against; null when stored whole.</summary>
 		std::shared_ptr<const RewindBlob> Base;
 		/// <summary>Deltas between this blob and the whole one its chain starts at (0: whole).</summary>
@@ -74,6 +94,9 @@ namespace SpaceGod::Core
 
 		bool Whole() const { return DeltaOf < 0; }
 
+		/// <summary>US-T484: its packed bytes were spilled to disk.</summary>
+		bool OnDisk() const { return Blob != nullptr && Blob->Spilled; }
+
 		/// <summary>The bytes held: the compressed size once the worker is done, an estimate until then.</summary>
 		size_t StoredBytes() const
 		{
@@ -107,6 +130,19 @@ namespace SpaceGod::Core
 
 		/// <summary>The memory the ring may hold (docs/REWIND.md: 512 MB of RAM).</summary>
 		size_t BudgetBytes = size_t(512) * 1024 * 1024;
+
+		/// <summary>US-T484: where keyframes spill past <see cref="BudgetBytes"/> (a run folder is made inside it); empty: no
+		/// spill, RAM thinning only.</summary>
+		cs::String SpillFolder;
+
+		/// <summary>US-T484: the disk the spilled keyframes may take (docs/REWIND.md, Recommendation: 4 GB).</summary>
+		size_t DiskBudgetBytes = size_t(4) * 1024 * 1024 * 1024;
+
+		RewindRing() = default;
+		RewindRing(const RewindRing&) = delete;
+		RewindRing& operator=(const RewindRing&) = delete;
+		/// <summary>US-T484: waits for spill writes and removes this ring's run folder.</summary>
+		~RewindRing();
 
 		/// <summary>Fewest real seconds between two keyframes. A capture is a synchronous walk of the world (110-490 ms,
 		/// docs/REWIND.md), so until capture moves off the simulation thread this keeps the hitch rare.</summary>
@@ -151,7 +187,12 @@ namespace SpaceGod::Core
 		void Thin(double nowSessionS);
 
 		const std::vector<std::shared_ptr<RewindKeyframe>>& Keyframes() const { return frames; }
+		/// <summary>The RAM held: keyframes not spilled, plus the graph held raw (what <see cref="BudgetBytes"/> bounds).</summary>
 		size_t Bytes() const;
+		/// <summary>US-T484: the disk held by spilled keyframes (what <see cref="DiskBudgetBytes"/> bounds).</summary>
+		size_t DiskBytes() const;
+		/// <summary>US-T484: spilling is on (a folder is set and no write has failed).</summary>
+		bool Spilling() const { return !SpillFolder.empty() && !spillFailed; }
 
 		/// <summary>The spacing the schedule wants for a keyframe this old.</summary>
 		static double SpacingFor(double ageS, bool battle);
@@ -185,6 +226,29 @@ namespace SpaceGod::Core
 		/// or the one just rewound to).</summary>
 		std::shared_ptr<const std::vector<uint8_t>> lastRaw;
 		std::shared_ptr<const RewindBlob> lastBlob;
+
+		/// <summary>US-T484: a spill write on a worker.</summary>
+		struct SpillJob
+		{
+			std::weak_ptr<const RewindBlob> Blob;
+			std::string Path;
+			size_t Bytes = 0;
+			std::future<bool> Done;
+		};
+		std::vector<SpillJob> spills;
+		/// <summary>US-T484: this ring's folder inside SpillFolder (made at the first spill).</summary>
+		std::string runFolder;
+		int nextSpill = 0;
+		bool spillFailed = false;
+
+		/// <summary>US-T484: takes in the finished writes: marks each blob on disk and drops its packed bytes, deletes the
+		/// file of a blob that was dropped meanwhile, and turns spilling off at a failed write.</summary>
+		void CollectSpills();
+		/// <summary>US-T484: starts writing the oldest packed keyframes (never the newest) until RAM is within budget;
+		/// false when RAM stays over budget with nothing left to spill.</summary>
+		bool Spill();
+		/// <summary>US-T484: makes the run folder (sweeping run folders over a day old); false when it cannot.</summary>
+		bool EnsureRunFolder();
 
 		/// <summary>US-T454: re-encodes every delta whose base is no longer its parent (thinning dropped it) on a worker.</summary>
 		void Rebase();

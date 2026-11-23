@@ -327,8 +327,14 @@ keyframe's graph is held raw as the next delta's dictionary (counted in the budg
 rewound to the dictionary. When thinning drops a keyframe, its successor is re-encoded against its new parent on a
 worker (`Rebase`). A delta carries the sizes and FNV-1a hashes of its base and its result, so one applied to the
 wrong base or damaged fails the rewind instead of loading a wrong world. `sg.Rewind list` marks each keyframe whole
-or delta. Still to do: the
-4 GB disk spill under the save folder, and an incremental or off-thread capture, which lets the 20 s floor drop to the
+or delta. The disk spill (US-T484): past the 512 MB RAM budget (non-spilled keyframes plus the raw dictionary) the
+oldest packed keyframes, never the newest, are written on a worker to `<profile saves>/Rewind/run-<id>/kf-<n>.bin`
+and dropped from RAM; a decode reads the file back (under the blob's lock, since `Rebase` and capture workers decode
+concurrently). The spacing only widens when nothing more can spill or the spilled keyframes pass the 4 GB disk
+budget. A keyframe's file goes with it, the run folder goes when the ring does, run folders over a day old (a crash)
+are swept at the first spill, and a failed write turns spilling off for the run (RAM thinning takes over).
+`sg.Rewind list` shows RAM and disk against their budgets and marks a spilled keyframe `[disk]`. Still to do: an
+incremental or off-thread capture, which lets the 20 s floor drop to the
 recommended 2 s and lets the dense battle ring ship. Then a client's rewind becomes a command in the co-op lockstep
 stream, ordered by the host: any player may rewind, and the later request wins.
 
