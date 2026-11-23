@@ -541,7 +541,7 @@ namespace SpaceGod
 		for (const auto& k : frames)
 		{
 			text += cs::Cat("\n  #", k->Id, "  ", Astro::ToDateTime(k->Jd).ToString("yyyy-MM-dd HH:mm:ss"), "  ", RewindSpan(rewindSessionS - k->SessionS),
-				rewindSessionS >= k->SessionS ? " back" : " ahead", "  ", RewindMb(k->StoredBytes()), "  capture ", cs::Fmt(k->CaptureMs, "F0"), " ms",
+				rewindSessionS >= k->SessionS ? " back" : " ahead", "  ", RewindMb(k->StoredBytes()), k->Whole() ? " whole" : " delta", "  capture ", cs::Fmt(k->CaptureMs, "F0"), " ms",
 				k->Pinned ? "  [start]" : "", k->Battle ? "  [battle]" : "", k->Id == Rewind.Head() ? "  <- here" : "");
 		}
 		return text;

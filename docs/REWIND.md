@@ -317,8 +317,17 @@ The owner approved the build on 2026-11-19. The phases below each land on their 
   keyframe. The analytic preview on the bar, and the US-T104 fork at the first intervention after a seek, are still to
   come.
 
-**Phase 4: cheaper storage and capture.** Use Oodle Kraken deltas against the parent keyframe, with every 16th
-keyframe whole. That needs the engine's Oodle SDK linked into the game module, not only into Bench.Rewind. Add the
+**Phase 4: cheaper storage and capture.** *Delta keyframes, done (US-T454).* Each keyframe after the session start is
+stored as a delta against its parent: `RewindRing::Diff` lists the literal runs and the copies from anywhere in the
+parent's graph (a hash of the parent's 32-byte blocks finds long-range matches, since one new object shifts every
+offset after it; the offset the last copy ran at is retried for a value changed in place), and the ops are DEFLATEd
+on the worker. No Oodle: the game module links no Oodle SDK, and the long-range match is what made Kraken-Normal
+work. The session start and every 16th keyframe of a chain (`WholeEvery`) are stored whole, as before. The newest
+keyframe's graph is held raw as the next delta's dictionary (counted in the budget), and a rewind makes the keyframe
+rewound to the dictionary. When thinning drops a keyframe, its successor is re-encoded against its new parent on a
+worker (`Rebase`). A delta carries the sizes and FNV-1a hashes of its base and its result, so one applied to the
+wrong base or damaged fails the rewind instead of loading a wrong world. `sg.Rewind list` marks each keyframe whole
+or delta. Still to do: the
 4 GB disk spill under the save folder, and an incremental or off-thread capture, which lets the 20 s floor drop to the
 recommended 2 s and lets the dense battle ring ship. Then a client's rewind becomes a command in the co-op lockstep
 stream, ordered by the host: any player may rewind, and the later request wins.

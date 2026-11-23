@@ -4,10 +4,17 @@
 // worker; the ring keeps them thinned by game age under a fixed memory budget (dense recently, sparse further back, the
 // session start always kept, never cut off) and hands one back as a SaveData to load in place.
 //
-// What this phase does not do yet (docs/REWIND.md, "Build phases"): no intervention log, so a rewind lands exactly on a
-// keyframe instead of replaying to any tick; whole DEFLATE keyframes (the save file's codec) instead of Oodle deltas;
-// no disk spill; one timeline. The storage is already branch-friendly: every keyframe carries a branch id (0) and a
-// parent link to the retained keyframe before it, and is keyed by session game time, not by date.
+// US-T454: a keyframe is stored as a compressed delta against the retained keyframe before it (its parent): the copy and
+// insert ops that rebuild its graph from the parent's (Diff, a long-range match against the parent's bytes, since one
+// new object shifts every offset after it), DEFLATEd. The session start and every WholeEvery-th keyframe of a chain are
+// stored whole (the save file's raw DEFLATE), which bounds the decode chain. The newest keyframe's graph is also held
+// raw, as the dictionary for the next delta. When thinning drops a keyframe, its successor is re-encoded against its
+// new parent on a worker. Every delta carries hashes of the graph it was made from and the graph it rebuilds, so a
+// delta applied to the wrong base fails loudly instead of loading a wrong world.
+//
+// What this does not do yet (docs/REWIND.md, "Build phases"): no disk spill; one timeline. The storage is already
+// branch-friendly: every keyframe carries a branch id (0) and a parent link to the retained keyframe before it, and is
+// keyed by session game time, not by date.
 //
 // Taking a keyframe only reads the world (the same walk a save makes), so it never changes the simulation.
 
@@ -23,6 +30,24 @@
 namespace SpaceGod::Core
 {
 	class SaveData;
+
+	/// <summary>
+	/// The stored bytes of one keyframe (US-T454), immutable once made so a worker may decode it while the ring moves on:
+	/// re-encoding a keyframe makes a new blob rather than changing this one. Whole: the graph DEFLATEd as a save file
+	/// holds it. Delta: <see cref="RewindRing::Diff"/> against <c>Base</c>'s graph, DEFLATEd.
+	/// </summary>
+	struct RewindBlob
+	{
+		std::shared_future<std::vector<uint8_t>> Packed;
+		/// <summary>The blob whose graph this one is a delta against; null when stored whole.</summary>
+		std::shared_ptr<const RewindBlob> Base;
+		/// <summary>Deltas between this blob and the whole one its chain starts at (0: whole).</summary>
+		int Depth = 0;
+		/// <summary>What to count for it while the worker is still at it.</summary>
+		size_t Estimate = 0;
+		/// <summary>The packed size once known (read on the simulation thread only).</summary>
+		mutable size_t PackedSize = 0;
+	};
 
 	/// <summary>One retained moment of the session.</summary>
 	struct RewindKeyframe
@@ -44,20 +69,21 @@ namespace SpaceGod::Core
 		bool Pinned = false;
 		size_t RawBytes = 0;
 		double CaptureMs = 0;
+		/// <summary>US-T454: the keyframe this one is stored as a delta against (its parent), or -1 when stored whole.</summary>
+		int DeltaOf = -1;
 
-		/// <summary>The bytes held: the compressed size once the worker is done, the raw size until then.</summary>
+		bool Whole() const { return DeltaOf < 0; }
+
+		/// <summary>The bytes held: the compressed size once the worker is done, an estimate until then.</summary>
 		size_t StoredBytes() const
 		{
-			if (packedSize == 0 && packed.valid() && packed.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-				packedSize = packed.get().size();
-			return packedSize != 0 ? packedSize : RawBytes;
+			if (Blob == nullptr) return RawBytes;
+			if (Blob->PackedSize == 0 && Blob->Packed.valid() && Blob->Packed.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+				Blob->PackedSize = Blob->Packed.get().size();
+			return Blob->PackedSize != 0 ? Blob->PackedSize : Blob->Estimate;
 		}
 
-		/// <summary>The compressed graph (waits for the worker if it is still at it).</summary>
-		const std::vector<uint8_t>& Packed() const { return packed.get(); }
-
-		std::shared_future<std::vector<uint8_t>> packed;
-		mutable size_t packedSize = 0;
+		std::shared_ptr<const RewindBlob> Blob;
 	};
 
 	/// <summary>
@@ -130,14 +156,38 @@ namespace SpaceGod::Core
 		/// <summary>The spacing the schedule wants for a keyframe this old.</summary>
 		static double SpacingFor(double ageS, bool battle);
 
-		/// <summary>A world's object graph compressed as a save file compresses it (what a keyframe holds).</summary>
+		/// <summary>A world's object graph compressed as a save file compresses it (what a whole keyframe holds).</summary>
 		static std::vector<uint8_t> Pack(const std::vector<uint8_t>& graph);
+
+		/// <summary>US-T454: a chain of deltas is cut by a whole keyframe at this depth (docs/REWIND.md: every 16th whole).</summary>
+		static constexpr int WholeEvery = 16;
+
+		/// <summary>
+		/// US-T454: the ops that rebuild <paramref name="target"/> from <paramref name="base"/> (uncompressed): literal runs
+		/// and copies from anywhere in the base, found by a hash of the base's 32-byte blocks and by trying the offset the
+		/// last copy ran at (a value changed in place). Headed by both sizes and FNV-1a hashes.
+		/// </summary>
+		static std::vector<uint8_t> Diff(const std::vector<uint8_t>& base, const std::vector<uint8_t>& target);
+
+		/// <summary>Rebuilds the target of <see cref="Diff"/>; throws when the delta is damaged or was made from another
+		/// base, or the result is not the graph it was made from.</summary>
+		static std::vector<uint8_t> Patch(const std::vector<uint8_t>& base, const uint8_t* delta, size_t size);
+
+		/// <summary>The object graph a blob holds (decodes its chain; waits for any worker still at it).</summary>
+		static std::vector<uint8_t> Decode(const RewindBlob& blob);
 
 	private:
 		std::vector<std::shared_ptr<RewindKeyframe>> frames;
 		int nextId = 0;
 		int head = -1;
 		double headWallS = 0;
+		/// <summary>US-T454: the graph of <c>lastBlob</c> held raw, the dictionary for the next delta (the newest keyframe,
+		/// or the one just rewound to).</summary>
+		std::shared_ptr<const std::vector<uint8_t>> lastRaw;
+		std::shared_ptr<const RewindBlob> lastBlob;
+
+		/// <summary>US-T454: re-encodes every delta whose base is no longer its parent (thinning dropped it) on a worker.</summary>
+		void Rebase();
 
 		/// <summary>The newest keyframe on the current line: the head after a rewind, else the newest taken.</summary>
 		const RewindKeyframe* Newest() const;
