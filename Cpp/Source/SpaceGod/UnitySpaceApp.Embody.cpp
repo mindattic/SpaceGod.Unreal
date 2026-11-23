@@ -229,6 +229,11 @@ namespace SpaceGod
 			ShowToast(cs::Cat("The ", unit->Name(), " can't send out a mech: ", why));
 			return;
 		}
+		{
+			// US-T494: single player logs the order as the co-op send's args (battle and unit index) so a rewind seek replays it.
+			int b = World()->War->Battles.IndexOf(battle), u = battle->Units.IndexOf(unit);
+			if (b >= 0 && u >= 0) RecordOrderIntervention("mech", cs::Cat(b, " ", u));
+		}
 		if (EmbodiableEquals(HeldNonHelm(), mech)) return;
 		mechHeight = 0; // sized afresh off the hull it stands on
 		TakeSeat(mech);
