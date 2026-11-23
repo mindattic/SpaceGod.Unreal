@@ -267,11 +267,10 @@ private:
 	void SettleHandOff(float dt);
 	void ReapplyHandOffSettle();
 	void ResetHandOffSettle();
-	int HandOffAnchorBody(const cs::Ref<Core::Ship>& ship, Core::DVec3 helio);
 	cs::List<Core::DVec3> handOffCarry;    // per ship: scene offset added to its raw place, decaying to zero
 	cs::List<Core::DVec3> handOffLastDrawn; // per ship: where it was drawn last frame (raw + carry)
-	cs::List<int> handOffLastAnchor;        // per ship: the body its last drawn place rode (as KmToSceneNear picks it), -1 none
-	cs::List<Core::DVec3> handOffLastAnchorScene; // per ship: that body's bodyScene when it was last drawn
+	cs::List<Core::DVec3> handOffLastStep;  // per ship: how far its drawn place moved in the scene on the last stepping frame
+	float handOffLastDt = 0;                // that frame's dt (0: no step known yet)
 	cs::List<Core::DVec3> handOffLastOff;   // per ship: its keep-clear sidestep in scene units last frame
 	cs::List<bool> handOffLastOffValid;
 	cs::List<Core::DVec3> handOffSettled;   // per ship: shipScene as this settle left it

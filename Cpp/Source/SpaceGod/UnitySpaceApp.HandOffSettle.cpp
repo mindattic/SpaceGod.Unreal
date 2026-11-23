@@ -51,27 +51,12 @@ namespace SpaceGod
 		}
 	}
 
-	int UnitySpaceApp::HandOffAnchorBody(const cs::Ref<Ship>& ship, DVec3 helio)
-	{
-		// The body a hull's drawn place rides, picked as KmToSceneNear does: its ring's body while queued or planetside,
-		// else its orbit's, the root outside that body's neighbourhood.
-		// The hull flown is drawn at PilotedScene, which rides the helm's frame body.
-		if (ship == nullptr) return -1;
-		if (ship == World()->PilotedShip && IsPiloting())
-			return pilotOffsetKm().Length() <= ScaleModel::NeighbourhoodKm((*Catalog())[pilotFrameBody]) ? pilotFrameBody : 0;
-		auto c = ship->Controller();
-		if (c == nullptr) return -1;
-		int b = c->Ring != nullptr && (c->Phase == ShipPhase::Queued || c->Planetside()) ? c->Ring->Body : (c->Orbit ? c->Orbit->Body : 0);
-		if ((helio - Ephemeris()->Helio(b)).Length() > ScaleModel::NeighbourhoodKm((*Catalog())[b])) b = 0;
-		return b;
-	}
-
 	void UnitySpaceApp::ResetHandOffSettle()
 	{
 		handOffCarry = cs::List<DVec3>();
 		handOffLastDrawn = cs::List<DVec3>();
-		handOffLastAnchor = cs::List<int>();
-		handOffLastAnchorScene = cs::List<DVec3>();
+		handOffLastStep = cs::List<DVec3>();
+		handOffLastDt = 0;
 		handOffLastOff =cs::List<DVec3>();
 		handOffLastOffValid = cs::List<bool>();
 		handOffSettled = cs::List<DVec3>();
@@ -86,11 +71,16 @@ namespace SpaceGod
 		int n = cs::Math::Min(ships.Count(), shipScene.Count());
 		if (handOffCarry.Count() != n)
 		{
+			int had = handOffLastDrawn.Count();
 			HandOffResize(handOffCarry, n);
 			HandOffResize(handOffLastDrawn, n);
-			HandOffResize(handOffLastAnchor, n);
-			HandOffResize(handOffLastAnchorScene, n);
-			for (int i = 0; i < n; i++) handOffLastAnchor[i] = -1;
+			HandOffResize(handOffLastStep, n);
+			// A hull new to the list has no last drawn place: take this frame's, so its first step reads as none.
+			for (int i = had; i < n; i++)
+			{
+				handOffLastDrawn[i] = shipScene[i];
+				handOffLastStep[i] = DVec3::Zero;
+			}
 			HandOffResize(handOffLastOff, n);
 			HandOffResize(handOffLastOffValid, n);
 			HandOffResize(handOffSettled, n);
@@ -112,15 +102,15 @@ namespace SpaceGod
 		if (handOff)
 		{
 			handOffFrames = HandOffWindowFrames;
-			// The hull taken or let go stays where it was drawn last frame, carried on with the body it rode (at real scale
-			// the planet's orbit moves the whole neighbourhood several hull radii a frame: pinning last frame's scene point
-			// would freeze it for a frame while everything round it drifts), and eases to its new place from there.
+			// The hull taken or let go goes on from where it was drawn last frame by the step it made on the last stepping
+			// frame, scaled to this frame's dt (US-T490: at real scale the hulls' shared orbital motion moves the scene
+			// several hull radii a frame; pinning last frame's point froze it for a frame while everything round it drifted,
+			// and that drift is not a body moving, so carrying it with a body did nothing), then eases to its new place.
 			auto flipped = [&](const cs::Ref<Ship>& s)
 			{
 				if (s == nullptr || s->Destroyed || s->Id < 0 || s->Id >= n) return;
 				DVec3 from = handOffLastDrawn[s->Id];
-				int anchor = handOffLastAnchor[s->Id];
-				if (anchor >= 0 && anchor < bodyScene.Count()) from += bodyScene[anchor] - handOffLastAnchorScene[s->Id];
+				if (handOffLastDt > 0) from += handOffLastStep[s->Id] * (static_cast<double>(dt) / handOffLastDt);
 				handOffCarry[s->Id] = from - shipScene[s->Id];
 			};
 			flipped(handOffLastPiloted);
@@ -164,15 +154,13 @@ namespace SpaceGod
 			handOffSettled[i] = shipScene[i];
 			if (stepping || !handOffPrimed)
 			{
+				handOffLastStep[i] = stepping && handOffPrimed ? shipScene[i] - handOffLastDrawn[i] : DVec3::Zero;
 				handOffLastDrawn[i] = shipScene[i];
-				int anchor = i < shipStates.Count() ? HandOffAnchorBody(ships[i], shipStates[i].HelioKm) : -1;
-				if (anchor >= bodyScene.Count()) anchor = -1;
-				handOffLastAnchor[i] = anchor;
-				handOffLastAnchorScene[i] = anchor >= 0 ? bodyScene[anchor] : DVec3::Zero;
 			}
 		}
 		if (stepping || !handOffPrimed)
 		{
+			handOffLastDt = stepping && handOffPrimed ? dt : 0;
 			handOffLastPiloted = piloted;
 			handOffPrimed = true;
 		}
@@ -193,6 +181,8 @@ namespace SpaceGod
 			if (applied[i] == DVec3::Zero || shipScene[i] == handOffSettled[i]) continue;
 			shipScene[i] += applied[i];
 			handOffSettled[i] = shipScene[i];
+			// The drawn place moved since the settle recorded it: the step it made this frame moved with it.
+			if (i < handOffLastStep.Count()) handOffLastStep[i] += shipScene[i] - handOffLastDrawn[i];
 			handOffLastDrawn[i] = shipScene[i];
 		}
 	}
