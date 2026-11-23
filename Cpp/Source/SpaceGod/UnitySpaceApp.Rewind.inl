@@ -140,8 +140,14 @@ private:
 	/// <summary>US-T488: while a seek replays, the logged stick of the seat the local player holds into input (true), so
 	/// UpdateSeat steps it as the play did.</summary>
 	bool RewindReplayedControl(Core::EmbodimentInput& input) const;
-	/// <summary>US-T492: whether a seek replays an Order entry with this verb (not spawn, practice, mech, reset or the hr*
-	/// smoke verbs: those stop the seek).</summary>
+	/// <summary>US-T493: SpawnShip's spawn proper (after the camera spot is read and CoopSpawns declines): a sandbox ship of
+	/// <paramref name="cls"/> at the spot, taken to the helm. Also the seek's replay of a logged spawn order.</summary>
+	void SpawnShipAt(Core::ShipClass cls, bool hostile, int frame, Core::DVec3 offsetKm, Core::DVec3 forward);
+	/// <summary>US-T493: SpawnPracticeFighter's tail: the practice fighter brought (or spawned) clear of the spot and taken to
+	/// the helm. Also the seek's replay of a logged practice order.</summary>
+	void PracticeFighterAt(int frame, Core::DVec3 offsetKm, Core::DVec3 forward);
+	/// <summary>US-T492: whether a seek replays an Order entry with this verb (not reset or the hr* smoke verbs: those stop
+	/// the seek; US-T493 replays spawn, practice and mech).</summary>
 	static bool RewindOrderReplays(const cs::String& verb);
 	/// <summary>US-T492: one logged order (its co-op wire text "<verb> <args>") carried out as single player gives it, through
 	/// the same entry points (CoopSends is false with no peer, and Recording is off while replaying).</summary>

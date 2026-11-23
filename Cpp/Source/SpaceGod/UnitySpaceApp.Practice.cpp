@@ -111,7 +111,12 @@ namespace SpaceGod
 		// Out of any screen the spawn was asked from (the spawn grid, the galaxy map): straight to the helm.
 		ShowSpawn = ShowGalaxyMap = ShowPicker = false;
 		if (CoopSpawns("practice", cs::String(), frame, offsetKm, forward)) return; // US-T44 (US-T43): the rest on every peer (CoopSpawnPractice)
+		PracticeFighterAt(frame, offsetKm, forward);
+	}
 
+	void UnitySpaceApp::PracticeFighterAt(int frame, DVec3 offsetKm, DVec3 forward)
+	{
+		// US-T493: the practice fighter brought or spawned at a spot, also the rewind seek's replay of a logged practice order.
 		double jd = Clock->Jd;
 		auto frameHelio = Ephemeris()->Helio(frame);
 		auto ship = ReusablePracticeFighter();

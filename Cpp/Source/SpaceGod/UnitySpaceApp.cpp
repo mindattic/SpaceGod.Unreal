@@ -1092,7 +1092,12 @@ namespace SpaceGod
 		auto forwardUnity = SpaceCamera->Rotation * Vector3::forward();
 		auto forward = DVec3(forwardUnity.x, forwardUnity.y, forwardUnity.z).SwapYZ();
 		if (CoopSpawns("spawn", cs::Cat(static_cast<int>(cls), " ", hostile ? 1 : 0), frame, offsetKm, forward)) return; // US-T44 (US-T43): the rest on every peer (CoopSpawnShip)
+		SpawnShipAt(cls, hostile, frame, offsetKm, forward);
+	}
 
+	void UnitySpaceApp::SpawnShipAt(ShipClass cls, bool hostile, int frame, DVec3 offsetKm, DVec3 forward)
+	{
+		// US-T493: the spawn proper, also the rewind seek's replay of a logged spawn order (RewindReplayOrder).
 		auto faction = hostile ? World()->Pirates : World()->Sol;
 		int spawned = ++spawnedCount;
 		cs::String name = cs::Cat("Sandbox ", cls, " ", spawned);

@@ -15,12 +15,15 @@
 #include <cmath>
 #include <iterator>
 #include <exception>
+#include <functional>
 
 #include "Astro.h"
 #include "Fleet.h"
 #include "SimClock.h"
 #include "World.h"
+#include "Combat/Battle.h"
 #include "Combat/War.h"
+#include "Embodiment/MechWalker.h" // US-T493: a mech order replayed
 #include "Persistence/InterventionLog.h"
 #include "Persistence/SaveGame.h"
 #include "Session/Commands.h"
@@ -576,8 +579,8 @@ namespace SpaceGod
 
 	bool UnitySpaceApp::RewindOrderReplays(const cs::String& verb)
 	{
-		// US-T492: spawn and practice (the helm taken), mech and the reset or the co-op smoke's verbs are not replayed yet.
-		return verb != "spawn" && verb != "practice" && verb != "mech" && verb != "reset" && verb != "hrfight" && verb != "hrdrop" && verb != "hrborn";
+		// US-T492: the reset and the co-op smoke's verbs are not replayed (US-T493 replays spawn, practice and mech).
+		return verb != "reset" && verb != "hrfight" && verb != "hrdrop" && verb != "hrborn";
 	}
 
 	void UnitySpaceApp::RewindReplayOrders(long long serial)
@@ -615,7 +618,55 @@ namespace SpaceGod
 			return s;
 		};
 		if (!RewindOrderReplays(verb)) return; // the seek stops before it (RewindUnreplayable)
-		if (verb == "travel")
+		// US-T493: a spawn's spot as CoopSpawns wrote it (frame, offset km, forward, then the camera's up frame).
+		auto spawnAt = [&a](size_t at, std::function<void(int, DVec3, DVec3)> spawn)
+		{
+			int frame = Wire::ParseI(a.at(at));
+			DVec3 offsetKm(Wire::ParseD(a.at(at + 1)), Wire::ParseD(a.at(at + 2)), Wire::ParseD(a.at(at + 3)));
+			DVec3 forward(Wire::ParseD(a.at(at + 4)), Wire::ParseD(a.at(at + 5)), Wire::ParseD(a.at(at + 6)));
+			if (a.size() > at + 7)
+			{
+				auto c = Wire::Split(a[at + 7], ',');
+				CoopUpFrame = Quaternion(Wire::ParseF(c.at(0)), Wire::ParseF(c.at(1)), Wire::ParseF(c.at(2)), Wire::ParseF(c.at(3)));
+			}
+			try { spawn(frame, offsetKm, forward); }
+			catch (...) { CoopUpFrame.reset(); throw; }
+			CoopUpFrame.reset();
+		};
+		if (verb == "spawn" || verb == "practice")
+		{
+			// The helm let go first, as SpawnShip and SpawnPracticeFighter do before they log the order.
+			ReleaseSeat();
+			if (IsPiloting()) ExitPiloting();
+			if (verb == "spawn")
+			{
+				auto cls = static_cast<ShipClass>(Wire::ParseI(a.at(0)));
+				bool hostile = a.at(1) == "1";
+				spawnAt(2, [this, cls, hostile](int frame, DVec3 offsetKm, DVec3 forward) { SpawnShipAt(cls, hostile, frame, offsetKm, forward); });
+			}
+			else
+			{
+				ShowSpawn = ShowGalaxyMap = ShowPicker = false;
+				spawnAt(0, [this](int frame, DVec3 offsetKm, DVec3 forward) { PracticeFighterAt(frame, offsetKm, forward); });
+			}
+		}
+		else if (verb == "mech")
+		{
+			// Only logged in co-op (DeployMech's CoopSends): DeployMech's single-player tail on the logged battle and unit.
+			const auto& battles = World()->War->Battles;
+			int b = Wire::ParseI(a.at(0)), u = Wire::ParseI(a.at(1));
+			auto battle = b >= 0 && b < battles.Count() ? battles[b] : nullptr;
+			auto unit = battle != nullptr && u >= 0 && u < battle->Units.Count() ? battle->Units[u] : nullptr;
+			cs::String why;
+			auto mech = MechWalker::Deploy(battle, unit, why);
+			if (mech == nullptr) ShowToast(cs::Cat("Can't send out a mech: ", why));
+			else if (!EmbodiableEquals(HeldNonHelm(), mech))
+			{
+				mechHeight = 0;
+				TakeSeat(mech);
+			}
+		}
+		else if (verb == "travel")
 		{
 			if (auto to = Galaxy->Find(args)) TravelTo(to);
 		}
