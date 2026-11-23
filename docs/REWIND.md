@@ -290,8 +290,9 @@ The owner approved the build on 2026-11-19. The phases below each land on their 
   the keyframe at or before T, then replays the logged frames through the game's own frame: each replayed frame gets
   its logged dt and has its clock put in the logged state first (as a co-op client does with the host's frame), and the
   player's input is handed over (idle). It stops at the frame that reaches T, or short of it at the first frame the
-  player acted on (that input is not replayed yet), at a gap in the log, or after 90 s of play replayed (replay runs at
-  the speed it was played). Esc stops a replay where it is. A replayed frame whose date differs from the log's is
+  player acted on (that input is not replayed yet), at a gap in the log, or at the first world check that differs
+  (below). Since US-T486 the frames are fast-forwarded headless (as many as fit 30 ms of each engine frame, through the
+  world steps only), so the log is the only cap. Esc stops a replay where it is. A replayed frame whose date differs from the log's is
   counted and logged as a warning.
 - *Timeline bar.* Under the top of the screen after Shift+F8, after any rewind and while a seek replays (`sg.Rewind bar`
   shows it for 30 s): the session from its start to now, a tick per keyframe (the session start wider), the replayable
@@ -299,10 +300,15 @@ The owner approved the build on 2026-11-19. The phases below each land on their 
   seeks there (when the cursor is free, not at the controls).
 - *Replay checks.* Every 60th logged frame also keeps a hash of the world just after it (FNV-1a over co-op's desync
   digest, `CoopDigest`: the clock, every system's counts and treasuries, the watched system's ships and settlements).
-  A seek's replay recomputes it at the same frames and counts the ones that differ, so whether a replay re-lived the
-  play exactly is measured in the game, not assumed: the arrival toast says when it drifted, the log gets a line
-  either way, and `sg.Rewind list` shows the last replay's verdict ("exact (N checks matched)", or where it first
-  drifted). The check only reads the world; nothing in the simulation calls it.
+  A seek's replay recomputes it at the same frames (the headless fast-forward too, at the point the live log takes it:
+  right after the logged clock is applied), so whether a replay re-lived the play exactly is measured in the game, not
+  assumed. *The check is a gate (US-T487):* the first check that differs stops the replay on that frame (the frame
+  steps whole, then play goes on live from the next), since past it the world is no longer the play's and replaying
+  further would only carry the drift on. The log gets a warning naming the first differing frame's serial and session
+  time, the toast says the replay stopped short because the world drifted at that frame, and `sg.Rewind list` shows the
+  last replay's verdict ("N of M frames replayed, exact (K checks matched)", or "stopped where it drifted from the
+  play: frame serial S, ... (K checks matched before it)"). The check only reads the world; nothing in the simulation
+  calls it.
 - *Adventures replay round the logged point.* The world's adventures spawn round the camera (`PlayerHelioKm`), and a
   restored view need not stand where the play's did. Each logged frame now also keeps whether it ran the adventures
   and round which point, and a replayed frame runs them round that point (`RewindAdventures`), as a co-op client runs

@@ -85,7 +85,7 @@ namespace SpaceGod
 		{
 			// This frame was the logged one: on to the next, until the seek arrives.
 			RewindReplayNote();
-			if (rewindReplayNext >= rewindReplayStop) FinishRewindReplay(false);
+			if (rewindReplayNext >= rewindReplayStop || rewindReplayMismatches > 0) FinishRewindReplay(false); // US-T487: a drift gates it
 			return;
 		}
 		LogRewindFrame();
@@ -155,11 +155,18 @@ namespace SpaceGod
 			rewindAdventureSerial = f->Serial;
 			rewindAdventureFromLog = true;
 			if (Clock->Jd != f->JdAfter) rewindReplayDrift++;
-			// The world itself, where the play kept a check: the replay is exact only while every one matches.
+			// The world itself, where the play kept a check: the replay is exact only while every one matches. US-T487: the
+			// first that differs gates the replay (its callers finish it here): past it the world is no longer the play's.
 			if (f->Check != 0)
 			{
 				rewindReplayChecks++;
-				if (RewindWorldCheck() != f->Check && rewindReplayMismatches++ == 0) rewindReplayFirstMismatchS = f->SessionS;
+				if (RewindWorldCheck() != f->Check && rewindReplayMismatches++ == 0)
+				{
+					rewindReplayFirstMismatchS = f->SessionS;
+					rewindReplayFirstMismatchSerial = f->Serial;
+					Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay: the world check differs from the play's at frame serial ",
+						f->Serial, " (", RewindSpan(f->SessionS), " into the session, after ", rewindReplayChecks - 1, " matched); the replay stops there"));
+				}
 			}
 		}
 		rewindReplayNext++;
@@ -195,6 +202,13 @@ namespace SpaceGod
 			CoopUpdateAdventures(!Travel->Active && !InFtlCruise());
 			DropLostTargets();
 			UpdateCourseShip();
+			// US-T487: this frame's world check differed from the play's: the fast-forward stops on it (the frame stepped
+			// whole, so play goes on from the next), and the engine frame runs live.
+			if (rewindReplayMismatches > 0)
+			{
+				FinishRewindReplay(false);
+				break;
+			}
 			// A star travel under way, or another system shown: the whole frame takes it from here (its views follow).
 			if (Travel->Active || ActiveSystem != system) break;
 		}
@@ -478,6 +492,7 @@ namespace SpaceGod
 		rewindReplayDrift = 0;
 		rewindReplayChecks = rewindReplayMismatches = 0;
 		rewindReplayFirstMismatchS = -1;
+		rewindReplayFirstMismatchSerial = -1;
 		ShowToast(cs::Cat("Replaying ", RewindSpan(wallS), " of play to the moment picked  (Esc stops here)"));
 		return true;
 	}
@@ -490,17 +505,21 @@ namespace SpaceGod
 		if (rewindReplayDrift > 0)
 			Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay: the clock differed from the log on ", rewindReplayDrift, " of ",
 				rewindReplayNext - rewindReplayStart, " frames"));
-		// Whether the replay re-lived the play: its world checks against the ones the play kept.
+		// Whether the replay re-lived the play: its world checks against the ones the play kept. US-T487: the first that
+		// differs stops the replay there (RewindReplayNote's callers), so the verdict names that frame.
+		bool drifted = rewindReplayMismatches > 0;
 		cs::String exact = rewindReplayChecks == 0 ? cs::String("not checked (too short)")
-			: rewindReplayMismatches == 0 ? cs::Cat("exact (", rewindReplayChecks, " checks matched)")
-			: cs::Cat("drifted from the play from ", RewindSpan(rewindReplayFirstMismatchS), " into the session (", rewindReplayMismatches,
-				" of ", rewindReplayChecks, " checks differ)");
-		rewindLastVerdict = cs::Cat(rewindReplayNext - rewindReplayStart, " frames replayed, ", exact);
-		if (rewindReplayMismatches > 0) Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay ", rewindLastVerdict));
+			: !drifted ? cs::Cat("exact (", rewindReplayChecks, " checks matched)")
+			: cs::Cat("stopped where it drifted from the play: frame serial ", rewindReplayFirstMismatchSerial, ", ",
+				RewindSpan(rewindReplayFirstMismatchS), " into the session (", rewindReplayChecks - 1, " checks matched before it)");
+		rewindLastVerdict = cs::Cat(rewindReplayNext - rewindReplayStart, " of ", rewindReplayStop - rewindReplayStart, " frames replayed, ", exact);
+		if (drifted) Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay ", rewindLastVerdict));
 		else Debug::Log(cs::Cat("[Unity.SpaceGod] Rewind replay ", rewindLastVerdict));
 		cs::String when = Astro::ToDateTime(Clock->Jd).ToString("yyyy-MM-dd HH:mm:ss");
-		cs::String tail = rewindReplayMismatches > 0 ? cs::String("  (the replay drifted from the play: sg.Rewind list)") : cs::String();
-		if (stopped) ShowToast(cs::Cat("Replay stopped at ", when, " UTC", tail));
+		cs::String tail = drifted ? cs::String("  (sg.Rewind list)") : cs::String();
+		if (drifted) ShowToast(cs::Cat("Replay stopped at ", when, " UTC, short of the moment picked: the world drifted from the play at frame ",
+			rewindReplayFirstMismatchSerial, tail));
+		else if (stopped) ShowToast(cs::Cat("Replay stopped at ", when, " UTC", tail));
 		else if (!rewindReplayWhy.empty()) ShowToast(cs::Cat("Replayed to ", when, " UTC, short of the moment picked: ", rewindReplayWhy, tail));
 		else ShowToast(cs::Cat("Arrived at ", when, " UTC  (play on and the old future is replaced)", tail));
 		ShowRewindBar(6);
