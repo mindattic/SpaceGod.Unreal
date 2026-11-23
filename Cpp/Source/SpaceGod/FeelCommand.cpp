@@ -85,7 +85,9 @@ namespace
 			scripted = true;
 		}
 
-		static FString V(DVec3 v) { return FString::Printf(TEXT("%.9g,%.9g,%.9g"), v.X, v.Y, v.Z); }
+		// US-T473: full double precision. At real scale the scene sits ~1e5 out and a fighter is 5e-5 across, so %.9g's
+		// 1e-4 step was two fighter radii: every frame read as a 20-radius position pop.
+		static FString V(DVec3 v) { return FString::Printf(TEXT("%.17g,%.17g,%.17g"), v.X, v.Y, v.Z); }
 		static FString V(SpaceGod::Vector3 v) { return FString::Printf(TEXT("%.6f,%.6f,%.6f"), v.x, v.y, v.z); }
 
 		void Sample(UnitySpaceApp& app, double now)
@@ -99,7 +101,7 @@ namespace
 			{
 				if (s == nullptr || s->Destroyed) return TEXT("0,0,0,0");
 				auto t = Target::OfShip(s);
-				return FString::Printf(TEXT("%s,%.9g"), *V(app.TargetScene(t)), app.TargetRadius(t));
+				return FString::Printf(TEXT("%s,%.17g"), *V(app.TargetScene(t)), app.TargetRadius(t));
 			};
 			const TCHAR* held = app.IsPiloting() ? (app.Piloted.Ship == scene->fighter ? TEXT("fighter") : TEXT("battleship")) : TEXT("god");
 			rows.Add(FString::Printf(TEXT("\"%s\",%.5f,%s,%d,%s,%s,%s,%.4f,%s,%d,%.4f,%d,%.6g,%s,%s"),
