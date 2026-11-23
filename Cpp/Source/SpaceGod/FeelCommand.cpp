@@ -104,11 +104,16 @@ namespace
 				return FString::Printf(TEXT("%s,%.17g"), *V(app.TargetScene(t)), app.TargetRadius(t));
 			};
 			const TCHAR* held = app.IsPiloting() ? (app.Piloted.Ship == scene->fighter ? TEXT("fighter") : TEXT("battleship")) : TEXT("god");
-			rows.Add(FString::Printf(TEXT("\"%s\",%.5f,%s,%d,%s,%s,%s,%.4f,%s,%d,%.4f,%d,%.6g,%s,%s"),
+			// US-T477: what the god's camera is focused on, so the report measures a Focus frame against that hull and a
+			// Free one against the scene (not against a fighter flying off on its own).
+			const auto& ft = cam->FocusTarget;
+			const TCHAR* focus = !ft.IsShip() ? (ft.IsNone() ? TEXT("none") : TEXT("other"))
+				: ft.Ship == scene->fighter ? TEXT("fighter") : ft.Ship == scene->battleship ? TEXT("battleship") : TEXT("other");
+			rows.Add(FString::Printf(TEXT("\"%s\",%.5f,%s,%d,%s,%s,%s,%.4f,%s,%d,%.4f,%d,%.6g,%s,%s,%s"),
 				at < steps.size() ? *steps[at].first : TEXT("end"), dt, UTF8_TO_TCHAR(SpaceGod::Cameras::ToString(cam->Mode)), cam->PilotLocked ? 1 : 0,
 				*V(cam->ScenePosition), *V(fwd), *V(up), app.UnityCamera ? app.UnityCamera->fieldOfView : 0.0f, held,
 				app.PossessionShowing() ? 1 : 0, app.PossessionT(), cam->PilotView.has_value() ? 1 : 0, cam->CurrentSpeed,
-				*shipCols(scene->fighter), *shipCols(scene->battleship)));
+				*shipCols(scene->fighter), *shipCols(scene->battleship), focus));
 		}
 
 		bool Tick()
@@ -153,7 +158,7 @@ namespace
 				if (auto* a = FeelActor()) a->bScriptedInput = false;
 			}
 			rows.Insert(TEXT("step,dt,mode,locked,cx,cy,cz,fx,fy,fz,ux,uy,uz,fov,held,show,showT,pilotView,swimSpeed,"
-				"ax,ay,az,ar,bx,by,bz,br"), 0);
+				"ax,ay,az,ar,bx,by,bz,br,focus"), 0);
 			FFileHelper::SaveStringArrayToFile(rows, *csv);
 			if (quit) FPlatformMisc::RequestExit(false);
 			return false;
@@ -278,7 +283,10 @@ namespace
 			return true;
 		});
 		push(TEXT("fighter again"), wait(3.0));
-		push(TEXT("let go again"), [](UnitySpaceApp& app, double)
+		// US-T477: let go mid-roll, so ExitFocus has a banked chase to ease level (the first let-go comes after a coast,
+		// with the hull level again).
+		push(TEXT("fighter bank"), hold({ Key::LeftCtrl, Key::D }, 0.7));
+		push(TEXT("let go banked"), [](UnitySpaceApp& app, double)
 		{
 			app.PickCommand();
 			return true;

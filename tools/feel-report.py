@@ -61,19 +61,43 @@ def main():
         a, ar = vec(r, 'ax', 'ay', 'az'), float(r['ar'])
         b, br = vec(r, 'bx', 'by', 'bz'), float(r['br'])
         held = r['held']
-        subj, rad = (a, ar) if held == 'fighter' else (b, br) if held == 'battleship' else (a, ar)
-        frames.append(dict(step=r['step'], dt=float(r['dt']), mode=r['mode'], held=held, c=c, f=f, u=u, fov=float(r['fov']),
-                           rel=sub(c, subj), rad=max(rad, 1e-12), show=r['show'] == '1', pv=r['pilotView'] == '1'))
+        # US-T477: CSVs before it have no focus column; a god then counts as focused on the fighter while in Focus mode.
+        focus = r.get('focus') or ('fighter' if r['mode'] == 'Focus' else 'none')
+        frames.append(dict(step=r['step'], dt=float(r['dt']), mode=r['mode'], held=held, focus=focus, c=c, f=f, u=u,
+                           fov=float(r['fov']), hull={'fighter': (a, ar), 'battleship': (b, br)},
+                           show=r['show'] == '1', pv=r['pilotView'] == '1'))
+
+    def followed(p, q):
+        # US-T477: the hull the view follows across the pair: the one held (on a hand-off, the one taken, or the one let
+        # go), else the one the god's camera is focused on, else none (the scene).
+        for f in (q, p):
+            if f['held'] in f['hull']:
+                return f['held']
+        for f in (q, p):
+            if f['focus'] in f['hull']:
+                return f['focus']
+        return None
+
     out = []
     for i in range(1, len(frames)):
         p, q = frames[i - 1], frames[i]
-        same_subject = p['held'] == q['held']
         look = angle(p['f'], q['f'])
         roll = roll_change(p['f'], p['u'], q['f'], q['u'])
-        # Against the hull followed; when the hull followed changes, against the scene instead (in the new one's radii).
-        move = norm(sub(q['rel'], p['rel'])) / q['rad'] if same_subject else norm(sub(q['c'], p['c'])) / q['rad']
+        subj = followed(p, q)
+        rad = q['hull'][subj or 'fighter'][1]
+        rad = max(rad, 1e-12)
+        if subj is not None:
+            # Against the hull followed, in both frames: a floating-origin shift moves camera and hull alike and cancels.
+            move = norm(sub(sub(q['c'], q['hull'][subj][0]), sub(p['c'], p['hull'][subj][0]))) / rad
+        else:
+            # The free camera, against the scene. An origin shift moves both hulls by the same step: take it out.
+            dc = sub(q['c'], p['c'])
+            da = sub(q['hull']['fighter'][0], p['hull']['fighter'][0])
+            db = sub(q['hull']['battleship'][0], p['hull']['battleship'][0])
+            shift = da if norm(da) > 0 and norm(sub(da, db)) < 0.05 * norm(da) else [0.0, 0.0, 0.0]
+            move = norm(sub(dc, shift)) / rad
         out.append(dict(i=i, step=q['step'], dt=q['dt'], look=look, roll=roll, move=move, dfov=q['fov'] - p['fov'],
-                        mode=q['mode'], held=q['held'], show=q['show'], pv=q['pv'], fmode=p['mode'] + '>' + q['mode'] if p['mode'] != q['mode'] else q['mode']))
+                        mode=q['mode'], held=q['held'] if subj is not None or q['held'] != 'god' else 'god(scene)', show=q['show'], pv=q['pv'], fmode=p['mode'] + '>' + q['mode'] if p['mode'] != q['mode'] else q['mode']))
 
     def spikes(key, floor, k=4.0, w=6):
         found = []
