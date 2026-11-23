@@ -4,6 +4,7 @@
 
 #include "UnitySpaceApp.h"
 #include "UI/Hud.h"
+#include "UI/GalaxyMapScreen.h" // US-T492: an order replayed
 #include "UI/UiMotion.h"
 #include "Coop/CoopPeer.h"
 #include "Input/Gamepad.h"
@@ -156,6 +157,7 @@ namespace SpaceGod
 			// The rest of this frame (its adventures) reads the logged frame's.
 			rewindAdventureSerial = f->Serial;
 			rewindAdventureFromLog = true;
+			RewindReplayOrders(rewindReplayNext - 1); // US-T492: the previous frame's orders, given after its world step
 			RewindReplayInterventions(f->Serial, f->Intervened); // US-T488: what the player did on it
 			if (Clock->Jd != f->JdAfter) rewindReplayDrift++;
 			// The world itself, where the play kept a check: the replay is exact only while every one matches. US-T487: the
@@ -212,6 +214,7 @@ namespace SpaceGod
 				FinishRewindReplay(false);
 				break;
 			}
+			RewindReplayOrders(f->Serial); // US-T492: this frame's orders, after its world step as the play gave them
 			// A star travel under way, or another system shown: the whole frame takes it from here (its views follow).
 			if (Travel->Active || ActiveSystem != system) break;
 		}
@@ -508,6 +511,7 @@ namespace SpaceGod
 		rewindReplayChecks = rewindReplayMismatches = 0;
 		rewindReplayFirstMismatchS = -1;
 		rewindReplayFirstMismatchSerial = -1;
+		rewindReplayOrdersDone = start - 1;
 		// US-T488: each seat's stick as it stood when the keyframe's world stepped on (a control frame is kept only on change).
 		rewindReplayControls.clear();
 		for (const auto& e : interventions.Entries())
@@ -528,7 +532,13 @@ namespace SpaceGod
 		for (; it != entries.end() && it->Tick == tick; ++it)
 		{
 			if (it->Kind == InterventionKind::Clock) continue; // the logged frame's clock (RewindFrame::Before)
-			if (it->Kind == InterventionKind::Order) return &*it; // US-T488 split: orders need a peer-less CoopExecute
+			if (it->Kind == InterventionKind::Order)
+			{
+				// US-T492: replayed peer-less (RewindReplayOrder), but for the verbs that stop the seek.
+				auto space = it->Text.find(' ');
+				if (!RewindOrderReplays(space == cs::String::npos ? it->Text : it->Text.substr(0, space))) return &*it;
+				continue;
+			}
 			try
 			{
 				if (InterventionLog::CommandOf(*it) == nullptr) return &*it;
@@ -562,6 +572,89 @@ namespace SpaceGod
 			}
 		}
 		if (applied) session->ApplyPending(); // Recording is off while replaying: nothing is logged again
+	}
+
+	bool UnitySpaceApp::RewindOrderReplays(const cs::String& verb)
+	{
+		// US-T492: spawn and practice (the helm taken), mech and the reset or the co-op smoke's verbs are not replayed yet.
+		return verb != "spawn" && verb != "practice" && verb != "mech" && verb != "reset" && verb != "hrfight" && verb != "hrdrop" && verb != "hrborn";
+	}
+
+	void UnitySpaceApp::RewindReplayOrders(long long serial)
+	{
+		if (serial <= rewindReplayOrdersDone || serial < rewindReplayStart) return;
+		rewindReplayOrdersDone = serial;
+		const RewindFrame* f = RewindFrameAt(serial);
+		if (f == nullptr || !f->Intervened) return;
+		const auto& entries = interventions.Entries();
+		auto it = std::lower_bound(entries.begin(), entries.end(), serial, [](const InterventionEntry& e, long long t) { return e.Tick < t; });
+		std::vector<std::pair<int, cs::String>> orders; // copied: an order may touch the log
+		for (; it != entries.end() && it->Tick == serial; ++it)
+			if (it->Kind == InterventionKind::Order) orders.emplace_back(it->Seat, it->Text);
+		for (const auto& o : orders)
+		{
+			try { RewindReplayOrder(o.first, o.second); }
+			catch (const std::exception& e)
+			{
+				Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay: order '", o.second, "' failed: ", e.what()));
+			}
+		}
+	}
+
+	void UnitySpaceApp::RewindReplayOrder(int seat, const cs::String& text)
+	{
+		namespace Wire = Coop::Wire;
+		auto space = text.find(' ');
+		cs::String verb = space == cs::String::npos ? text : text.substr(0, space);
+		cs::String args = space == cs::String::npos ? cs::String() : text.substr(space + 1);
+		std::vector<cs::String> a = args.empty() ? std::vector<cs::String>() : Wire::Split(args, ' ');
+		auto joinFrom = [&a](size_t from)
+		{
+			cs::String s;
+			for (size_t i = from; i < a.size(); i++) s = i > from ? cs::Cat(s, " ", a[i]) : a[i];
+			return s;
+		};
+		if (!RewindOrderReplays(verb)) return; // the seek stops before it (RewindUnreplayable)
+		if (verb == "travel")
+		{
+			if (auto to = Galaxy->Find(args)) TravelTo(to);
+		}
+		else if (verb == "plot") PlotCourse(Galaxy->Find(args));
+		else if (verb == "cruise") CruiseTo(CruiseTargetFromWire(args));
+		else if (verb == "laneplot") PlotLaneRoute(Wire::ParseI(a.at(0)), Wire::ParseI(a.at(1)), joinFrom(2));
+		else if (verb == "laneclear") ClearLaneRoute();
+		else if (verb == "autopilot") EngageCourseAutopilot();
+		else if (verb == "crew")
+		{
+			int id = Wire::ParseI(a.at(0));
+			cs::Ref<Ship> ship = id >= 0 && id < Fleet()->Ships().Count() ? Fleet()->Ships()[id] : nullptr;
+			auto to = Galaxy->Find(joinFrom(2));
+			if (ship != nullptr && to != nullptr) StartCrewCourse(ship, to, a.at(1) == "1");
+		}
+		else if (verb == "tanker") CallTanker();
+		else if (verb == "civ")
+		{
+			bool sent = false;
+			cs::String done;
+			cs::String why = CivHandAsk(args, sent, done);
+			if (!why.empty()) ShowToast(cs::Cat("The SpaceGod's hand is refused: ", why));
+		}
+		else if (verb == "ftlplot")
+		{
+			cs::String name = joinFrom(1);
+			auto system = Galaxy->Find(name);
+			cs::Ref<FtlTarget> target = system != nullptr ? FtlTarget::OfStar(system) : nullptr;
+			if (target == nullptr)
+				for (const auto& star : Galaxy->NearbyStars)
+					if (star.Name == name) { target = FtlTarget::OfStar(star); break; }
+			if (target != nullptr) PlotFtlCourse(target, a.at(0) == "1");
+		}
+		else if (verb == "comms") CoopComms(seat, true, args);
+		else if (verb == "voidping" || verb == "voiddark") VoidStopKey(verb == "voidping", FtlCruise, Clock->Jd);
+		else if (verb == "ftlclear") ClearFtlCourse();
+		else if (verb == "ftlauto") EngageFtlAutopilot();
+		else if (!hud->CoopExecute(verb, a) && !UI::GalaxyMapScreen::CoopExecute(this, verb, a))
+			Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay: unknown order '", verb, "'"));
 	}
 
 	bool UnitySpaceApp::RewindReplayedControl(EmbodimentInput& input) const

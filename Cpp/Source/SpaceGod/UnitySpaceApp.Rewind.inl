@@ -140,6 +140,18 @@ private:
 	/// <summary>US-T488: while a seek replays, the logged stick of the seat the local player holds into input (true), so
 	/// UpdateSeat steps it as the play did.</summary>
 	bool RewindReplayedControl(Core::EmbodimentInput& input) const;
+	/// <summary>US-T492: whether a seek replays an Order entry with this verb (not spawn, practice, mech, reset or the hr*
+	/// smoke verbs: those stop the seek).</summary>
+	static bool RewindOrderReplays(const cs::String& verb);
+	/// <summary>US-T492: one logged order (its co-op wire text "<verb> <args>") carried out as single player gives it, through
+	/// the same entry points (CoopSends is false with no peer, and Recording is off while replaying).</summary>
+	void RewindReplayOrder(int seat, const cs::String& text);
+	/// <summary>US-T492: the Order entries of logged frame <paramref name="serial"/>, once, after that frame's world step (an
+	/// order is logged from the HUD or the map after the step): from RewindFastForward after the step, else from the next
+	/// frame's RewindReplayNote before its commands. Only on a frame the player acted on.</summary>
+	void RewindReplayOrders(long long serial);
+	/// <summary>US-T492: the last logged frame whose orders the replay has carried out.</summary>
+	long long rewindReplayOrdersDone = -1;
 	/// <summary>US-T488: each seat's last logged control frame as the replay has reached it.</summary>
 	std::map<int, cs::Ref<Core::IGameCommand>> rewindReplayControls;
 
