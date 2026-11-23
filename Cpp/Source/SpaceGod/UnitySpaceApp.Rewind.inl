@@ -96,8 +96,17 @@ private:
 	std::unordered_map<int, long long> rewindKeySerial;
 	/// <summary>About 10 minutes of frames at 60 fps (a frame is under 112 bytes).</summary>
 	static constexpr size_t RewindMaxFrames = 40000;
-	/// <summary>A seek replays at most this many real seconds of play (replay runs at the speed it was played).</summary>
-	static constexpr double RewindMaxReplayS = 90;
+	/// <summary>US-T486: the real seconds each engine frame spends replaying logged frames headless while a seek replays.</summary>
+	static constexpr double RewindFastForwardBudgetS = 0.03;
+	/// <summary>US-T486: while a seek replays, runs logged frames through the live frame's world steps only (clock, galaxy,
+	/// helm, seat, adventures, lost targets, course) until the wall budget is spent, leaving the next one (and always the
+	/// last) to the whole frame. Called at the top of Update, before RewindFrameStart.</summary>
+	void RewindFastForward();
+	/// <summary>The session's game time from the clock's forward steps (UpdateRewind, and each fast-forwarded frame).</summary>
+	void RewindNoteSessionTime();
+	/// <summary>A replayed frame's bookkeeping at the point the live log takes it: its adventures, clock drift and world
+	/// check; then on to the next logged frame.</summary>
+	void RewindReplayNote();
 
 	/// <summary>US-T475: what the player did, frame by frame, stamped with the frame log's serials: the session's commands
 	/// (LocalSession::ApplyPending records them while Recording) and the clock's changes. Recording only while the frame

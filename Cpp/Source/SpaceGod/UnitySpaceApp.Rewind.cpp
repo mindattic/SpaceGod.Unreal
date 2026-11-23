@@ -10,6 +10,7 @@
 #include "Input/InputDevice.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <iterator>
 #include <exception>
@@ -77,29 +78,13 @@ namespace SpaceGod
 			rewindFrameStarted = false;
 			return;
 		}
-		// The timeline's game time: what the clock moved forward (a clock set back by hand does not run the session back).
-		if (!std::isnan(rewindLastJd) && Clock->Jd > rewindLastJd) rewindSessionS += (Clock->Jd - rewindLastJd) * 86400.0;
-		rewindLastJd = Clock->Jd;
+		RewindNoteSessionTime();
 
 		double wall = Time::realtimeSinceStartupAsDouble;
 		if (rewindReplaying)
 		{
 			// This frame was the logged one: on to the next, until the seek arrives.
-			rewindFrameStarted = false;
-			if (const RewindFrame* f = RewindFrameAt(rewindReplayNext))
-			{
-				// The rest of this frame (its adventures) reads the logged frame's.
-				rewindAdventureSerial = f->Serial;
-				rewindAdventureFromLog = true;
-				if (Clock->Jd != f->JdAfter) rewindReplayDrift++;
-				// The world itself, where the play kept a check: the replay is exact only while every one matches.
-				if (f->Check != 0)
-				{
-					rewindReplayChecks++;
-					if (RewindWorldCheck() != f->Check && rewindReplayMismatches++ == 0) rewindReplayFirstMismatchS = f->SessionS;
-				}
-			}
-			rewindReplayNext++;
+			RewindReplayNote();
 			if (rewindReplayNext >= rewindReplayStop) FinishRewindReplay(false);
 			return;
 		}
@@ -151,6 +136,67 @@ namespace SpaceGod
 			// walking the world again every frame (the keyframes already kept can still be rewound to).
 			Debug::LogError(cs::Cat("[Unity.SpaceGod] Rewind keyframe failed: ", e.what()));
 			rewindEnabled = false;
+		}
+	}
+
+	void UnitySpaceApp::RewindNoteSessionTime()
+	{
+		// The timeline's game time: what the clock moved forward (a clock set back by hand does not run the session back).
+		if (!std::isnan(rewindLastJd) && Clock->Jd > rewindLastJd) rewindSessionS += (Clock->Jd - rewindLastJd) * 86400.0;
+		rewindLastJd = Clock->Jd;
+	}
+
+	void UnitySpaceApp::RewindReplayNote()
+	{
+		rewindFrameStarted = false;
+		if (const RewindFrame* f = RewindFrameAt(rewindReplayNext))
+		{
+			// The rest of this frame (its adventures) reads the logged frame's.
+			rewindAdventureSerial = f->Serial;
+			rewindAdventureFromLog = true;
+			if (Clock->Jd != f->JdAfter) rewindReplayDrift++;
+			// The world itself, where the play kept a check: the replay is exact only while every one matches.
+			if (f->Check != 0)
+			{
+				rewindReplayChecks++;
+				if (RewindWorldCheck() != f->Check && rewindReplayMismatches++ == 0) rewindReplayFirstMismatchS = f->SessionS;
+			}
+		}
+		rewindReplayNext++;
+	}
+
+	void UnitySpaceApp::RewindFastForward()
+	{
+		// US-T486: a seek replays headless: as many logged frames as fit the wall budget run through the world steps of the
+		// live frame only, in its order, and the engine frame then runs the next logged frame whole (its views drawn). The
+		// last logged frame is always left to the whole frame, so the replay ends as it did (FinishRewindReplay there).
+		if (!rewindReplaying || Clock == nullptr || Galaxy == nullptr || Input.Escape) return; // Esc: RewindFrameStart stops it
+		Input.Handover(); // the logged frames had idle hands (a frame acted on ends the seek)
+		auto until = std::chrono::steady_clock::now() + std::chrono::microseconds(static_cast<long long>(RewindFastForwardBudgetS * 1e6));
+		auto system = ActiveSystem;
+		while (rewindReplaying && rewindReplayNext + 1 < rewindReplayStop && std::chrono::steady_clock::now() < until)
+		{
+			const RewindFrame* f = RewindFrameAt(rewindReplayNext);
+			if (f == nullptr) break;
+			float dt = f->Dt;
+			// As RewindFrameStart, then HandleCommands' UpdateRewind (the bookkeeping at the point the live log takes it).
+			rewindAdventureSerial = -1;
+			rewindAdventureFromLog = false;
+			f->Before.ApplyTo(*Clock);
+			RewindNoteSessionTime();
+			RewindReplayNote();
+			// As Update: the helm in a battle holds warp at real time, then the clock and the world step.
+			if (!Piloted.IsNone() && Piloted.Ship != nullptr && Piloted.Ship->Battle != nullptr && Clock->WarpIndex > 0) Clock->SetWarp(0);
+			Clock->Advance(dt);
+			Galaxy->Update(Clock->Jd);
+			SyncShipViews(); // a ship the world spawned gets its slots before the helm reads them
+			UpdatePiloting(dt);
+			UpdateSeat(dt);
+			CoopUpdateAdventures(!Travel->Active && !InFtlCruise());
+			DropLostTargets();
+			UpdateCourseShip();
+			// A star travel under way, or another system shown: the whole frame takes it from here (its views follow).
+			if (Travel->Active || ActiveSystem != system) break;
 		}
 	}
 
@@ -418,8 +464,7 @@ namespace SpaceGod
 			if (f == nullptr) { rewindReplayWhy = "the log ends there"; break; }
 			if (f->SessionS >= targetS - 1e-9) break;
 			if (f->Intervened) { rewindReplayWhy = "you acted there (your input is not replayed yet)"; break; }
-			if (wallS + f->Dt > RewindMaxReplayS) { rewindReplayWhy = cs::Cat("a seek replays at most ", cs::Fmt(RewindMaxReplayS, "F0"), " s of play"); break; }
-			wallS += f->Dt;
+			wallS += f->Dt; // US-T486: no cap but the log (RewindMaxFrames): the replay runs headless, faster than played
 		}
 		if (stop == start)
 		{
@@ -515,8 +560,9 @@ namespace SpaceGod
 			long long total = std::max<long long>(1, rewindReplayStop - rewindReplayStart);
 			double done = static_cast<double>(rewindReplayNext - rewindReplayStart) / static_cast<double>(total);
 			GUI::DrawTexture(Rect(xOf(nowS) - 1, strip.y - 3, 2, strip.height + 6), rewindBarHover);
-			line = cs::Cat("Replaying to ", RewindSpan(rewindReplayTargetS - frames.front()->SessionS), " into the session: ",
-				cs::Fmt(done * 100, "F0"), "%  (Esc stops here)");
+			// US-T486: the now marker walks to the target as the fast-forward runs; the line counts the frames.
+			line = cs::Cat("Fast-forwarding to ", RewindSpan(rewindReplayTargetS - frames.front()->SessionS), " into the session: ",
+				cs::Fmt(done * 100, "F0"), "%  (", rewindReplayNext - rewindReplayStart, " of ", total, " frames; Esc stops here)");
 		}
 		else if (hit.Contains(e.mousePosition))
 		{

@@ -487,6 +487,7 @@ namespace SpaceGod
 		bool overUi = IsPointerOverUi();
 		Input.Poll(overUi, ModelViewer::CapturesInput());
 		CaptureEvents::Hotkeys(Input); // US-T72: Alt+F9/F10/F11 while capture runs, on this machine only
+		RewindFastForward(); // US-T486: a seek's logged frames replayed headless, as many as fit the frame's budget
 		if (RewindFrameStart(dt)) Input.Handover(); // US-T99: the frame for the rewind log; while a seek replays, the logged frame has it
 		// The galaxy map turns with its own drag: the camera behind it does not look about meanwhile.
 		if ((ShowGalaxyMap || ShowSystemMap /* US-T258 */ || ShowHelp || ShowLogs || ShowDiscoveries || ShowEncyclopedia || ShowSociety /* US-T293 */) && !ScreenCleared) Input.ReleaseLook(); // US-T261: the logs screen too; US-T259: the discoveries; US-T271: the Encyclopedia
