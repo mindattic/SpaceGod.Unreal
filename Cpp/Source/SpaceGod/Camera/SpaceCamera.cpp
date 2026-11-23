@@ -175,6 +175,15 @@ namespace SpaceGod::Cameras
 		PilotView = std::nullopt;
 		PilotEye = nullptr;
 		SetRotation(rotation);
+		// US-T463: a chase or a seat's view may be rolled (the hull banked under the helm); the free camera has no roll, so
+		// letting go once snapped it level in one frame. The roll now eases out over LevelSeconds, as Level does.
+		auto level = ComposedRotation();
+		if (Quaternion::Angle(rotation, level) > 0.05f)
+		{
+			levelOffset = rotation * Quaternion::Inverse(level);
+			levelT = 0.0f;
+		}
+		Rotation = level;
 		velocity = Vector3::zero();
 		SetScenePosition(ScenePosition);
 	}
@@ -330,10 +339,14 @@ namespace SpaceGod::Cameras
 			// the hull's own forward, which the player may already be turning under their own input while
 			// this plays out. Read live (not just at the moment the chase began) so a turn mid-transition
 			// is followed rather than fought.
+			// US-T463: behind the view the seat will hold (the mouse's, at a fighter's string or a capital's look-around), not
+			// the bare hull's facing: the chase (UpdateFocus) sits there, so the glide once ended a view's turn off it and
+			// popped across on its last frame.
 			auto shipRotation = world->TargetRotation(FocusTarget);
-			auto endDirV = shipRotation * Vector3::back();
+			auto viewRotation = PilotView.value_or(shipRotation);
+			auto endDirV = viewRotation * Vector3::back();
 			dir = Vector3::Slerp(ToVector(startDir), endDirV, e).normalized();
-			lookAt = PilotEye && PilotView.has_value() ? *PilotView : shipRotation;
+			lookAt = viewRotation;
 		}
 		else
 		{
@@ -341,6 +354,13 @@ namespace SpaceGod::Cameras
 			lookAt = Quaternion::LookRotation(-dir, Up());
 		}
 		ScenePosition = target + DVec3(dir.x, dir.y, dir.z) * dist;
+		// US-T463: the chase over a seat's view rides PilotViewLift above it (UpdateFocus); the glide rises into that lift
+		// as it lands, where it once jumped the whole lift (a fifth of the chase distance) on the frame the chase took over.
+		if (PilotLocked && PilotView.has_value() && !PilotEye)
+		{
+			auto lift = *PilotView * Vector3::up();
+			ScenePosition += DVec3(lift.x, lift.y, lift.z) * (dist * PilotViewLift * e);
+		}
 		// Gliding to a gun mount (U.SPC-T445): the glide ends at the mount's eye, not behind the hull.
 		if (PilotLocked && PilotEye)
 		{
