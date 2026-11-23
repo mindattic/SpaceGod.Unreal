@@ -746,6 +746,55 @@ namespace SpaceGod::Core
 			s->PathLength > 0 ? dist / s->PathLength : 1);
 	}
 
+	bool Fleet::PlannedHelioAt(cs::Ref<Ship> ship, double jd, DVec3& helio)
+	{
+		if (ship == nullptr || ship->Destroyed) return false;
+		auto s = ship->Controller();
+		if (s == nullptr || jd < s->PhaseStartJd) return false;
+		switch (s->Phase)
+		{
+		case ShipPhase::Parked:
+			if (s->Orbit == nullptr) return false;
+			helio = ephemeris->HelioAt(s->Orbit->Body, jd) + s->Orbit->OffsetAt(jd);
+			return true;
+		case ShipPhase::Lurk:
+		case ShipPhase::Adrift:
+			helio = LanePoint(s, jd, s->LaneHold) + s->LaneHoldSide * Astro::SmoothStep(0, 0.08, jd - s->PhaseStartJd);
+			return true;
+		case ShipPhase::Queued:
+		case ShipPhase::Descent:
+		case ShipPhase::Landed:
+		case ShipPhase::Ascent:
+			if (s->Ring == nullptr) return false;
+			helio = ephemeris->HelioAt(s->Ring->Body, jd);
+			return true;
+		case ShipPhase::Lane:
+			if (jd > s->PhaseEndJd) return false;
+			helio = RidePoint(s, jd, LaneProgress(s, jd));
+			return true;
+		case ShipPhase::Transit:
+		{
+			if (jd > s->PhaseEndJd) return false;
+			double tau = jd - s->PhaseStartJd;
+			if (s->Conic != nullptr)
+			{
+				helio = ephemeris->HelioAt(s->FrameBody, jd) + s->Conic->OffsetAt(cs::Math::Min(s->Conic->Days, tau));
+				return true;
+			}
+			// The flip-and-burn profile of BaseStateOf.
+			double total = s->PhaseEndJd - s->PhaseStartJd;
+			tau = cs::Math::Min(total, tau);
+			double dist = tau < total * 0.5 ? 0.5 * s->AccelKmPerDay2 * tau * tau
+				: s->PathLength - 0.5 * s->AccelKmPerDay2 * (total - tau) * (total - tau);
+			DVec3 pos, dir;
+			PointAtDistance(s, dist, pos, dir);
+			helio = ephemeris->HelioAt(s->FrameBody, jd) + pos + Drift(s, tau);
+			return true;
+		}
+		}
+		return false;
+	}
+
 	ShipState Fleet::ConicState(cs::Ref<Ship> s, double jd)
 	{
 		auto c = s->Conic;

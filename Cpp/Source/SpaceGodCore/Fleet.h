@@ -335,6 +335,15 @@ namespace SpaceGod::Core
 		/// </summary>
 		DVec3 HelioVelocityOf(cs::Ref<Ship> ship, double jd);
 
+		/// <summary>
+		/// US-T495: where the ship's current leg puts it at <paramref name="jd"/>, read off its schedule alone: no
+		/// sidestep, no body's cached current frame (every body via <see cref="Ephemeris::HelioAt"/>), nothing
+		/// changed. A transfer (conic or flip-and-burn) or a lane ride inside its dates; parked, off a lane, or at a
+		/// ring since the phase began (a ring-bound ship at its world's centre). False before the phase began, past
+		/// a moving leg's end, or for a destroyed ship: the schedule holds only the leg it is on.
+		/// </summary>
+		bool PlannedHelioAt(cs::Ref<Ship> ship, double jd, DVec3& helio);
+
 	private:
 		/// <summary>Where the ship's schedule puts it, before any sidestep.</summary>
 		ShipState BaseStateOf(cs::Ref<Ship> ship, double jd);
