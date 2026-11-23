@@ -297,7 +297,13 @@ The owner approved the build on 2026-11-19. The phases below each land on their 
 - *Timeline bar.* Under the top of the screen after Shift+F8, after any rewind and while a seek replays (`sg.Rewind bar`
   shows it for 30 s): the session from its start to now, a tick per keyframe (the session start wider), the replayable
   stretch shaded blue, now in amber. Hovering a moment says how far back it is and whether it replays exactly; a click
-  seeks there (when the cursor is free, not at the controls).
+  seeks there (when the cursor is free, not at the controls). *Scrub (US-T457):* pressing on the bar and dragging
+  previews the moment under the cursor without restoring anything: the line gives its date (from the frame log where
+  it covers the moment, else between the keyframes on either side, marked "about"), and a panel under the bar draws
+  the watched system's star(s) and the bodies orbiting them where their Kepler orbits put them then (bright) and now
+  (dim), via `Ephemeris::HelioAt` (the cached frame is left alone). Releasing seeks there; releasing well off the bar
+  drops the scrub. Not yet: ships' flight plans in the preview, and bodies of another system when the moment predates
+  a star trip (the preview always draws the system watched now).
 - *Replay checks.* Every 60th logged frame also keeps a hash of the world just after it (FNV-1a over co-op's desync
   digest, `CoopDigest`: the clock, every system's counts and treasuries, the watched system's ships and settlements).
   A seek's replay recomputes it at the same frames (the headless fast-forward too, at the point the live log takes it:

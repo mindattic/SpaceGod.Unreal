@@ -177,6 +177,18 @@ private:
 	cs::Ref<GUIStyle> rewindBarPanel, rewindBarText;
 	cs::Ref<Texture2D> rewindBarBack, rewindBarLog, rewindBarKey, rewindBarNow, rewindBarHover;
 
+	/// <summary>US-T457: the timeline bar is being dragged (pressed on it, not yet released): the moment under the cursor is
+	/// previewed, nothing restored; the release seeks there (released well off the bar, it is dropped).</summary>
+	bool rewindScrubbing = false;
+	double rewindScrubS = 0;
+	/// <summary>US-T457: the clock's Julian date at a session second: from the frame log where it covers the moment
+	/// (<paramref name="logged"/> true), else between the keyframes on either side (or the last one and now), linearly.</summary>
+	double RewindJdAt(double sessionS, bool& logged) const;
+	/// <summary>US-T457: the scrub preview under the bar: the watched system's star and the bodies round it, each where its
+	/// Kepler orbit puts it at <paramref name="jd"/> (bright) and now (dim), worked out analytically (Ephemeris::HelioAt,
+	/// which leaves the cached frame alone): the world is not touched.</summary>
+	void DrawRewindScrubPreview(const Rect& under, double jd, bool logged);
+
 	/// <summary>The logged frame with this serial, or null.</summary>
 	const RewindFrame* RewindFrameAt(long long serial) const;
 	/// <summary>The replay is over (it arrived, or Esc or a gap stopped it): play goes on from here.</summary>

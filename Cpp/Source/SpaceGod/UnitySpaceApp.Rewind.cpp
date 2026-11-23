@@ -18,6 +18,9 @@
 #include <functional>
 
 #include "Astro.h"
+#include "BodyCatalog.h"
+#include "BodyDefinition.h"
+#include "Ephemeris.h"
 #include "Fleet.h"
 #include "SimClock.h"
 #include "World.h"
@@ -757,7 +760,8 @@ namespace SpaceGod
 	{
 		const auto& frames = Rewind.Keyframes();
 		double wall = Time::realtimeSinceStartupAsDouble;
-		if (frames.empty() || (!rewindReplaying && wall > rewindBarUntil) || ScreenCleared) return;
+		if (frames.empty() || ScreenCleared || rewindReplaying) rewindScrubbing = false;
+		if (frames.empty() || (!rewindReplaying && !rewindScrubbing && wall > rewindBarUntil) || ScreenCleared) return;
 		if (rewindBarPanel == nullptr)
 		{
 			rewindBarBack = UI::Hud::Solid(Color(0.03f, 0.05f, 0.09f, 0.86f), Color(0.5f, 0.72f, 1.0f, 0.7f));
@@ -806,23 +810,131 @@ namespace SpaceGod
 			line = cs::Cat("Fast-forwarding to ", RewindSpan(rewindReplayTargetS - frames.front()->SessionS), " into the session: ",
 				cs::Fmt(done * 100, "F0"), "%  (", rewindReplayNext - rewindReplayStart, " of ", total, " frames; Esc stops here)");
 		}
-		else if (hit.Contains(e.mousePosition))
+		else if (rewindScrubbing || hit.Contains(e.mousePosition))
 		{
+			// US-T457: press and drag along the bar to preview a moment (the bodies' analytic positions then, below), release
+			// to seek there; released well off the bar, the scrub is dropped and nothing changes.
 			ShowRewindBar(2);
-			double s = (e.mousePosition.x - strip.x) / strip.width * endS;
-			GUI::DrawTexture(Rect(e.mousePosition.x - 1, strip.y - 3, 2, strip.height + 6), rewindBarHover);
-			const RewindKeyframe* k = Rewind.Before(s + 1e-6);
-			bool exact = k != nullptr && rewindKeySerial.count(k->Id) != 0 && !rewindFrames.empty() && s <= rewindFrames.back().SessionS;
-			line = cs::Cat("Click to go back ", RewindSpan(rewindSessionS - s), exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)");
-			if (e.type == EventType::MouseDown && e.button == 0)
+			auto sAt = [&](float x) { return cs::Math::Clamp(static_cast<double>((x - strip.x) / strip.width) * endS, 0.0, endS); };
+			double s = rewindScrubbing ? rewindScrubS : sAt(e.mousePosition.x);
+			bool off = rewindScrubbing && std::abs(e.mousePosition.y - strip.center().y) > 80.0f;
+			if (e.type == EventType::MouseDown && e.button == 0 && hit.Contains(e.mousePosition))
 			{
-				RequestRewindSeek(s);
+				rewindScrubbing = true;
+				rewindScrubS = s;
 				e.Use();
 			}
+			else if (rewindScrubbing && e.type == EventType::MouseDrag)
+			{
+				rewindScrubS = s = sAt(e.mousePosition.x);
+				e.Use();
+			}
+			else if (rewindScrubbing && e.type == EventType::MouseUp && e.button == 0)
+			{
+				rewindScrubbing = false;
+				if (!off) RequestRewindSeek(rewindScrubS);
+				e.Use();
+			}
+			GUI::DrawTexture(Rect(xOf(s) - 1, strip.y - 3, 2, strip.height + 6), rewindBarHover);
+			const RewindKeyframe* k = Rewind.Before(s + 1e-6);
+			bool exact = k != nullptr && rewindKeySerial.count(k->Id) != 0 && !rewindFrames.empty() && s <= rewindFrames.back().SessionS;
+			if (rewindScrubbing)
+			{
+				bool logged = false;
+				double jd = RewindJdAt(s, logged);
+				line = off ? cs::String("Release here to drop the scrub (nothing changes)")
+					: cs::Cat("Release to go back ", RewindSpan(rewindSessionS - s), " to ", Astro::ToDateTime(jd).ToString("yyyy-MM-dd HH:mm"),
+						logged ? "" : " (about)", " UTC", exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)");
+				DrawRewindScrubPreview(panel, jd, logged);
+			}
+			else
+				line = cs::Cat("Click to go back ", RewindSpan(rewindSessionS - s), exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)",
+					"  ·  drag to preview");
 		}
 		else
 			line = cs::Cat("Timeline: ", frames.size(), " keyframes over ", RewindSpan(endS), ", the blue stretch replays to any moment  ·  Shift+F8 the last keyframe  ·  click a moment");
 		GUI::Label(Rect(panel.x, strip.yMax() + 4, w, 22), line, rewindBarText);
+	}
+
+	double UnitySpaceApp::RewindJdAt(double sessionS, bool& logged) const
+	{
+		logged = false;
+		if (!rewindFrames.empty() && sessionS >= rewindFrames.front().SessionS && sessionS <= rewindFrames.back().SessionS)
+		{
+			// The logged frame the moment falls in, between its clock before and after.
+			auto next = std::upper_bound(rewindFrames.begin(), rewindFrames.end(), sessionS,
+				[](double s, const RewindFrame& f) { return s < f.SessionS; });
+			const RewindFrame& f = *std::prev(next);
+			double span = next != rewindFrames.end() ? next->SessionS - f.SessionS : 0;
+			double t = span > 0 ? cs::Math::Clamp((sessionS - f.SessionS) / span, 0.0, 1.0) : 1.0;
+			logged = true;
+			return f.Before.Jd + (f.JdAfter - f.Before.Jd) * t;
+		}
+		// Between the keyframes on either side, or the last one and now.
+		const auto& frames = Rewind.Keyframes();
+		double s0 = 0, jd0 = Clock != nullptr ? Clock->Jd : 0, s1 = rewindSessionS, jd1 = jd0;
+		bool haveBefore = false;
+		for (const auto& k : frames)
+		{
+			if (k->SessionS <= sessionS) { s0 = k->SessionS; jd0 = k->Jd; haveBefore = true; }
+			else { s1 = k->SessionS; jd1 = k->Jd; break; }
+		}
+		if (!haveBefore) return frames.empty() ? jd1 : frames.front()->Jd;
+		if (s1 <= s0) return jd0;
+		return jd0 + (jd1 - jd0) * cs::Math::Clamp((sessionS - s0) / (s1 - s0), 0.0, 1.0);
+	}
+
+	void UnitySpaceApp::DrawRewindScrubPreview(const Rect& under, double jd, bool logged)
+	{
+		if (Event::current().type != EventType::Repaint || ActiveSystem == nullptr || Clock == nullptr) return;
+		auto catalog = Catalog();
+		auto eph = Ephemeris();
+		if (catalog == nullptr || eph == nullptr) return;
+
+		// The star(s) and what orbits them directly (a moon would sit on its world at this scale).
+		struct Mark { DVec3 Then, Now; Color Tint; bool Star; };
+		std::vector<Mark> marks;
+		double reach = 0;
+		for (int i = 0; i < catalog->Count(); i++)
+		{
+			auto b = (*catalog)[i];
+			if (b == nullptr || !b->IsVisible() || BodyUncharted(i)) continue;
+			bool star = b->IsStar();
+			auto parent = b->ParentIndex >= 0 && b->ParentIndex < catalog->Count() ? (*catalog)[b->ParentIndex] : nullptr;
+			if (!star && (parent == nullptr || !parent->IsStar())) continue;
+			Mark m{ eph->HelioAt(i, jd), eph->HelioAt(i, Clock->Jd), Color(b->Color.R, b->Color.G, b->Color.B, 1), star };
+			if (!star) reach = std::max(reach, std::max(m.Then.Length(), m.Now.Length()));
+			marks.push_back(m);
+		}
+		if (marks.empty()) return;
+		if (reach <= 0) reach = 1;
+
+		float side = 200;
+		auto box = Rect(under.center().x - side / 2, under.yMax() + 6, side, side);
+		GUI::Box(box, cs::String(), rewindBarPanel);
+		Vector2 c = box.center();
+		float radius = side / 2 - 10;
+		// Square-root radial scale: the inner worlds stay apart while the outer ones still fit; the angle is the true one.
+		auto at = [&](const DVec3& p)
+		{
+			double r = p.Length();
+			if (r <= 0) return c;
+			double k = cs::Math::Sqrt(r / reach) * radius / r;
+			return Vector2(c.x + static_cast<float>(p.X * k), c.y - static_cast<float>(p.Y * k));
+		};
+		auto old = GUI::color;
+		const auto& tex = Texture2D::whiteTexture();
+		for (const auto& m : marks)
+		{
+			Vector2 now = at(m.Now), then = at(m.Then);
+			float size = m.Star ? 7.0f : 4.0f;
+			GUI::color = Color(m.Tint.r, m.Tint.g, m.Tint.b, 0.3f);
+			GUI::DrawTexture(Rect(now.x - size / 2, now.y - size / 2, size, size), tex);
+			GUI::color = Color(m.Tint.r, m.Tint.g, m.Tint.b, logged ? 1.0f : 0.75f);
+			GUI::DrawTexture(Rect(then.x - size / 2, then.y - size / 2, size, size), tex);
+		}
+		GUI::color = old;
+		GUI::Label(Rect(box.x, box.yMax() - 20, box.width, 18), cs::Cat(ActiveSystem->Name, ": bright then, dim now"), rewindBarText);
 	}
 
 	cs::String UnitySpaceApp::DescribeRewind() const
