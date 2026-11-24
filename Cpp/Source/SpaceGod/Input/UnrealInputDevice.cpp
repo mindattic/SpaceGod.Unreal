@@ -158,6 +158,11 @@ namespace SpaceGod::Input
 		}
 	}
 
+	const FKey& UnrealInputDevice::KeyOf(Key key)
+	{
+		return Map()[static_cast<int>(key)];
+	}
+
 	void UnrealInputDevice::Feed(APlayerController* pc, float dt)
 	{
 		(void)dt; // edges are Unreal's own per-frame ones; nothing here integrates over time
