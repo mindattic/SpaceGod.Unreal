@@ -46,6 +46,11 @@ namespace SpaceGod::Audio
 			int spatial = 0;
 			bool spatialPending = false;
 			bool spatialBuilt = false;
+			/// audio.quality's index (US-T615; 2, High, is today's voice count), whether it still has to reach the audio
+			/// device, and the scale last put on it (1: untouched).
+			int quality = 2;
+			bool qualityPending = false;
+			float qualityScale = 1.0f;
 			FTSTicker::FDelegateHandle ticker;
 		};
 
@@ -218,10 +223,32 @@ namespace SpaceGod::Audio
 					: cs::String("Binaural sound is not available here: sounds are panned.");
 		}
 
+		/// The share of the device's voices (its max channels, as au.SetAudioChannelScaleCount scales them) each quality
+		/// plays: Low a quarter, Medium half, High all of them (today's count).
+		float QualityScale(int quality) { return quality == 0 ? 0.25f : quality == 1 ? 0.5f : 1.0f; }
+
+		/// Scales the play device's max channels to the chosen quality (on the game thread; the device takes it on its
+		/// audio thread). Waits, ticking, until a device exists.
+		void ApplyQualityNow()
+		{
+			State& s = S();
+			FAudioDeviceManager* manager = FAudioDeviceManager::Get();
+			const ::Audio::FDeviceId id = PlayDevice();
+			FAudioDevice* device = manager && id != 0 ? manager->GetAudioDeviceRaw(id) : nullptr;
+			if (!device) return;
+			s.qualityPending = false;
+			const float scale = QualityScale(s.quality);
+			if (scale == s.qualityScale) return;
+			s.qualityScale = scale;
+			device->SetMaxChannelsScaled(scale);
+			Debug::Log(cs::Cat("[Unity.SpaceGod] Audio: sound quality ", s.quality == 0 ? "Low" : s.quality == 1 ? "Medium" : "High", "."));
+		}
+
 		bool Tick(float)
 		{
 			State& s = S();
 			if (s.spatialPending) ApplySpatialNow();
+			if (s.qualityPending) ApplyQualityNow();
 			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty() || SpeakerChannels(s.speakerMode) > 0 || TwoChannel(s.speakerMode)) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds)
 				Query();
 			return true;
@@ -268,9 +295,29 @@ namespace SpaceGod::Audio
 			ApplySpatialNow();
 			if (s.spatialPending) Watch();
 		}
+
+		void ApplyQuality(int quality)
+		{
+			State& s = S();
+			s.quality = quality;
+			if (PlayerOptions::ScriptedRun() || !GameAudio::Enabled()) return; // a scripted run keeps today's voice count
+			s.qualityPending = true;
+			ApplyQualityNow();
+			if (s.qualityPending) Watch();
+		}
 	}
 
-	void AudioOutput::Declare() { Device(); SpeakerMode(); SpatialSound(); }
+	void AudioOutput::Declare() { Device(); SpeakerMode(); SpatialSound(); Quality(); }
+
+	const cs::Ref<ChoiceSetting>& AudioOutput::Quality()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("audio.quality", SettingGroups::Audio, "Sound quality",
+			cs::List<cs::String>{ "Low", "Medium", "High" }, 2, "How many sounds play at once: Low keeps the fewest (the quietest "
+			"and farthest drop out first) and costs the least; High plays them all.",
+			"sound quality voices channels sounds at once performance low medium high")
+			->Applying([](int i) { ApplyQuality(i); });
+		return value;
+	}
 
 	const cs::Ref<ChoiceSetting>& AudioOutput::SpatialSound()
 	{

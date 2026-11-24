@@ -32,5 +32,9 @@ namespace SpaceGod::Audio
 		/// audio.spatialSound (US-T673): Off (today's panning), Binaural (Resonance Audio's HRTF, for headphones), Windows
 		/// spatial sound (Windows Sonic / Dolby Atmos). A choice whose plugin does not run pans and says why on the row.
 		static const cs::Ref<Core::ChoiceSetting>& SpatialSound();
+
+		/// audio.quality (US-T615): Low, Medium, High, how many sounds play at once (the audio device's max channels,
+		/// scaled to a quarter, a half, or all of them). High, the default, is today's count; a scripted run keeps it.
+		static const cs::Ref<Core::ChoiceSetting>& Quality();
 	};
 }
