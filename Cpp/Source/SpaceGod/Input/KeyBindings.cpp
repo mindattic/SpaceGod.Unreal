@@ -409,7 +409,12 @@ namespace SpaceGod::Input
 					r.released = !r.down && s.lastDown;
 					s.lastDown = r.down;
 				}
-				s.out = StepTrigger(s.trigger, b.trigger, setting.HeldKind, r.down, r.pressed, r.released, Time::unscaledTime, KeyBindings::Tuning());
+				if (b.trigger == Trigger::Toggle && Gamepad::MenuMode)
+				{
+					s.trigger = TriggerState();
+					s.out = TriggerOut();
+				}
+				else s.out = StepTrigger(s.trigger, b.trigger, setting.HeldKind, r.down, r.pressed, r.released, Time::unscaledTime, KeyBindings::Tuning());
 			}
 			return s.out;
 		}
