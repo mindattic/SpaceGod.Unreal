@@ -84,7 +84,9 @@ namespace SpaceGod::Core
 		{
 		}
 
-		/// <summary>The tuning of a hull of class <paramref name="c"/>: its row in the ship catalog (US-T193).</summary>
+		/// <summary>The tuning of a hull of class <paramref name="c"/>: its row in the ship catalog (US-T193), times its
+		/// pilot-control family's flight knobs ("tune.flight.&lt;family&gt;.*", US-T535), read on every call so a turned knob
+		/// flies at once.</summary>
 		static PilotTuning Of(ShipClass c);
 
 		/// <summary>How a hull of class <paramref name="c"/> is flown at the helm (U.SPC-T269): its catalog row's.</summary>
