@@ -166,7 +166,17 @@ namespace SpaceGod::Core
 			r.Lines.Add({ "comms", "Garbled transmission.", false });
 			return r;
 		}
-		return Say(c, Resolve(c.World, targetKey), static_cast<CommsVerb>(verb));
+		auto to = Resolve(c.World, targetKey);
+		bool offered = false;
+		for (auto v : Verbs(c, to))
+			if (static_cast<int>(v) == verb) offered = true;
+		if (!offered)
+		{
+			CommsReply r;
+			r.Lines.Add({ "comms", "That can't be said to them from here.", false });
+			return r;
+		}
+		return Say(c, to, static_cast<CommsVerb>(verb));
 	}
 
 	std::function<bool(const cs::Ref<Ship>&)>& Comms::AnonymousBroadcast()
