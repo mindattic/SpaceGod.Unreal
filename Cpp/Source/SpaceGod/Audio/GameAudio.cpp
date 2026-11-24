@@ -22,6 +22,7 @@
 #include "Sound/SoundClass.h"
 #include "Sound/SoundSubmix.h"
 #include "Sound/SoundWaveProcedural.h"
+#include "UObject/Package.h"
 
 #include <array>
 
@@ -68,6 +69,9 @@ namespace SpaceGod::Audio
 		/// US-T552: Sound while paused (0 Play, 1 Duck, 2 Mute) and Dynamic range (0 Full, 1 Night), set by their Applying.
 		int whilePaused = 0;
 		int dynamicRange = 0;
+
+		/// US-T613: how 3D sounds are placed, set by AudioOutput's speaker mode.
+		GameAudio::Placement placement = GameAudio::Placement::Panned;
 
 		/// How loud a ducked bus is while the pause menu is open.
 		constexpr float PausedDuck = 0.3f;
@@ -212,6 +216,16 @@ namespace SpaceGod::Audio
 			Debug::Log("[Unity.SpaceGod] Audio: buses Master, Music, Effects, Interface, Ambience, Voice ready.");
 		}
 
+		/// The speaker mode's placement on an attenuation: Mono plays it unpanned; Headphones keeps sounds inside their
+		/// min distance (<paramref name="minCm"/>) in the middle, panning as they leave it; Panned is the engine's own.
+		void Place(FSoundAttenuationSettings& at, float minCm)
+		{
+			at.bSpatialize = placement != GameAudio::Placement::Mono;
+			at.NonSpatializedRadiusStart = placement == GameAudio::Placement::Headphones ? minCm : 0.0f;
+			at.NonSpatializedRadiusEnd = 0.0f;
+			at.NonSpatializedRadiusMode = ENonSpatializedRadiusSpeakerMapMode::OmniDirectional;
+		}
+
 		USoundAttenuation* Attenuation(float minDistance, float maxDistance)
 		{
 			State& s = S();
@@ -228,6 +242,7 @@ namespace SpaceGod::Audio
 			at.AttenuationShapeExtents = FVector(minCm, 0, 0);
 			at.FalloffDistance = maxCm - minCm;
 			at.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
+			Place(at, minCm);
 			s.attenuations.Add(key, a);
 			return a;
 		}
@@ -380,6 +395,17 @@ namespace SpaceGod::Audio
 	}
 
 	int GameAudio::Playing() { return S().voices.Num(); }
+
+	void GameAudio::SetPlacement(Placement value)
+	{
+		if (value == placement) return;
+		placement = value;
+		State& s = S();
+		for (const TPair<uint64, USoundAttenuation*>& entry : s.attenuations) Place(entry.Value->Attenuation, static_cast<float>(entry.Key >> 32));
+		for (const Voice& v : s.voices)
+			if (UAudioComponent* c = v.Component.Get())
+				if (c->AttenuationSettings) c->AdjustAttenuation(c->AttenuationSettings->Attenuation);
+	}
 
 	void GameAudio::Declare()
 	{

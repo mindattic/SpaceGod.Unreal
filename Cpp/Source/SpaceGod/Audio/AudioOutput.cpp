@@ -36,6 +36,11 @@ namespace SpaceGod::Audio
 			bool swapping = false;
 			/// audio.outputDevice's value, set by its Applying.
 			FString wanted;
+			/// audio.speakerMode's index, set by its Applying, and the channels the device plays (0: not asked yet).
+			int speakerMode = 0;
+			int channels = 0;
+			/// Whether audio.speakerMode exists yet (its Applying first runs while it is being built).
+			bool speakersBuilt = false;
 			FTSTicker::FDelegateHandle ticker;
 		};
 
@@ -64,12 +69,35 @@ namespace SpaceGod::Audio
 			return GEngine->GetMainAudioDeviceID();
 		}
 
-		/// On the audio thread: the mixer platform of a device.
-		::Audio::IAudioMixerPlatformInterface* Platform(::Audio::FDeviceId id)
+		/// On the audio thread: the mixer of a device.
+		::Audio::FMixerDevice* Mixer(::Audio::FDeviceId id)
 		{
 			FAudioDeviceManager* manager = FAudioDeviceManager::Get();
 			FAudioDevice* device = manager && id != 0 ? manager->GetAudioDeviceRaw(id) : nullptr;
-			return device ? static_cast<::Audio::FMixerDevice*>(device)->GetAudioMixerPlatform() : nullptr;
+			return static_cast<::Audio::FMixerDevice*>(device);
+		}
+
+		/// On the audio thread: the mixer platform of a device.
+		::Audio::IAudioMixerPlatformInterface* Platform(::Audio::FDeviceId id)
+		{
+			::Audio::FMixerDevice* mixer = Mixer(id);
+			return mixer ? mixer->GetAudioMixerPlatform() : nullptr;
+		}
+
+		constexpr const char* SpeakerDescription = "How the game's sound is laid out: Auto follows the device; Headphones narrows sounds close by; "
+			"Mono plays everything in both ears alike; Surround uses the device's own channels.";
+
+		/// The channels a Surround choice needs (0: any).
+		int SpeakerChannels(int mode) { return mode == 4 ? 6 : mode == 5 ? 8 : 0; }
+
+		/// The row says when the device plays fewer channels than the chosen Surround mode.
+		void Describe()
+		{
+			State& s = S();
+			if (!s.speakersBuilt) return;
+			const int need = SpeakerChannels(s.speakerMode);
+			AudioOutput::SpeakerMode()->Description = need > 0 && s.channels > 0 && s.channels < need
+				? cs::String("Windows reports stereo: set 5.1 / 7.1 in Windows Sound settings.") : cs::String(SpeakerDescription);
 		}
 
 		/// Switches to the chosen device while it is listed, else to the system default (the choice stays saved).
@@ -112,6 +140,8 @@ namespace SpaceGod::Audio
 			{
 				TArray<Listed> list;
 				bool ok = false;
+				const ::Audio::FMixerDevice* mixer = Mixer(id);
+				const int channels = mixer ? mixer->GetNumDeviceChannels() : 0;
 				if (::Audio::IAudioMixerPlatformInterface* platform = Platform(id))
 				{
 					ok = true;
@@ -134,10 +164,12 @@ namespace SpaceGod::Audio
 						}
 					}
 				}
-				FAudioThread::RunCommandOnGameThread([list = MoveTemp(list), ok]() mutable
+				FAudioThread::RunCommandOnGameThread([list = MoveTemp(list), ok, channels]() mutable
 				{
 					State& s = S();
 					s.querying = false;
+					s.channels = channels;
+					Describe();
 					if (!ok) return;
 					s.devices = MoveTemp(list);
 					s.listed = true;
@@ -149,7 +181,8 @@ namespace SpaceGod::Audio
 		bool Tick(float)
 		{
 			State& s = S();
-			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty()) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds) Query();
+			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty() || SpeakerChannels(s.speakerMode) > 0) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds)
+				Query();
 			return true;
 		}
 
@@ -169,9 +202,33 @@ namespace SpaceGod::Audio
 			if (s.listed) Reconcile();
 			Query();
 		}
+
+		void ApplySpeakers(int mode)
+		{
+			State& s = S();
+			s.speakerMode = mode;
+			Describe();
+			if (PlayerOptions::ScriptedRun()) return;
+			GameAudio::SetPlacement(mode == 1 ? GameAudio::Placement::Headphones : mode == 3 ? GameAudio::Placement::Mono : GameAudio::Placement::Panned);
+			if (SpeakerChannels(mode) > 0 && Active())
+			{
+				Watch();
+				Query();
+			}
+		}
 	}
 
-	void AudioOutput::Declare() { Device(); }
+	void AudioOutput::Declare() { Device(); SpeakerMode(); }
+
+	const cs::Ref<ChoiceSetting>& AudioOutput::SpeakerMode()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("audio.speakerMode", SettingGroups::Audio, "Speaker mode",
+			cs::List<cs::String>{ "Auto", "Headphones", "Stereo speakers", "Mono", "Surround 5.1", "Surround 7.1" }, 0, SpeakerDescription,
+			"sound speakers headphones stereo mono surround 5.1 7.1 channels accessibility mono audio")
+			->Applying([](int i) { ApplySpeakers(i); });
+		S().speakersBuilt = true;
+		return value;
+	}
 
 	const cs::Ref<TextSetting>& AudioOutput::Device()
 	{

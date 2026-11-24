@@ -69,5 +69,11 @@ namespace SpaceGod::Audio
 
 		/// How many one-shots and loops are playing (the audit, the log).
 		static int Playing();
+
+		/// How 3D sounds are placed (US-T613, from Settings > Sound > Speaker mode): Panned, the engine's own; Headphones,
+		/// near sounds narrowed toward the middle; Mono, nothing panned.
+		enum class Placement { Panned, Headphones, Mono };
+		/// Applies to every sound from now on and to those playing.
+		static void SetPlacement(Placement placement);
 	};
 }
