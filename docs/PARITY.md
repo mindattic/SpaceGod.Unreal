@@ -139,19 +139,19 @@ entries a C# save carries.
   guard stopped that run on 2026-11-04. `C:\Apps\SpaceGod` still holds `ad93e37`; its window title reads
   "SpaceGod". Writing C# delegate names from C++ would add nothing a load uses.
 
-## Recording through MindAttic.Capture (US-T72)
+## Recording through MindAttic.Media.Capture (US-T72)
 
 Per [docs/CAPTURE.md](CAPTURE.md), mirrored from SpaceGod.Unity.CSharp at `2158228`. This copy has what the Unity one has:
 - **Flags:** `-capture` (`video`, `screen N`, `hq`, a duration) and `-capture-config`.
-- **Tour shots:** with `-capture`, the `-demo` tour's screenshots go through MindAttic.Capture.
+- **Tour shots:** with `-capture`, the `-demo` tour's screenshots go through MindAttic.Media.Capture.
 - **Rules:** the shipped `SpaceGod.capture.json`.
 - **Events:** the 20-event catalogue, with the same names, fields and order, at the same code points.
 - **Log line:** the `[capture] event` line.
 - **Hotkeys:** Alt+F9/F10/F11 through `InputState`.
 - **Gating:** capture-enabled published builds.
 
-The engine side differs (Capture/README.md). MindAttic.Capture runs in a host process (`Capture/SpaceGod.Capture`,
-on the vendored library) that records the game window through Windows Graphics Capture. The game drives it over a pipe,
+The engine side differs. MindAttic.Media.Capture runs in its capture agent (`capture.exe`, driven by the
+MindAttic.Media.Capture.Unreal plugin since US-T692/US-T693) that records the game window through Windows Graphics Capture. The game drives it over a pipe,
 where Unity runs the package inside the player and reads the GPU frame. The `[capture] event` lines also go to the
 session folder's `.game.log`, because a Shipping game writes no log.
 

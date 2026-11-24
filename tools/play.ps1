@@ -22,7 +22,7 @@ param(
   # opens on anyone's screen, no sound plays) under "-capture $Capture"; MindAttic.Media.Capture records the game's own frames
   # (read back from the GPU into the capture host, Capture/README.md) into the usual session folder. -Seconds stops the
   # game after that long (the host then exports the session); -ExecCmds runs a scenario (e.g. "sg.Tour auto");
-  # -CaptureStats logs the game's frame rate and the frame feed's cost every 5 s ([MindAttic.Capture] feed: ...).
+  # -CaptureStats logs the game's frame rate and the frame feed's cost every 5 s ([MindAttic.Media.Capture] feed: ...).
   # US-T233, US-T234: this goes through the shared headless launcher, ..\Unreal.Shared\tools\Start-Headless.ps1, so it
   # is the MindAtticShared plugin's --headless run: an ordinary session on scripted input past the main menu, which logs
   # MINDATTIC_HEADLESS_READY SpaceGod once up. A test or CI script can call that launcher itself
@@ -110,7 +110,7 @@ if ($Offscreen) {
     else { $p.WaitForExit() }
   }
   finally { if (-not $p.HasExited) { Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue } }
-  if (Test-Path -LiteralPath $log) { Select-String -LiteralPath $log -Pattern '\[MindAttic\.Capture\]' | ForEach-Object { $_.Line -replace '^\[[^\]]*\]\[\s*\d+\]', '' } }
+  if (Test-Path -LiteralPath $log) { Select-String -LiteralPath $log -Pattern '\[MindAttic\.Media\.Capture\]' | ForEach-Object { $_.Line -replace '^\[[^\]]*\]\[\s*\d+\]', '' } }
   # The host (and the detached "capture finalize" it hands the tape to) exports after the game ends.
   $deadline = (Get-Date).AddMinutes(5)
   while ((Get-Date) -lt $deadline -and (Get-Process -Name capture -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -ge $t0 })) { Start-Sleep -Seconds 1 }

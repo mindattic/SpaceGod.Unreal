@@ -34,7 +34,9 @@ Every game these scripts start records: they pass `-capture video hq` (see Recor
 - Unreal Engine 5.8 (found via `UE_ROOT`, the registry, the Epic launcher's install list, or `<drive>:\Games\UE_5.8`;
   see `tools/engine.ps1`).
 - Visual Studio 2022 with the "Game development with C++" workload (MSVC x64 tools).
-- The .NET 10 SDK, for the MindAttic.Media.Capture host the package carries (built from `Capture/` and `Vendor/`), and
+- MindAttic.Media.Capture checked out next to this repo: `Cpp/SpaceGod.uproject` loads its
+  MindAttic.Media.Capture.Unreal plugin, and `tools/package.ps1` publishes its capture agent into the package (the
+  .NET 10 SDK builds it). From source, `-capture` uses the installed agent (`%LOCALAPPDATA%\MindAttic\Capture\bin`).
   ffmpeg on PATH to record video with `-capture` (not bundled).
 
 ## Building and running from source
@@ -103,9 +105,7 @@ Unity.SpaceGod's own bindings, unchanged (in game, H / F1 shows them all).
 - `Shared/Plugins/SpaceGodRender/`: the original's shaders ported to Unreal, the materials built on them, and the
   imported Resources (textures, ship models, data).
 - `Bench/`: the headless runner and its scenarios. `tools/`: build, package, play, bench and race scripts.
-- `Capture/SpaceGod.Capture/`: the MindAttic.Media.Capture host the game drives for `-capture` (C#, .NET 10), built on
-  `Vendor/MindAttic.Capture/` (the library's sources, copied in; Vendor/README.md). `Cpp/Content/Capture/` holds the
-  shipped default rules.
+- `Cpp/Content/Capture/`: the shipped default capture rules the MindAttic.Media.Capture.Unreal plugin hands its agent.
 - `tools/unity_extract.py` and `Shared/Plugins/SpaceGodRender/Content/Python/spacegod_import_resources.py` are
   **optional one-time import tools** that read the original Unity project or player; their output is committed, and
   nothing in the build runs them.

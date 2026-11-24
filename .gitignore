@@ -31,11 +31,6 @@ Data/Vehicles/Meshes/Kit/
 Cpp/Content/ThirdParty/USC/
 Cpp/Content/ThirdParty/SSC/
 
-# .NET build output of the capture host and the vendored MindAttic.Capture (US-T72).
-Capture/**/bin/
-Capture/**/obj/
-Vendor/**/bin/
-Vendor/**/obj/
 # US-T586: Piper (piper.exe, its DLLs, espeak-ng-data) and its .onnx voices; tools/fetch-piper.ps1 fetches them.
 Vendor/Piper/
 

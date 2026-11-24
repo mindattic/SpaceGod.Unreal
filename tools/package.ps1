@@ -24,7 +24,8 @@ Steps:
  2. RunUAT BuildCookRun -platform=Win64 -clientconfig=<Configuration> -build -cook -stage -pak -archive.
     UBT runs with -WaitMutex (queued behind any other UE build) and -MaxParallelActions (default 4).
  3. Renames the launcher exe (see below).
- 4. dotnet publish of the MindAttic.Media.Capture host (Capture/SpaceGod.Capture) into <archive>/Capture/ (US-T72).
+ 4. dotnet publish of the MindAttic.Media.Capture agent (the sibling ..\MindAttic.Media.Capture checkout) into
+    <archive>/Capture/ (US-T693).
  5. Data/Lore (the applied Prose texts, docs/PROSE.md) into <archive>/Lore/, where the game reads them (US-T236).
  6. Data/Vehicles/Vehicles.json (engine ports and hardpoint placements, docs/Vehicles.md) into <archive>/Vehicles/,
     where the game reads it (US-T452).
@@ -80,14 +81,17 @@ if (-not (Test-Path -LiteralPath $launcher)) { throw "BuildCookRun archived no l
 # 3. The exe name.
 Move-Item -LiteralPath $launcher -Destination $renamed -Force
 
-# 4. The MindAttic.Media.Capture host (US-T72; Capture/README.md): built from Capture/SpaceGod.Capture and the vendored
-#    MindAttic.Media.Capture sources, next to the package's Engine/ folder, where the game looks for Capture/capture.exe.
-#    Framework-dependent: it runs on the .NET 10 runtime the SDK that builds it installs.
-$captureProject = Join-Path $repo 'Capture\SpaceGod.Capture\SpaceGod.Capture.csproj'
+# 4. The MindAttic.Media.Capture agent (US-T693): published from the sibling MindAttic.Media.Capture checkout next to
+#    the package's Engine/ folder, where the MindAttic.Media.Capture.Unreal plugin looks for Capture/capture.exe before
+#    the installed agent (%LOCALAPPDATA%\MindAttic\Capture\bin). Framework-dependent: it runs on the .NET 10 runtime.
+$captureProject = Join-Path (Split-Path -Parent $repo) 'MindAttic.Media.Capture\src\MindAttic.Media.Capture.Agent\MindAttic.Media.Capture.Agent.csproj'
+if (-not (Test-Path -LiteralPath $captureProject)) {
+  throw "No capture agent project at ${captureProject}: clone MindAttic.Media.Capture next to this repo (the plugin in Cpp/SpaceGod.uproject comes from it too)."
+}
 $captureOut = Join-Path $archive 'Capture'
 & dotnet publish $captureProject -c Release -r win-x64 --self-contained false -o $captureOut -nologo -v q '-p:GenerateDocumentationFile=false'
-if ($LASTEXITCODE) { throw "Publishing the capture host failed ($LASTEXITCODE)." }
-if (-not (Test-Path -LiteralPath (Join-Path $captureOut 'capture.exe'))) { throw "The capture host publish wrote no capture.exe in $captureOut." }
+if ($LASTEXITCODE) { throw "Publishing the capture agent failed ($LASTEXITCODE)." }
+if (-not (Test-Path -LiteralPath (Join-Path $captureOut 'capture.exe'))) { throw "The capture agent publish wrote no capture.exe in $captureOut." }
 
 # 5. The Prose texts (US-T236; docs/PROSE.md): Data/Lore's <kind>/*.json beside the package's Engine/ folder, where
 #    GameLore (Source/SpaceGod/GameLore.cpp) looks first. None yet is fine: the game plays on its placeholders.

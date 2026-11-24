@@ -1,20 +1,7 @@
 # Vendor
 
-Outside code this repo carries as plain files, so a fresh clone builds with nothing next to it.
-
-| Folder | What | From | Commit |
-|---|---|---|---|
-| `MindAttic.Capture/src/MindAttic.Capture` | MindAttic.Capture's core: options, the `-capture` flags, trigger rules, the rolling tape, exports, sidecars, the session manifest (netstandard2.1 + net10.0) | [MindAttic.Media.Capture](https://github.com/mindattic/MindAttic.Media.Capture) `src/MindAttic.Capture` (before its rename) | `c4272836318e00dcdbb2965faafa0b03da3c5e66` |
-| `MindAttic.Capture/src/MindAttic.Capture.Windows` | Windows capture: Windows Graphics Capture of a window, Desktop Duplication / GDI, WASAPI audio | MindAttic.Media.Capture `src/MindAttic.Capture.Windows` | same |
-| `MindAttic.Capture/Directory.Build.props` | the two projects' shared build settings | MindAttic.Media.Capture `Directory.Build.props` | same |
-
-Copied unchanged (US-T72), except that `AgentLocator` also trusts the installed agent's newer product name
-`MindAttic.Media.Capture.Agent` (US-T687). The folder and namespaces keep the old `MindAttic.Capture` names until the
-next refresh brings the new ones. Only the game's capture host (`Capture/SpaceGod.Capture`) builds them; see
-[Capture/README.md](../Capture/README.md). The Windows project's NuGet packages (NAudio.Wasapi, Vortice.Direct3D11/DXGI,
-System.Drawing.Common, Microsoft.Extensions.*.Abstractions) restore from nuget.org.
-
-To refresh: copy those folders again from a MindAttic.Media.Capture checkout (without `bin/` and `obj/`) and update the commit.
+Outside code the game uses. Recording no longer has a copy here (US-T693): the MindAttic.Media.Capture.Unreal plugin
+comes from the sibling MindAttic.Media.Capture checkout and drives its installed capture agent.
 
 ## Fetched, not committed
 

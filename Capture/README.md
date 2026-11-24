@@ -5,7 +5,7 @@ SpaceGod copies do. In Unity, MindAttic.Media.Capture's package runs inside the 
 library runs beside the game in a small host process the game starts and drives.
 
 ```
- game (C++)                                   capture.exe host (Capture/SpaceGod.Capture)
+ game (C++)                                   capture.exe (the MindAttic.Media.Capture agent)
  ──────────                                   ───────────────────────────────────────────
  -capture on the command line?
    └─ first frame with a window: start ───>   host --hwnd <game window> --pid <game> --app SpaceGod
@@ -20,17 +20,15 @@ library runs beside the game in a small host process the game starts and drives.
 
 - **Off unless asked.** Nothing starts unless `-capture` is literally on the command line. Without a mode after it
   (`CaptureArgs.Any` false), the host says so and exits.
-- **Where it is.** `tools/package.ps1` publishes the host to `<package>/Capture/capture.exe`, next to the package's
-  `Engine/` folder. An editor or uncooked run uses a build of `Capture/SpaceGod.Capture` in the repo
-  (`dotnet build -c Release`). `MINDATTIC_CAPTURE_HOST` overrides both.
+- **Where it is.** `tools/package.ps1` publishes the agent from the sibling MindAttic.Media.Capture checkout to
+  `<package>/Capture/capture.exe`, next to the package's `Engine/` folder. An editor or uncooked run uses the installed
+  agent (`%LOCALAPPDATA%\MindAttic\Capture\bin\capture.exe`). `MINDATTIC_CAPTURE_HOST` overrides both (US-T693).
 - **Output.** `R:\MindAttic\Capture\SpaceGod\` (this repo's name, docs/CAPTURE.md section 2; before the promotion,
   US-T76, it was `SpaceGod.Unreal.Cpp\`, which the archived SpaceGod.Unreal.Cpp repo still writes) (or `Videos\MindAttic\Capture\...` without `R:`).
 - **Prerequisites.** The .NET 10 runtime (the SDK that builds it installs it), and ffmpeg on PATH for video and
   replays. ffmpeg is not bundled.
-- **Name.** The exe is `capture.exe` with product name `MindAttic.Capture.Agent`, the names MindAttic.Media.Capture trusts for
-  its detached `capture finalize` / `capture recover` (it trusts the installed agent's newer `MindAttic.Media.Capture.Agent`
-  too, US-T687). The host implements those two commands too, so the game never
-  waits for an export.
+- **Name.** The exe is `capture.exe` with product name `MindAttic.Media.Capture.Agent`, the names the plugin's locator
+  trusts. The agent also runs the detached `capture finalize` / `capture recover`, so the game never waits for an export.
 
 ## Frames: capture with no window (US-T163)
 
