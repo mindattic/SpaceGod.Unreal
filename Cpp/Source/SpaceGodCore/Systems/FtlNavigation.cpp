@@ -11,6 +11,7 @@
 #include "SimClock.h"
 #include "Combat/PilotFlight.h"
 #include "Economy/Propulsion.h"
+#include "Settings/DevFlags.h"
 #include "Settings/GameSetting.h"
 
 namespace SpaceGod::Core
@@ -32,8 +33,11 @@ namespace SpaceGod::Core
 		// What lies along the way is charted before the course is (U.SPC-T421): a rogue planet's well is plotted as the trip meets it.
 		if (galaxy != nullptr && galaxy->DeepSpace != nullptr) galaxy->DeepSpace->SeedRoute(here->Name, here->Origin, target->Name, target->Origin);
 		auto drive = c->Drive = CruiseDrives::Of(ship);
+		// The developer flags act on the player's own trip (US-T530), so the plan shows the trip they fly.
+		bool freeFuel = DevFlags::UnlimitedFtlFuel()->Value;
+		bool instant = DevFlags::InstantFtlSpool()->Value;
 		c->TanksTonnes = ship->Propellant();
-		c->RangeLy = FtlRules::RangeLy(drive, ship);
+		c->RangeLy = freeFuel ? cs::Double::PositiveInfinity : FtlRules::RangeLy(drive, ship);
 
 		// Out beyond the rim, clear of every well and field, on the line to the target.
 		c->DepartureKm = DeparturePoint(galaxy, here, fromKm, target);
@@ -43,7 +47,7 @@ namespace SpaceGod::Core
 		c->Ly = arrive.DistanceLy(start);
 
 		// The jump, leg by leg: each star's well or projector on the line pulls it out to cross under the ordinary drive.
-		c->SpoolDays = drive->SpoolDays();
+		c->SpoolDays = instant ? 0 : drive->SpoolDays();
 		auto probe = cs::New<Cruise>();
 		probe->Drive = drive; probe->From = here; probe->To = target->System; probe->ToName = target->Name; probe->Target = arrive; probe->Plan = true;
 		probe->Ships.Add(ship);
@@ -56,7 +60,7 @@ namespace SpaceGod::Core
 			int jumps = drive->JumpsFor(arrive.DistanceLy(at));
 			auto hop = jumps > 1 ? GalacticPosition::Lerp(at, arrive, 1.0 / jumps) : arrive;
 			double legLy = hop.DistanceLy(at);
-			c->JumpFuelTonnes += FtlRules::PropellantFor(drive, ship, legLy);
+			if (!freeFuel) c->JumpFuelTonnes += FtlRules::PropellantFor(drive, ship, legLy);
 			// As the trip itself is flown (FtlInterdiction): not the fields the leg starts in or ends in.
 			cs::List<GravityField> fields;
 			if (leg < MaxInterdictions && galaxy != nullptr && galaxy->DeepSpace != nullptr)
@@ -70,7 +74,7 @@ namespace SpaceGod::Core
 				if (jumps <= 1) break;
 				// A void stop: the drive cools from the jump and spools again for the next.
 				c->Stops++;
-				c->StopDays += drive->CooldownDays() + drive->SpoolDays();
+				if (!instant) c->StopDays += drive->CooldownDays() + drive->SpoolDays();
 				at = hop;
 				if (leg > 4096) break;
 				continue;
@@ -86,7 +90,7 @@ namespace SpaceGod::Core
 			c->Interdictions.Add(field.Name);
 			if (exit.DistanceKm(arrive) <= 1) break;
 			// Spooled again on the far side, once the drive has cooled from being pulled out.
-			c->FtlDays += drive->SpoolDays() + cs::Math::Max(0.0, drive->CooldownDays() - crossDays);
+			if (!instant) c->FtlDays += drive->SpoolDays() + cs::Math::Max(0.0, drive->CooldownDays() - crossDays);
 			at = exit;
 		}
 
@@ -118,7 +122,7 @@ namespace SpaceGod::Core
 		}
 		if (!c->Refusal.empty()) return c;
 
-		c->CoolDays = cs::Math::Max(0.0, FtlRules::CoolUntil(ship) - (jd + c->OutRunDays));
+		c->CoolDays = instant ? 0 : cs::Math::Max(0.0, FtlRules::CoolUntil(ship) - (jd + c->OutRunDays));
 		if (c->JumpFuelTonnes > ship->Propellant() + 1e-9)
 			c->Refusal = "Out of range: " + cs::Fmt(c->Ly, "0.00") + " ly in " + cs::Fmt(c->Jumps(), "0") + " jump" + (c->Jumps() == 1 ? "" : "s") +
 				" takes " + cs::Fmt(c->JumpFuelTonnes, "N0") + " t, the tanks hold " + cs::Fmt(ship->Propellant(), "N0") + " t";
