@@ -126,8 +126,12 @@ namespace SpaceGod::Core
 	public:
 		static constexpr const char* Quick = "quicksave";
 		static constexpr int AutosaveCount = 3;
+		static constexpr int MaxAutosaves = 10;
 
 		cs::String Directory;
+
+		/// <summary>US-T616: how many autosave slots take turns (1 to MaxAutosaves; the player's Autosaves kept).</summary>
+		int AutosavesKept = AutosaveCount;
 
 		explicit SaveSlots(cs::String directory) : Directory(std::move(directory)) {}
 

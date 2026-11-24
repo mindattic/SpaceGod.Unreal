@@ -34,6 +34,12 @@ namespace SpaceGod
 
 		/// Off, or 2 / 5 / 10 / 15 / 30 real minutes between autosaves (5 before the player changes it).
 		static const cs::Ref<Core::ChoiceSetting>& AutosaveInterval();
+		/// US-T616: 1 / 3 / 5 / 10 autosaves taking turns (3 before the player changes it).
+		static const cs::Ref<Core::ChoiceSetting>& AutosaveSlots();
+		/// US-T616: an autosave on docking. Off by default.
+		static const cs::Ref<Core::ToggleSetting>& AutosaveOnDock();
+		/// US-T616: an autosave right before a jump. Off by default.
+		static const cs::Ref<Core::ToggleSetting>& AutosaveBeforeJump();
 		/// How long distances are written: km then AU as the readout sees fit, always km, or AU wherever it is not a fight's range.
 		static const cs::Ref<Core::ChoiceSetting>& DistanceUnits();
 		/// Toasts and the news ticker: everything, important only, or quiet.
@@ -67,6 +73,11 @@ namespace SpaceGod
 
 		/// Real seconds between autosaves; 0 when they are off.
 		static float AutosaveSeconds();
+		/// How many autosave slots take turns (3 in a scripted run).
+		static int AutosavesKept();
+		/// Autosave on docking / before a jump is on (never in a scripted run).
+		static bool AutosavesOnDock();
+		static bool AutosavesBeforeJump();
 
 		enum class Units : int { Auto = 0, Kilometres = 1, Au = 2 };
 		static Units DistanceMode();

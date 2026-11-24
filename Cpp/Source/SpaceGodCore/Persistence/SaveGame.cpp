@@ -333,7 +333,9 @@ namespace SpaceGod::Core
 		cs::List<cs::String> list;
 		list.Add(Quick);
 		for (const auto& slot : ManualSlots()) list.Add(slot);
-		for (int i = 1; i <= AutosaveCount; i++) list.Add(Autosave(i));
+		// US-T616: the slots that take turns, and any beyond them still on disk from when more were kept.
+		for (int i = 1; i <= MaxAutosaves; i++)
+			if (i <= AutosavesKept || Exists(Autosave(i))) list.Add(Autosave(i));
 		return list;
 	}
 
@@ -403,7 +405,8 @@ namespace SpaceGod::Core
 	{
 		cs::String oldest;
 		cs::DateTime oldestAt = cs::DateTime::MaxValue;
-		for (int i = 1; i <= AutosaveCount; i++)
+		int kept = cs::Math::Max(1, cs::Math::Min(MaxAutosaves, AutosavesKept));
+		for (int i = 1; i <= kept; i++)
 		{
 			auto slot = Autosave(i);
 			auto h = Header(slot);

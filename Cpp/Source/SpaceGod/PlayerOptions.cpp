@@ -57,6 +57,29 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ChoiceSetting>& PlayerOptions::AutosaveSlots()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("gameplay.autosaveSlots", Gameplay, "Autosaves kept",
+			cs::List<cs::String>{ "1", "3", "5", "10" }, 1,
+			"How many autosaves take turns before the oldest is overwritten (fewer kept leaves the extra ones on disk).",
+			"save autosave slots kept rotation count");
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& PlayerOptions::AutosaveOnDock()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.autosaveOnDock", Gameplay, "Autosave on docking", false,
+			"An autosave each time the helm is cleared in at a port.", "save autosave dock docking port berth");
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& PlayerOptions::AutosaveBeforeJump()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.autosaveBeforeJump", Gameplay, "Autosave before a jump", false,
+			"An autosave right before a gate jump, an FTL charge or a trip to another star.", "save autosave jump gate ftl travel");
+		return value;
+	}
+
 	const cs::Ref<ChoiceSetting>& PlayerOptions::DistanceUnits()
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("gameplay.distanceUnits", Gameplay, "Distances",
@@ -154,7 +177,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -166,6 +189,17 @@ namespace SpaceGod
 		int i = AutosaveInterval()->Index;
 		return i >= 0 && i < 6 ? minutes[i] * 60.0f : 300.0f;
 	}
+
+	int PlayerOptions::AutosavesKept()
+	{
+		static const int kept[] = { 1, 3, 5, 10 };
+		int i = AutosaveSlots()->Index;
+		return !ScriptedRun() && i >= 0 && i < 4 ? kept[i] : 3;
+	}
+
+	bool PlayerOptions::AutosavesOnDock() { return !ScriptedRun() && AutosaveOnDock()->Value; }
+
+	bool PlayerOptions::AutosavesBeforeJump() { return !ScriptedRun() && AutosaveBeforeJump()->Value; }
 
 	PlayerOptions::Units PlayerOptions::DistanceMode() { return static_cast<Units>(DistanceUnits()->Index); }
 

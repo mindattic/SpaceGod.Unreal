@@ -59,6 +59,7 @@ namespace SpaceGod
 
 	void UnitySpaceApp::UpdateSaves(float dt)
 	{
+		Saves->AutosavesKept = PlayerOptions::AutosavesKept(); // US-T616: Settings > Gameplay > Autosaves kept
 		if (!autosaveEnabled) return;
 		// US-T252: Settings > Gameplay > Autosave (off, or every 2 to 30 minutes); a shorter interval picked takes hold at once.
 		float every = PlayerOptions::AutosaveSeconds();
