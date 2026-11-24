@@ -240,6 +240,9 @@ namespace SpaceGod::Rendering
 		/// the shaders read (the audit's render probes, US-T51; the C# track's UnrealRenderBackend.Describe, same text).</summary>
 		cs::String Describe();
 
+		/// US-T596: puts the volume back into effect after Settings > Graphics' bloom or vignette row changed.
+		void Reapply() { Apply(); }
+
 	private:
 		Core::CameraLook look;
 		PostProcessLook game;

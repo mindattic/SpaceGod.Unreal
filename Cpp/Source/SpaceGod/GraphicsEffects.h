@@ -33,6 +33,16 @@ namespace SpaceGod
 		static const cs::Ref<Core::RangeSetting>& FilmGrain();
 		static const cs::Ref<Core::RangeSetting>& ChromaticAberration();
 		static const cs::Ref<Core::ChoiceSetting>& LensFlares();
+		// US-T596: bloom scales the render backend's own bloom intensity (High, the default, leaves it as drawn) and
+		// vignette sets its vignette intensity (Off, the default, keeps none); both go through UnrealRenderBackend::Apply.
+		// Hardware ray tracing drives r.Lumen.HardwareRayTracing, defaults to that variable's own value, and is declared
+		// only when the RHI and project have ray tracing enabled.
+		static const cs::Ref<Core::ChoiceSetting>& Bloom();
+		static const cs::Ref<Core::RangeSetting>& Vignette();
+		static const cs::Ref<Core::ToggleSetting>& HardwareRayTracing();
+		/// What the backend multiplies its bloom intensity by, and the vignette intensity it sets (1 and 0 in a scripted run).
+		static float BloomScale();
+		static float VignetteIntensity();
 
 		/// Builds every row in menu order (the settings source GameSettingsHost adds).
 		static void Declare();

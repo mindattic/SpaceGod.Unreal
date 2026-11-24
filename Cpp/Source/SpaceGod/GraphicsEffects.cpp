@@ -7,7 +7,11 @@
 #include "GameFramework/PlayerController.h"
 #include "HAL/IConsoleManager.h"
 
+#include "RHI.h"
+#include "RenderUtils.h"
+
 #include "PlayerOptions.h"
+#include "Rendering/Pipeline/RenderBackend.h"
 #include "Settings/GameSetting.h"
 #include "Settings/SettingsRegistry.h"
 #include "UnityCompat/UnityScene.h"
@@ -261,9 +265,88 @@ namespace SpaceGod
 		return value;
 	}
 
+	namespace
+	{
+		// US-T596: as last put into effect by their Applying callbacks.
+		int bloomLevel = 2;    // 0 off, 1 low, 2 high (the game's own bloom)
+		double vignette = 0;   // percent
+		// Bloom's options: Off, Low (half the game's bloom), High (as drawn).
+		constexpr float BloomScales[] = { 0.0f, 0.5f, 1.0f };
+		/// Vignette at 100% (VignetteIntensity; Unreal's own default is 0.4, HyperspaceToll's 1).
+		constexpr double VignetteAtFull = 1.0;
+		Held hardwareRayTracing{ TEXT("r.Lumen.HardwareRayTracing") };
+
+		void ReapplyBackend()
+		{
+			if (Rendering::UnrealRenderBackend* b = Rendering::UnrealRenderBackend::Existing()) b->Reapply();
+		}
+
+		bool RayTracingAvailable()
+		{
+			return GIsRHIInitialized && IsRayTracingEnabled()
+				&& IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.HardwareRayTracing")) != nullptr;
+		}
+	}
+
+	float GraphicsEffects::BloomScale()
+	{
+		return PlayerOptions::ScriptedRun() ? 1.0f : BloomScales[FMath::Clamp(bloomLevel, 0, 2)];
+	}
+
+	float GraphicsEffects::VignetteIntensity()
+	{
+		return PlayerOptions::ScriptedRun() ? 0.0f : static_cast<float>(vignette / 100.0 * VignetteAtFull);
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsEffects::Bloom()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("graphics.bloom", SettingGroups::Graphics,
+			"Bloom", cs::List<cs::String>{ "Off", "Low", "High" }, 2,
+			"The glow that spills around suns, engines and other bright lights. High is the game's own; Off keeps them crisp.",
+			"bloom glow bright lights sun engines halo post processing")->Applying([](int i)
+			{
+				bloomLevel = i >= 0 && i <= 2 ? i : 2;
+				ReapplyBackend();
+			});
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& GraphicsEffects::Vignette()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.vignette", SettingGroups::Graphics,
+			"Vignette", 0, 0, 100, 5,
+			"Darkens the corners and edges of the screen, as a camera lens does.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::Fmt(v, "0"), "%"); }),
+			"vignette dark edges corners lens cinematic post processing")->Applying([](double v)
+			{
+				vignette = v > 0 ? v : 0;
+				ReapplyBackend();
+			});
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& GraphicsEffects::HardwareRayTracing()
+	{
+		static const bool engineDefault = []
+		{
+			IConsoleVariable* v = IConsoleManager::Get().FindConsoleVariable(TEXT("r.Lumen.HardwareRayTracing"));
+			return v != nullptr && v->GetInt() != 0;
+		}();
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("graphics.hardwareRayTracing", SettingGroups::Graphics,
+			"Hardware ray tracing", engineDefault,
+			"Lumen traces light on the GPU's ray tracing cores: truer reflections and bounced light. Costs GPU time.",
+			"hardware ray tracing rtx dxr lumen reflections global illumination")->Applying([](bool on)
+			{
+				hardwareRayTracing.Set(on != engineDefault ? std::optional<float>(on ? 1.0f : 0.0f) : std::nullopt);
+			});
+		return value;
+	}
+
 	void GraphicsEffects::Declare()
 	{
 		MotionBlur(); AmbientOcclusion(); AnisotropicFiltering(); Sharpening();
 		DepthOfField(); FilmGrain(); ChromaticAberration(); LensFlares(); // US-T700
+		Bloom(); Vignette(); // US-T596
+		if (RayTracingAvailable()) HardwareRayTracing(); // hidden where the GPU or project has no ray tracing
 	}
 }

@@ -1,6 +1,7 @@
 // Port of Unity.SpaceGod Runtime/Rendering/Pipeline/RenderBackend.cs, RenderPipelineSelection.cs (RenderPipelineSettings)
 // and Urp/UrpPostProcessSettings.cs, with UrpRenderBackend.cs's look on Unreal's post-process volume (US-T30).
 #include "Rendering/Pipeline/RenderBackend.h"
+#include "GraphicsEffects.h" // US-T596
 #include "Rendering/HullLighting.h"
 #include "Rendering/RenderPipelineProfiles.h"
 #include "Settings/GameSetting.h"
@@ -291,8 +292,9 @@ namespace SpaceGod::Rendering
 		s.ExpandGamut = 0;
 		// The original's URP volume (DefaultVolumeProfile: Vignette intensity 0) has no vignette; Unreal's default is 0.4,
 		// which darkened every edge, the model viewer's flat clear colour most visibly (US-T57).
+		// US-T596: unless Settings > Graphics > Vignette asks for one (0, the default, keeps the original's none).
 		s.bOverride_VignetteIntensity = true;
-		s.VignetteIntensity = 0;
+		s.VignetteIntensity = GraphicsEffects::VignetteIntensity();
 
 		float gameEv = game.Enabled ? game.ExposureEv : 0.0f;
 		float contrast = (game.Enabled ? game.Contrast : 0.0f) + (stack ? static_cast<float>(look.Contrast) : 0.0f);
@@ -316,7 +318,7 @@ namespace SpaceGod::Rendering
 		// URP's temperature runs -100 (cool) to 100 (warm); Unreal's white point is in kelvin (warmer = lower).
 		s.WhiteTemp = 6500.0f - 30.0f * (stack ? FMath::Clamp(static_cast<float>(look.Temperature), -100.0f, 100.0f) : 0.0f);
 		s.bOverride_BloomIntensity = true;
-		s.BloomIntensity = FMath::Max(0.0f, bloomIntensity);
+		s.BloomIntensity = FMath::Max(0.0f, bloomIntensity) * GraphicsEffects::BloomScale(); // US-T596: 1 at its default
 		s.bOverride_BloomThreshold = true;
 		s.BloomThreshold = FMath::Max(0.0f, bloomThreshold);
 		// None draws the image as the shaders do (clipping above white); Neutral and ACES take Unreal's filmic curve.
