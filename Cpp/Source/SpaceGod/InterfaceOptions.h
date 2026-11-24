@@ -11,6 +11,7 @@
 namespace SpaceGod::Core
 {
 	class ChoiceSetting;
+	class RangeSetting;
 	class ToggleSetting;
 }
 
@@ -31,6 +32,9 @@ namespace SpaceGod
 		static const cs::Ref<Core::ToggleSetting>& OffscreenIndicators();
 		/// The ticks round the reticle when a round lands (US-T257). On by default.
 		static const cs::Ref<Core::ToggleSetting>& HitMarkers();
+		/// US-T600: how far in from the screen's edges the HUD keeps (0% to 10%), for TVs that crop the picture and very
+		/// wide screens. 0 by default: the HUD on the screen's edges as it always was.
+		static const cs::Ref<Core::RangeSetting>& SafeZone();
 
 		/// Builds every one of these settings (the declaration source GameSettingsHost registers).
 		static void Declare();
@@ -54,5 +58,8 @@ namespace SpaceGod
 		static bool ShowsOffscreenIndicators();
 		/// Whether hit markers are drawn.
 		static bool ShowsHitMarkers();
+
+		/// The HUD's inset from each edge as a fraction of the screen's size (0 to 0.1).
+		static float SafeZoneFraction();
 	};
 }

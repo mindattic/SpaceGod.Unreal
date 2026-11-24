@@ -4,6 +4,7 @@
 
 #include "UI/Hud.h"
 
+#include "InterfaceOptions.h" // US-T600
 #include "UnitySpaceApp.h"
 #include "Camera/SpaceCamera.h"
 #include "Camera/StarTravel.h"
@@ -170,8 +171,11 @@ namespace SpaceGod::UI
 		f.hudMode = app->HudModeOn(); // US-T439: the minimal HUD shows the pinned drawers and the urgent tabs only
 		f.screenW = static_cast<float>(Screen::width);
 		f.screenH = static_cast<float>(Screen::height);
-		float left = SafeLeft() + HudLayout::Margin, right = SafeRight() - HudLayout::Margin;
-		float top = HudLayout::Margin, foot = f.screenH - HudLayout::Margin;
+		// US-T600: the Interface safe zone keeps every edge's band that far in from the screen's edges (the ultrawide band
+		// already further in stays as it was).
+		float insetX = f.screenW * InterfaceOptions::SafeZoneFraction(), insetY = f.screenH * InterfaceOptions::SafeZoneFraction();
+		float left = Mathf::Max(SafeLeft(), insetX) + HudLayout::Margin, right = Mathf::Min(SafeRight(), f.screenW - insetX) - HudLayout::Margin;
+		float top = insetY + HudLayout::Margin, foot = f.screenH - insetY - HudLayout::Margin;
 		using HudDock::Box;
 		using HudDock::Edge;
 		// US-T440: every panel is a drawer, so the edges' bands are the screen less its margins: the top bar and the navigator
@@ -182,14 +186,14 @@ namespace SpaceGod::UI
 		f.bands[static_cast<int>(Edge::Top)] = Box(left, top, Mathf::Max(0.0f, right - left), Mathf::Max(0.0f, foot - top));
 		// The right edge: the right-hand column, from over the dev menu's hint up to the hold rewind's line (the readout itself
 		// is the first drawer down from its top, where the line always was).
-		float rightTop = 44, rightBottom = f.screenH - HudLayout::Margin - HudLayout::DevHintStrip;
+		float rightTop = insetY + 44, rightBottom = foot - HudLayout::DevHintStrip;
 		f.bands[static_cast<int>(Edge::Right)] = Box(left, rightTop, Mathf::Max(0.0f, right - left), Mathf::Max(0.0f, rightBottom - rightTop));
 		// The bottom edge: from the left edge to the right-hand column's foot stack (the reactor, the sensors, the cards over
 		// them) as the last pass laid it out, on the screen's foot.
 		float x1 = right;
 		for (const auto& w : drawers.Windows())
 			if (w.drawn && w.docked && w.edge == Edge::Right && !w.far) x1 = Mathf::Min(x1, w.rect.x - HudLayout::Margin);
-		x1 = Mathf::Min(x1, f.screenW - HudLayout::DevHintWidth - HudLayout::Margin);
+		x1 = Mathf::Min(x1, f.screenW - insetX - HudLayout::DevHintWidth - HudLayout::Margin);
 		if (x1 - left < 520) x1 = Mathf::Min(left + 520, right);
 		f.bands[static_cast<int>(Edge::Bottom)] = Box(left, top, Mathf::Max(0.0f, x1 - left), Mathf::Max(0.0f, foot - top));
 		bottomBandW = Mathf::Max(0.0f, x1 - left);

@@ -64,9 +64,18 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& InterfaceOptions::SafeZone()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("interface.safeZone", SettingGroups::Interface, "HUD safe zone", 0, 0, 10, 1,
+			"How far in from the screen's edges the HUD keeps, for TVs that crop the picture and very wide screens.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "%"); }),
+			"safe zone area margin inset border edge tv overscan ultrawide hud");
+		return value;
+	}
+
 	void InterfaceOptions::Declare()
 	{
-		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers();
+		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone();
 	}
 
 	// ---------------------------------------------------------------- reads
@@ -102,4 +111,11 @@ namespace SpaceGod
 	bool InterfaceOptions::ShowsOffscreenIndicators() { return Toggle(OffscreenIndicators()); }
 
 	bool InterfaceOptions::ShowsHitMarkers() { return Toggle(HitMarkers()); }
+
+	float InterfaceOptions::SafeZoneFraction()
+	{
+		const auto& s = SafeZone();
+		double pct = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
+		return static_cast<float>(cs::Math::Max(0.0, cs::Math::Min(10.0, pct)) / 100.0);
+	}
 }
