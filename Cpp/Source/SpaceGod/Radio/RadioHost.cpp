@@ -1,6 +1,7 @@
 #include "Radio/RadioHost.h"
 
 #include "Information/LightSpeed.h"
+#include "Radio/RadioStats.h" // US-T650
 
 #include <algorithm>
 
@@ -10,6 +11,9 @@ namespace SpaceGod::Radio
 
 	void RadioHost::Tick(int system, const DVec3& here, double now)
 	{
+		SG_RADIO_SCOPE(HostTick);
+		RadioStats& stats = RadioStats::Get();
+		stats.Arrivals = 0;
 		if (system != systemId)
 		{
 			// A new system: its own log, made on its first message; the old one's fronts cannot cross the stars.
@@ -55,7 +59,12 @@ namespace SpaceGod::Radio
 		}
 
 		arrivals.clear();
-		receiver.Advance(*log, jd, [this](double atJd) { return ListenerAt(atJd); }, arrivals);
+		{
+			SG_RADIO_SCOPE(Advance);
+			receiver.Advance(*log, jd, [this](double atJd) { return ListenerAt(atJd); }, arrivals);
+		}
+		stats.Arrivals = static_cast<int>(arrivals.size());
+		SG_RADIO_SCOPE(Reception);
 		for (const RadioArrival& a : arrivals)
 		{
 			// US-T679: the tuner hears it first (activity for its scan); muted, unlistened or encrypted traffic stops here,
@@ -151,6 +160,7 @@ namespace SpaceGod::Radio
 
 	void RadioHost::DoRebase()
 	{
+		SG_RADIO_SCOPE(Rebase);
 		rebasePending = false;
 		rebases++;
 		receiver.Rebase(*log, [this](double atJd) { return ListenerAt(atJd); }, jd);

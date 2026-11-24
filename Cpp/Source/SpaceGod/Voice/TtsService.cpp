@@ -1,6 +1,7 @@
 #include "Voice/TtsService.h"
 
 #include "Audio/GameAudio.h"
+#include "Radio/RadioStats.h"
 #include "Voice/PiperTts.h"
 #include "Voice/RadioEffect.h"
 #include "Voice/SapiTts.h"
@@ -23,6 +24,10 @@ namespace SpaceGod::Voice
 	{
 		/// US-T649: the Voice engine setting (0 Auto, 1 Piper, 2 Windows), set on the game thread, read by the worker.
 		std::atomic<int> preferredEngine { 0 };
+		/// US-T650: cache hits (memory on the game thread, disk on the worker), syntheses and their total time.
+		std::atomic<unsigned long long> cacheHits { 0 };
+		std::atomic<unsigned long long> synthCount { 0 };
+		std::atomic<unsigned long long> synthCycles { 0 };
 
 		struct Job
 		{
@@ -102,10 +107,16 @@ namespace SpaceGod::Voice
 					if (ITtsEngine* engine = Choose())
 					{
 						result.Key = VoiceCache::KeyOf(ChosenId, job.Request);
-						if (!VoiceCache::Load(result.Key, result.Clip))
+						if (VoiceCache::Load(result.Key, result.Clip)) cacheHits.fetch_add(1, std::memory_order_relaxed);
+						else
 						{
+							SCOPE_CYCLE_COUNTER(STAT_SpaceGodRadio_TtsSynth);
+							TRACE_CPUPROFILER_EVENT_SCOPE(SpaceGodRadio_TtsSynth);
+							const uint64 start = FPlatformTime::Cycles64();
 							result.Clip = engine->Synthesize(job.Request);
 							if (job.Request.Effect) RadioEffect::Apply(result.Clip, result.Key);
+							synthCycles.fetch_add(FPlatformTime::Cycles64() - start, std::memory_order_relaxed);
+							synthCount.fetch_add(1, std::memory_order_relaxed);
 							if (result.Clip.IsValid() && !Stopping) VoiceCache::Store(result.Key, result.Clip);
 						}
 					}
@@ -215,6 +226,7 @@ namespace SpaceGod::Voice
 		TtsId id = 0;
 		if (key && s.Cache.Find(key, clip))
 		{
+			cacheHits.fetch_add(1, std::memory_order_relaxed);
 			id = ++s.Next;
 			s.Hits.Add(Result { id, key, MoveTemp(clip) });
 		}
@@ -245,8 +257,25 @@ namespace SpaceGod::Voice
 		s.Runnable->Waiting.RemoveAll([id](const Job& job) { return job.Id == id; });
 	}
 
+	TtsService::Stats TtsService::GetStats()
+	{
+		Stats stats;
+		State& s = S();
+		if (s.Runnable)
+		{
+			FScopeLock scope(&s.Runnable->Lock);
+			stats.QueueDepth = s.Runnable->Waiting.Num();
+		}
+		stats.CacheHits = cacheHits.load(std::memory_order_relaxed);
+		stats.CacheMisses = synthCount.load(std::memory_order_relaxed);
+		const unsigned long long cycles = synthCycles.load(std::memory_order_relaxed);
+		stats.MeanSynthMs = stats.CacheMisses > 0 ? FPlatformTime::ToMilliseconds64(cycles) / static_cast<double>(stats.CacheMisses) : 0.0;
+		return stats;
+	}
+
 	void TtsService::Tick()
 	{
+		SG_RADIO_SCOPE(TtsTick);
 		State& s = S();
 		if (!s.Runnable) return;
 		TArray<Result> hits = MoveTemp(s.Hits);

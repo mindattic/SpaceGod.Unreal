@@ -38,6 +38,20 @@ namespace SpaceGod::Voice
 		/// (SAPI) only. The worker picks it up before its next line; the cache key follows the engine that speaks.
 		static void SetEngine(int engine);
 
+		/// US-T650: plain counters for STATGROUP_SpaceGodRadio and sg.Radio stats (any thread may have added to them).
+		struct Stats
+		{
+			/// Requests waiting for the worker now.
+			int QueueDepth = 0;
+			/// Answered from the memory or disk cache, since the start.
+			unsigned long long CacheHits = 0;
+			/// Synthesized, since the start.
+			unsigned long long CacheMisses = 0;
+			/// The mean time of a synthesis (with its effect), ms.
+			double MeanSynthMs = 0;
+		};
+		static Stats GetStats();
+
 		/// The most requests waiting at once.
 		static constexpr int Capacity = 16;
 		static constexpr int PrefetchPriority = INT_MIN;

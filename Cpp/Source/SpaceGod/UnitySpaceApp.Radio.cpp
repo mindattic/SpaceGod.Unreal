@@ -10,6 +10,7 @@
 #include "Systems/Galaxy.h"
 #include "Systems/InterstellarTraffic.h"
 #include "UnityCompat/UnityRuntime.h"
+#include "Radio/RadioStats.h" // US-T650
 #include "Voice/VoiceArbiter.h" // US-T685
 
 #include <chrono>
@@ -24,8 +25,26 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioTick()
 	{
 		if (Clock == nullptr) return;
-		// US-T685: the spoken radio lines take their turns on the one voice; under high warp only urgent ones are kept.
-		Voice::VoiceArbiter::Tick(Clock->Paused() ? 0.0f : static_cast<float>(Clock->Warp().SimSecondsPerSecond * Clock->Speed));
+		// US-T650: every stage below is timed (stat SpaceGodRadio, Insights, sg.Radio stats); the counters go out on return.
+		Radio::RadioStats::Get().BeginFrame();
+		struct PublishOnReturn
+		{
+			const Radio::RadioHost& Host;
+			~PublishOnReturn()
+			{
+				Radio::RadioStats& stats = Radio::RadioStats::Get();
+				stats.LogSize = Host.Log() != nullptr ? Host.Log()->Count() : 0;
+				stats.HeapSize = Host.Receiver().Count();
+				stats.Digested = Host.Digest().Pending();
+				stats.Publish();
+			}
+		} publishOnReturn { radio };
+		SG_RADIO_SCOPE(Tick);
+		{
+			// US-T685: the spoken radio lines take their turns on the one voice; under high warp only urgent ones are kept.
+			SG_RADIO_SCOPE(Arbiter);
+			Voice::VoiceArbiter::Tick(Clock->Paused() ? 0.0f : static_cast<float>(Clock->Warp().SimSecondsPerSecond * Clock->Speed));
+		}
 		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
 		cs::Ref<Newswire> news = Galaxy != nullptr && Galaxy->Traffic != nullptr ? Galaxy->Traffic->News : nullptr;
 		if (news != radioNews)
@@ -52,6 +71,7 @@ namespace SpaceGod
 		// none.
 		auto takeDigest = [this]()
 		{
+			SG_RADIO_SCOPE(Digest);
 			if (PlayerOptions::ScriptedRun())
 			{
 				radio.Digest().Clear();
@@ -72,6 +92,7 @@ namespace SpaceGod
 		{
 			// US-T681: ambient talk (read-only, view-local, its own random stream). A new system or a rebase back-fills what is
 			// already in flight first: the log clamps a SentJd earlier than its newest, so nothing newer may go out before it.
+			SG_RADIO_SCOPE(Sampler);
 			if (!radioAmbientSeeded)
 			{
 				std::random_device device;
@@ -95,6 +116,7 @@ namespace SpaceGod
 		if (radioSystemIndex >= 0 && !PlayerOptions::ScriptedRun())
 		{
 			// US-T682: the world's events in this system go out as chatter (read-only, view-local).
+			SG_RADIO_SCOPE(Events);
 			radioChatterOut.clear();
 			radioChatter.Pump(ActiveSystem, radioSystemIndex, Clock->Jd, radioChatterOut);
 			for (const auto& m : radioChatterOut)

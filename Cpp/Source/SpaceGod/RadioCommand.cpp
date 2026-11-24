@@ -5,6 +5,8 @@
 
 #include "Astro.h"
 #include "Radio/RadioChannels.h"
+#include "Radio/RadioStats.h"
+#include "Voice/TtsService.h"
 #include "SpaceGodLog.h"
 #include "UnitySpaceAppActor.h"
 
@@ -60,15 +62,37 @@ namespace
 				r.AgeDays * Astro::SecondsPerDay, UTF8_TO_TCHAR(r.Text.c_str()));
 	}
 
+	/// US-T650: the latest frame's time per radio stage and the counters behind stat SpaceGodRadio.
+	void RadioPrintStats()
+	{
+		using SpaceGod::Radio::RadioStage;
+		using SpaceGod::Radio::RadioStats;
+		const RadioStats& stats = RadioStats::Get();
+		for (int i = 0; i < static_cast<int>(RadioStage::Count); i++)
+		{
+			const RadioStage stage = static_cast<RadioStage>(i);
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Radio stats: %-18s %.4f ms"), UTF8_TO_TCHAR(RadioStats::StageName(stage)), stats.LastMs(stage));
+		}
+		const SpaceGod::Voice::TtsService::Stats tts = SpaceGod::Voice::TtsService::GetStats();
+		UE_LOG(LogSpaceGod, Display, TEXT("sg.Radio stats: log %llu, heap %d, arrivals %d, digested %llu, tts queue %d, cache hits %llu, misses %llu, mean synth %.1f ms"),
+			static_cast<unsigned long long>(stats.LogSize), stats.HeapSize, stats.Arrivals, static_cast<unsigned long long>(stats.Digested),
+			tts.QueueDepth, tts.CacheHits, tts.CacheMisses, tts.MeanSynthMs);
+	}
+
 	FAutoConsoleCommand GRadioCommand(
 		TEXT("sg.Radio"),
-		TEXT("US-T656: the radio host's log, heap, overflow and skipped counts and latest arrivals; sg.Radio emit <text> sends <text> on Guard from 1 AU away."),
+		TEXT("US-T656: the radio host's log, heap, overflow and skipped counts and latest arrivals; sg.Radio emit <text> sends <text> on Guard from 1 AU away; sg.Radio stats (US-T650) prints each stage's last-frame time and the radio counters (stat SpaceGodRadio shows them live)."),
 		FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& args)
 		{
 			auto* app = RadioRunningApp();
 			if (app == nullptr)
 			{
 				UE_LOG(LogSpaceGod, Warning, TEXT("sg.Radio: no game running"));
+				return;
+			}
+			if (args.Num() > 0 && args[0].Equals(TEXT("stats"), ESearchCase::IgnoreCase))
+			{
+				RadioPrintStats();
 				return;
 			}
 			if (args.Num() > 0 && args[0].Equals(TEXT("emit"), ESearchCase::IgnoreCase))
