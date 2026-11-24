@@ -408,6 +408,15 @@ private:
 	void DrawCaptions();
 	cs::Ref<GUIStyle> captionStyles[3]; // by AccessibilityOptions::CaptionScale
 
+	// ---------------------------------------------------------------- US-T658: the FPS counter (Hud.Fps.cpp)
+
+	/// <summary>Frames per second in the top right corner while Settings > Interface > Show FPS counter is on, its text
+	/// rebuilt twice a second.</summary>
+	void DrawFps();
+	int fpsFrames = 0, fpsLastFrame = -1;
+	float fpsSince = 0;
+	cs::String fpsText;
+
 	/// Streaks of light streaming out from <paramref name="centre"/>, longer and faster with
 	/// <paramref name="strength"/>; <paramref name="seed"/> gives a set its own pattern.
 	void DrawStreaks(Vector2 centre, float strength, int count, Color tint, int seed, float maxLength);

@@ -276,6 +276,7 @@ namespace SpaceGod::UI
 		DrawPossession(); // US-T446: the possession show's breath, and the possessed view's frame (with the HUD off too)
 		DrawSelfDestruct(); // US-T97: shown with the HUD off too
 		DrawDevBadge(*app, small); // US-T525: with the HUD off too
+		DrawFps(); // US-T658: with the HUD off too
 		if (!app->ShowHud)
 		{
 			drawers.Draw(frame); // US-T440: the alerts and what a key opened (the saves, the comms) only
@@ -1224,14 +1225,15 @@ namespace SpaceGod::UI
 			float half = Mathf::Lerp(46.0f, 18.0f, static_cast<float>(me->LockProgress));
 			DrawBrackets(Rect(lp.x - half, lp.y - half, half * 2, half * 2), made ? LockColor : HostileColor, made ? 2.5f : 1.5f);
 			cs::String state = made ? cs::String("LOCKED") : cs::Cat("LOCKING ", Mathf::RoundToInt(static_cast<float>(me->LockProgress) * 100), "%");
+			double lockKm = (locked->Pos - me->Pos).Length();
+			bool labelled = InterfaceOptions::LabelsAt(lockKm, ArrowReachKm(me)); // US-T658
 			WorldLabels wl(worldLabelPass); // US-T214
-			DrawLabel(cs::Cat(state, "  ", RangeText((locked->Pos - me->Pos).Length()),
+			DrawLabel(cs::Cat(state, labelled ? cs::Cat("  ", RangeText(lockKm)) : cs::String(),
 				locked->Kind == UnitKind::Ship && Battle::OpenPrize(locked) && battle->Hostile(me, locked) ? cs::String("  OPEN PRIZE") : cs::String()), // US-T380
 				lp + Vector2(half + 6, -8), made ? LockColor : HostileColor, true);
 			// US-T381: how many of your weapons reach it at this range, and how far short the nearest of the rest falls. Read only.
-			if (c != nullptr && battle->Hostile(me, locked))
+			if (labelled && c != nullptr && battle->Hostile(me, locked))
 			{
-				double lockKm = (locked->Pos - me->Pos).Length();
 				int weapons = 0, reaching = 0;
 				double shortest = cs::Double::MaxValue;
 				cs::String shortName;

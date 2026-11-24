@@ -54,6 +54,7 @@ namespace SpaceGod::UI
 			Color Tint;
 			cs::String Label;
 			bool Ringed = false;
+			bool Labelled = true;
 		};
 
 		Vector3 ToUnity(DVec3 eclipticDirection)
@@ -100,7 +101,8 @@ namespace SpaceGod::UI
 		double reach = unit != nullptr && me != nullptr ? ArrowReachKm(me) : War::ScanRangeKm;
 		auto tint = unit != nullptr && me != nullptr ? (battle->Hostile(me, unit) ? HostileColor : unit->Side == me->Side ? ArrowFriendlyColor : ArrowNeutralColor)
 			: t.IsShip() ? StanceColor(HeldFaction(), t.Ship->Faction) : Accent;
-		DrawEdgeArrow(rel, ArrowSize(km, reach), tint, cs::Cat(name, "  ", RangeText(km)), unit != nullptr && me != nullptr && unit == me->PlayerLockTarget);
+		auto tag = InterfaceOptions::LabelsAt(km, ArrowReachKm(me)) ? cs::Cat(name, "  ", RangeText(km)) : cs::String(); // US-T658
+		DrawEdgeArrow(rel, ArrowSize(km, reach), tint, tag, unit != nullptr && me != nullptr && unit == me->PlayerLockTarget);
 		return true;
 	}
 
@@ -201,9 +203,11 @@ namespace SpaceGod::UI
 				a.ReachKm = reach;
 				a.Tint = hostile ? HostileColor : o->Side == me->Side ? ArrowFriendlyColor : ArrowNeutralColor;
 				a.Ringed = isLock;
-				a.Label = isLock ? cs::Cat(o->Name(), "  ", RangeText(a.Km)) : cs::String();
+				a.Labelled = InterfaceOptions::LabelsAt(a.Km, reach); // US-T658
+				a.Label = isLock && a.Labelled ? cs::Cat(o->Name(), "  ", RangeText(a.Km)) : cs::String();
 				// US-T380: a hostile hull lying open to boarding says so on its arrow.
-				if (hostile && o->Kind == UnitKind::Ship && Battle::OpenPrize(o)) a.Label = cs::Cat(a.Label.empty() ? RangeText(a.Km) : a.Label, "  OPEN PRIZE");
+				if (hostile && o->Kind == UnitKind::Ship && Battle::OpenPrize(o))
+					a.Label = !a.Label.empty() ? cs::Cat(a.Label, "  OPEN PRIZE") : a.Labelled ? cs::Cat(RangeText(a.Km), "  OPEN PRIZE") : cs::String("OPEN PRIZE");
 				items.Add(a);
 			}
 		}
@@ -223,7 +227,8 @@ namespace SpaceGod::UI
 				a.Km = km;
 				a.ReachKm = reach;
 				a.Tint = StanceColor(mine, g->Faction());
-				a.Label = cs::Cat(g->Leader->Name, "  ", RangeText(km));
+				a.Labelled = InterfaceOptions::LabelsAt(km, reach); // US-T658
+				a.Label = a.Labelled ? cs::Cat(g->Leader->Name, "  ", RangeText(km)) : cs::String();
 				items.Add(a);
 			}
 		}
@@ -234,7 +239,7 @@ namespace SpaceGod::UI
 		{
 			if (drawn >= ArrowMaxCount && !a.Ringed) continue;
 			// The nearest hostile is named by its range too.
-			auto named = !a.Label.empty() ? a.Label : drawn == 0 ? RangeText(a.Km) : cs::String();
+			auto named = !a.Label.empty() ? a.Label : drawn == 0 && a.Labelled ? RangeText(a.Km) : cs::String();
 			DrawEdgeArrow(a.Rel, ArrowSize(a.Km, a.ReachKm), a.Tint, named, a.Ringed);
 			drawn++;
 		}
