@@ -4,6 +4,8 @@
 
 #include "Information/LightSpeed.h"
 #include "Information/Ranges.h"
+#include "Radio/ChatterLines.h"
+#include "Systems/Galaxy.h"
 #include "UnityCompat/UnityRuntime.h"
 #include "UnitySpaceApp.h"
 
@@ -30,9 +32,10 @@ namespace SpaceGod::Radio
 
 		HeardLine line;
 		cs::String tag = channel != nullptr ? cs::Cat(channel->Name, " ", cs::Format("{0:0.0##}", channel->FrequencyMhz)) : cs::Cat("ch ", m.ChannelId);
+		const cs::Ref<World> world = app.ActiveSystem != nullptr ? app.ActiveSystem->World : nullptr;
 		cs::String text = m.TextSlot != RadioMessage::NoText && host.Log() != nullptr ? host.Log()->Text(a.Index)
-			: cs::Cat(channel != nullptr ? ToString(channel->Kind) : "Radio", " traffic");
-		cs::String sender = m.EmitterKey == 0 ? cs::String() : cs::Cat("#", m.EmitterKey, ": ");
+			: ChatterLines::Realise(m, world, a.ArrivalJd, channel != nullptr ? channel->Kind : RadioChannelKind::Civil);
+		cs::String sender = m.EmitterKey == 0 ? cs::String() : cs::Cat(ChatterLines::SenderName(world, m.EmitterKey), ": ");
 		line.Text = cs::Cat("[", tag, "] ", sender, text, "  - sent ", LightSpeed::Describe(a.AgeDays), " ago, ", Ranges::Spoken(a.DistanceKm));
 		line.Kind = (channel != nullptr && channel->Kind == RadioChannelKind::Pirate) || m.Priority >= 3 ? Tone::Hostile
 			: channel != nullptr && channel->Kind == RadioChannelKind::Guard ? Tone::Wary
