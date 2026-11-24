@@ -24,4 +24,11 @@ public:
 private:
 	/// <summary>A keyboard binding of the Console action is on <paramref name="key"/> with exactly the modifiers held now.</summary>
 	static bool IsToggleKey(const FKey& key);
+
+	/// <summary>
+	/// US-T625: the game's own autocomplete lines (RegisterConsoleAutoCompleteEntries, rebuilt each time the console
+	/// opens): sg.Set per setting with its label, value and default, sg.Toggle per toggle, sg.Cheat per dev menu
+	/// category and entry, and sg.Settings lockin, unlock and list.
+	/// </summary>
+	static void AddAutoCompleteEntries(TArray<FAutoCompleteCommand>& list);
 };
