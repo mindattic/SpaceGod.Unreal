@@ -112,6 +112,37 @@ namespace SpaceGod::Input
 		InvertMove();
 		VibrationStrength();
 		Prompts();
+		ResponseCurve();
+		TriggerDeadZone();
+	}
+
+	const cs::Ref<ChoiceSetting>& Gamepad::ResponseCurve()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("controls.pad.responseCurve", SettingGroups::Controls,
+			"Gamepad stick response curve", cs::List<cs::String>{ "Linear", "Smooth", "Precise" }, 0,
+			"How a stick's push past its dead zone turns into movement: Linear follows the stick, Smooth (squared) and Precise (cubed) keep small pushes small for fine control and still reach full at full deflection.",
+			"gamepad controller stick response curve exponent linear smooth precise sensitivity");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& Gamepad::TriggerDeadZone()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.pad.triggerDeadZone", SettingGroups::Controls,
+			"Gamepad trigger dead zone", 0.0, 0.0, 0.3, 0.01,
+			"How far a trigger pulls before it counts: raise it if a trigger fires from a resting finger.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::ToInt(cs::Math::Round(v * 100)), "%"); }),
+			"gamepad controller trigger deadzone pull fire");
+		return value;
+	}
+
+	float Gamepad::TriggerValue(float raw)
+	{
+		float v = Mathf::Clamp01(raw);
+		if (PlayerOptions::ScriptedRun()) return v;
+		float dead = static_cast<float>(TriggerDeadZone()->Value);
+		if (dead <= 0) return v;
+		if (v <= dead) return 0;
+		return Mathf::Clamp01((v - dead) / Mathf::Max(0.0001f, 1.0f - dead));
 	}
 
 	float Gamepad::Vibration() { return PlayerOptions::ScriptedRun() ? 1.0f : static_cast<float>(VibrationStrength()->Value); }
@@ -154,6 +185,10 @@ namespace SpaceGod::Input
 		float m = raw.magnitude();
 		if (m <= dead || m <= 0.0001f) return Vector2::zero();
 		float scaled = Mathf::Clamp01((m - dead) / Mathf::Max(0.0001f, 1.0f - dead));
+		// US-T633: the response curve on the length, so the direction (each axis's sign) is kept.
+		int curve = PlayerOptions::ScriptedRun() ? 0 : ResponseCurve()->Index;
+		if (curve == 1) scaled = scaled * scaled;
+		else if (curve == 2) scaled = scaled * scaled * scaled;
 		return raw * (scaled / m);
 	}
 

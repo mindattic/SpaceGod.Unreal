@@ -80,6 +80,15 @@ namespace SpaceGod::Input
 		/// <summary>Controls (US-T699): whose button names the pad's prompts show: Auto (by the pad connected), Xbox or
 		/// PlayStation.</summary>
 		static const cs::Ref<Core::ChoiceSetting>& Prompts();
+		/// <summary>Controls (US-T633): the sticks' response curve after the dead zone: Linear (as before), Smooth (the
+		/// deflection squared) or Precise (cubed), the direction kept. A view setting, each machine's own; a scripted run
+		/// keeps Linear.</summary>
+		static const cs::Ref<Core::ChoiceSetting>& ResponseCurve();
+		/// <summary>Controls (US-T633): the triggers' dead zone, 0 (as before) to 30%: a pull inside it reads 0, the rest is
+		/// rescaled to start from 0. A scripted run keeps 0.</summary>
+		static const cs::Ref<Core::RangeSetting>& TriggerDeadZone();
+		/// <summary>US-T633: a raw trigger (0..1) through <see cref="TriggerDeadZone"/>, rescaled, 0..1.</summary>
+		static float TriggerValue(float raw);
 		/// <summary>US-T699: sets <see cref="ShownPadPrompts"/> from <see cref="Prompts"/> and <see cref="ConnectedPadName"/>
 		/// (Auto: PlayStation when the name says DualSense, DualShock, PlayStation, PS4 or PS5); a scripted run keeps Xbox.
 		/// Called each frame after the pad is fed.</summary>
@@ -90,7 +99,8 @@ namespace SpaceGod::Input
 		/// <summary>Builds every pad setting (the declaration source GameSettingsHost registers).</summary>
 		static void Declare();
 
-		/// <summary>A raw stick through the dead zone (radial, rescaled), the result's length 0..1.</summary>
+		/// <summary>A raw stick through the dead zone (radial, rescaled) and the <see cref="ResponseCurve"/>, the result's
+		/// length 0..1.</summary>
 		static Vector2 Stick(Vector2 raw);
 		/// <summary>The move stick through the dead zone: the left (the right with <see cref="SwapSticks"/>), its y flipped
 		/// with <see cref="InvertMove"/>; a scripted run keeps the left, unflipped.</summary>

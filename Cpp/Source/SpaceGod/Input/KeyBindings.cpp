@@ -354,7 +354,7 @@ namespace SpaceGod::Input
 				case BindSource::PadTrigger:
 					if (!pad.present) break;
 					if (b.thresholdPct <= 0) fromButton(pad[b.code == 1 ? PadButton::RightTrigger : PadButton::LeftTrigger], true); // the pad's own click
-					else r.down = (b.code == 1 ? pad.rightTrigger : pad.leftTrigger) >= b.thresholdPct / 100.0f;
+					else r.down = Gamepad::TriggerValue(b.code == 1 ? pad.rightTrigger : pad.leftTrigger) >= b.thresholdPct / 100.0f; // US-T633: through the trigger dead zone
 					break;
 				case BindSource::PadStick:
 					if (!pad.present) break;
