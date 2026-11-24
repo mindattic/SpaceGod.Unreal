@@ -7,6 +7,7 @@
 #include "PlayerOptions.h" // US-T252
 #include "UnitySpaceApp.h"
 #include "Camera/SpaceCamera.h"
+#include "Console/GameConsole.h" // US-T620
 #include "Input/DriftKey.h"
 #include "Input/Gamepad.h" // US-T250
 #include "Input/KeyBindings.h" // US-T249
@@ -65,6 +66,7 @@ namespace SpaceGod
 			RenderPipelineSettings::RayTracing();
 		});
 		SettingsRegistry::AddDeclarationSource([] { Views::BattleFx::EffectsBudget(); });
+		SettingsRegistry::AddDeclarationSource([] { GameConsole::Declare(); }); // US-T620: Developer > Console
 	}
 
 	void GameSettingsHost::Bind()

@@ -63,6 +63,7 @@ namespace SpaceGod::Input
 		// Screens and panels
 		PauseMenu /* US-T437 */, Help, Comms, Drawer, GalaxyMap, SystemMap, Market, DockPort, Cargo, Outfit, Bounties, Contracts, Fleet, Trade, Hail,
 		Logs, Discoveries, Encyclopedia, Society /* US-T293 */, Notices /* US-T345 */, BattlePlot /* US-T367 */, SpawnPilot, SpawnPractice, QuickSave, QuickLoad, Rewind /* US-T99 */, HoldRewind /* US-T409 */, Saves, CheatMenu, SpawnMenu,
+		Console /* US-T620 */,
 		Count,
 	};
 

@@ -157,8 +157,8 @@ namespace SpaceGod::Smoke::FeatureAudit
 			double g0 = app->ScaleGoal;
 			Tap(Key::G);
 			double g1 = app->ScaleGoal;
-			Tap(Key::Backquote);
-			Result("view.scale", g1 != g0 && app->ScaleGoal == g0, cs::Cat("G ", g0, " -> ", g1, ", ` -> ", app->ScaleGoal));
+			Tap(Key::G);
+			Result("view.scale", g1 != g0 && app->ScaleGoal == g0, cs::Cat("G ", g0, " -> ", g1, ", G again -> ", app->ScaleGoal));
 			frames(60);
 
 			Toggle("view.orbits", Key::O, app->ShowOrbits);

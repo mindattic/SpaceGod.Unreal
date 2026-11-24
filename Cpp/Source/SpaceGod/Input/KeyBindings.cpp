@@ -224,7 +224,7 @@ namespace SpaceGod::Input
 				{ KeyAction::TogglePause, "pause", "Time: pause", Both, EdgeKind, { Key::Space, Key::Pause }, "Pause (eases to a stop and back)." },
 				{ KeyAction::TimeFaster, "timeFaster", "Time: faster", Both, EdgeKind, { Key::Period, Key::Equals, Key::NumpadPlus }, "Time warp faster." },
 				{ KeyAction::TimeSlower, "timeSlower", "Time: slower", Both, EdgeKind, { Key::Comma, Key::Minus, Key::NumpadMinus }, "Time warp slower (below real time, slow motion)." },
-				{ KeyAction::ToggleScale, "scale", "Time: gameplay / realistic scale", Both, EdgeKind, { Key::G, Key::Backquote }, "Toggle GAMEPLAY / REALISTIC scale." },
+				{ KeyAction::ToggleScale, "scale", "Time: gameplay / realistic scale", Both, EdgeKind, { Key::G }, "Toggle GAMEPLAY / REALISTIC scale." },
 
 				{ KeyAction::Orbits, "orbits", "View: orbits", Both, EdgeKind, { Key::O }, "Orbits on or off." },
 				{ KeyAction::Labels, "labels", "View: labels", Both, EdgeKind, { Key::L }, "Labels on or off." },
@@ -271,6 +271,7 @@ namespace SpaceGod::Input
 				{ KeyAction::Saves, "saves", "Game: save slots", Both, EdgeKind, { Key::F6 }, "The save slots." },
 				{ KeyAction::CheatMenu, "devMenu", "Game: dev menu", Both, EdgeKind, { InputBinding(Key::F1, S) }, "The dev menu." },
 				{ KeyAction::SpawnMenu, "spawnMenu", "Game: dev spawn menu", Both, EdgeKind, { InputBinding(Key::F2, S) }, "The dev menu on its Spawn tab." },
+				{ KeyAction::Console, "console", "Game: developer console", Both, EdgeKind, { Key::Backquote }, "The developer console, while Developer > Console is on." }, // US-T620
 			};
 			return actions;
 		}
