@@ -131,6 +131,24 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ChoiceSetting>& PlayerOptions::Clock()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("gameplay.clockFormat", Gameplay, "Clock",
+			cs::List<cs::String>{ "24-hour", "12-hour" }, 0,
+			"How times of day are written on the HUD and the screens: 14:05, or 2:05 PM.",
+			"clock time hour 12 24 am pm military format");
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& PlayerOptions::Dates()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("gameplay.dateOrder", Gameplay, "Date order",
+			cs::List<cs::String>{ "Year-month-day", "Day/month/year", "Month/day/year" }, 0,
+			"How dates are written on the HUD and the screens: 2026-11-24, 24/11/2026 or 11/24/2026.",
+			"date order format day month year iso us european calendar");
+		return value;
+	}
+
 	// ---------------------------------------------------------------- Accessibility
 
 	const cs::Ref<RangeSetting>& PlayerOptions::UiScale()
@@ -177,7 +195,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss(); Clock(); Dates();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -244,6 +262,25 @@ namespace SpaceGod
 	}
 
 	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }
+
+	ClockFormat PlayerOptions::ClockMode() { return !ScriptedRun() && Clock()->Index == 1 ? ClockFormat::TwelveHour : ClockFormat::TwentyFourHour; }
+
+	DateOrder PlayerOptions::DateMode()
+	{
+		int i = Dates()->Index;
+		return !ScriptedRun() && i >= 0 && i <= 2 ? static_cast<DateOrder>(i) : DateOrder::YearMonthDay;
+	}
+
+	cs::String PlayerOptions::Date(const cs::DateTime& t) { return DateText::Date(t, DateMode()); }
+
+	cs::String PlayerOptions::Time(const cs::DateTime& t, bool seconds) { return DateText::Time(t, ClockMode(), seconds); }
+
+	cs::String PlayerOptions::DateAndTime(const cs::DateTime& t, bool seconds, const char* gap)
+	{
+		return DateText::DateAndTime(t, DateMode(), ClockMode(), seconds, gap);
+	}
+
+	cs::String PlayerOptions::MonthDay(const cs::DateTime& t, bool year, bool padDay) { return DateText::MonthDay(t, DateMode(), year, padDay); }
 
 	bool PlayerOptions::ScriptedRun()
 	{
