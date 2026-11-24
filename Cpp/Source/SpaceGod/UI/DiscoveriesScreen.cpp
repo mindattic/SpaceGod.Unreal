@@ -1,7 +1,6 @@
 #include "UI/DiscoveriesScreen.h"
 
 #include "UnitySpaceApp.h"
-#include "PlayerOptions.h"
 #include "Astro.h"
 #include "GameLore.h"
 #include "SimClock.h"
@@ -19,7 +18,7 @@ namespace SpaceGod::UI
 
 	cs::String DiscoveriesScreen::Date(double jd)
 	{
-		return jd <= 0 ? cs::String("date unknown") : PlayerOptions::Date(Astro::ToDateTime(jd));
+		return jd <= 0 ? cs::String("date unknown") : Astro::ToDateTime(jd).ToString("yyyy-MM-dd");
 	}
 
 	const char* DiscoveriesScreen::HowFound(int k)
