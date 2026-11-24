@@ -38,6 +38,8 @@ public class SpaceGod : ModuleRules
 		PrivateDependencyModuleNames.Add("HTTP");
 		// US-T248: the main menu's Host Co-op page lists this machine's addresses for the players joining it.
 		PrivateDependencyModuleNames.Add("Sockets");
+		// US-T552: Settings > Sound's night dynamic range, a compressor on the main submix.
+		PrivateDependencyModuleNames.Add("AudioMixer");
 		// US-T245: the build number and short commit hash the main menu shows in its corner (BuildInfo.cpp).
 		StampBuild();
 	}

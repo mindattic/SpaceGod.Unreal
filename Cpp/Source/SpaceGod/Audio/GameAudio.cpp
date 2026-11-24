@@ -1,3 +1,7 @@
+// The engine's DSP headers use Unreal's PI macro, which Cs.h takes away: included before it.
+#include "AudioMixerBlueprintLibrary.h"
+#include "AudioMixerDevice.h"
+#include "SubmixEffects/AudioMixerSubmixEffectDynamicsProcessor.h"
 #include "Audio/GameAudio.h"
 #include "EngineSettings.h"
 #include "SessionAudio.h"
@@ -50,6 +54,9 @@ namespace SpaceGod::Audio
 			std::array<float, AudioBusCount> appliedVolumes{};
 			FTSTicker::FDelegateHandle ticker;
 			LoopId nextLoop = 1;
+			/// The night compressor (US-T552), and the audio device it is on (0: on none).
+			USubmixEffectDynamicsProcessorPreset* night = nullptr;
+			::Audio::FDeviceId nightDevice = 0;
 		};
 
 		State& S()
@@ -60,6 +67,13 @@ namespace SpaceGod::Audio
 
 		/// Live volumes of the four buses (Master is the listener's, audio.masterVolume): set by the settings' Applying.
 		std::array<float, AudioBusCount> busVolumes{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+
+		/// US-T552: Sound while paused (0 Play, 1 Duck, 2 Mute) and Dynamic range (0 Full, 1 Night), set by their Applying.
+		int whilePaused = 0;
+		int dynamicRange = 0;
+
+		/// How loud a ducked bus is while the pause menu is open.
+		constexpr float PausedDuck = 0.3f;
 
 		/// A run that is driven or photographed (the smoke, shots, audits, the race, co-op smoke, -demo, -capture),
 		/// headless or offscreen plays nothing unless -GameAudio asks for sound.
@@ -92,8 +106,47 @@ namespace SpaceGod::Audio
 			return nullptr;
 		}
 
+		/// The pause menu's gain on a bus (US-T552): the menu's own Interface bus is never ducked or muted.
+		float Paused(AudioBus bus)
+		{
+			if (bus == AudioBus::Interface || UnityCompat::Time::timeScale > 0) return 1.0f;
+			return whilePaused == 2 ? 0.0f : whilePaused == 1 ? PausedDuck : 1.0f;
+		}
+
 		/// A bus's own volume on a sound's component (Master's is the listener's, applied to everything already).
-		float Mix(AudioBus bus) { return bus == AudioBus::Master ? 1.0f : busVolumes[static_cast<int>(bus)]; }
+		float Mix(AudioBus bus) { return bus == AudioBus::Master ? 1.0f : busVolumes[static_cast<int>(bus)] * Paused(bus); }
+
+		/// Night puts a compressor on the main submix of the device the game plays on; Full takes it off.
+		void ApplyDynamicRange()
+		{
+			State& s = S();
+			UWorld* world = PlayWorld();
+			FAudioDeviceHandle device = world ? world->GetAudioDevice() : FAudioDeviceHandle();
+			const ::Audio::FDeviceId want = dynamicRange == 1 && device.IsValid() ? device.GetDeviceID() : 0;
+			if (want == s.nightDevice) return;
+			if (s.nightDevice != 0)
+				if (FAudioDeviceManager* manager = GEngine ? GEngine->GetAudioDeviceManager() : nullptr)
+					if (FAudioDevice* old = manager->GetAudioDeviceRaw(s.nightDevice))
+						static_cast<::Audio::FMixerDevice*>(old)->RemoveMasterSubmixEffect(s.night->GetUniqueID());
+			s.nightDevice = 0;
+			if (want == 0) return;
+			if (!s.night)
+			{
+				s.night = NewObject<USubmixEffectDynamicsProcessorPreset>(GetTransientPackage(), TEXT("SpaceGod_NightRange"));
+				s.night->AddToRoot();
+				FSubmixEffectDynamicsProcessorSettings settings;
+				settings.DynamicsProcessorType = ESubmixEffectDynamicsProcessorType::Compressor;
+				settings.ThresholdDb = -24.0f;
+				settings.Ratio = 4.0f;
+				settings.KneeBandwidthDb = 10.0f;
+				settings.AttackTimeMsec = 5.0f;
+				settings.ReleaseTimeMsec = 200.0f;
+				settings.OutputGainDb = 6.0f;
+				s.night->SetSettings(settings);
+			}
+			UAudioMixerBlueprintLibrary::AddMasterSubmixEffect(world, s.night);
+			s.nightDevice = want;
+		}
 
 		float Effective(const Voice& v) { return v.Gain * Mix(v.Bus); }
 
@@ -101,8 +154,11 @@ namespace SpaceGod::Audio
 		{
 			State& s = S();
 			const double now = FPlatformTime::Seconds();
-			const bool volumesChanged = s.appliedVolumes != busVolumes;
-			s.appliedVolumes = busVolumes;
+			std::array<float, AudioBusCount> mixes;
+			for (int i = 0; i < AudioBusCount; i++) mixes[i] = Mix(static_cast<AudioBus>(i));
+			const bool volumesChanged = s.appliedVolumes != mixes;
+			s.appliedVolumes = mixes;
+			ApplyDynamicRange();
 			for (int i = s.voices.Num() - 1; i >= 0; i--)
 			{
 				Voice& v = s.voices[i];
@@ -328,7 +384,11 @@ namespace SpaceGod::Audio
 
 	int GameAudio::Playing() { return S().voices.Num(); }
 
-	void GameAudio::Declare() { MusicVolume(); EffectsVolume(); InterfaceVolume(); AmbienceVolume(); VoiceVolume(); }
+	void GameAudio::Declare()
+	{
+		MusicVolume(); EffectsVolume(); InterfaceVolume(); AmbienceVolume(); VoiceVolume();
+		MuteInBackground(); SoundWhilePaused(); DynamicRange();
+	}
 
 	const cs::Ref<RangeSetting>& GameAudio::MusicVolume()
 	{
@@ -363,6 +423,35 @@ namespace SpaceGod::Audio
 	{
 		static const cs::Ref<RangeSetting> value = BusSetting("audio.voiceVolume", "Voice volume",
 			"How loud the voices on comms are, under the master volume.", "sound speech dialogue comms loudness", AudioBus::Voice);
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& GameAudio::MuteInBackground()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("audio.muteInBackground", SettingGroups::Audio,
+			"Mute when in the background", true, "Silences the game while its window is not the one in front (alt-tabbed or minimized).",
+			"sound mute background unfocused focus alt tab minimized")
+			->Applying([](bool v) { FApp::SetUnfocusedVolumeMultiplier(v ? 0.0f : 1.0f); });
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GameAudio::SoundWhilePaused()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("audio.soundWhilePaused", SettingGroups::Audio, "Sound while paused",
+			cs::List<cs::String>{ "Play", "Duck", "Mute" }, 0,
+			"What the game's sound does while the pause menu is open: plays on, drops quieter, or goes silent (menu sounds still play).",
+			"sound pause paused menu duck mute quiet")
+			->Applying([](int i) { whilePaused = i; });
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GameAudio::DynamicRange()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("audio.dynamicRange", SettingGroups::Audio, "Dynamic range",
+			cs::List<cs::String>{ "Full", "Night" }, 0,
+			"Full keeps the gap between quiet and loud; Night compresses it, so quiet sounds come up and loud ones come down (for late play at low volume).",
+			"sound dynamic range night mode compression compressor loud quiet")
+			->Applying([](int i) { dynamicRange = i; });
 		return value;
 	}
 }

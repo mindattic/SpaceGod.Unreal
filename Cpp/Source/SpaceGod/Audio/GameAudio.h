@@ -5,7 +5,7 @@
 #include "Audio/SynthSound.h"
 #include "UnityCompat/UnityMath.h"
 
-namespace SpaceGod::Core { class RangeSetting; }
+namespace SpaceGod::Core { class RangeSetting; class ToggleSetting; class ChoiceSetting; }
 
 namespace SpaceGod::Audio
 {
@@ -60,6 +60,12 @@ namespace SpaceGod::Audio
 		static const cs::Ref<Core::RangeSetting>& InterfaceVolume();
 		static const cs::Ref<Core::RangeSetting>& AmbienceVolume();
 		static const cs::Ref<Core::RangeSetting>& VoiceVolume();
+		/// US-T552: silent while the window is in the background (on: Unreal's own default, as before).
+		static const cs::Ref<Core::ToggleSetting>& MuteInBackground();
+		/// US-T552: what the game's sound does while the pause menu is open (Play, Duck, Mute); menu sounds still play.
+		static const cs::Ref<Core::ChoiceSetting>& SoundWhilePaused();
+		/// US-T552: Full, or Night (a compressor on the main submix: quiet sounds up, loud ones down).
+		static const cs::Ref<Core::ChoiceSetting>& DynamicRange();
 
 		/// How many one-shots and loops are playing (the audit, the log).
 		static int Playing();
