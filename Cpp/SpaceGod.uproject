@@ -41,6 +41,10 @@
 			"Enabled": true
 		},
 		{
+			"Name": "MicroSoftSpatialSound",
+			"Enabled": true
+		},
+		{
 			"Name": "MindAtticMediaCapture",
 			"Enabled": true
 		}

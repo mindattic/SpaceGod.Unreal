@@ -76,6 +76,8 @@ namespace SpaceGod::Audio
 
 		/// US-T613: how 3D sounds are placed, set by AudioOutput's speaker mode.
 		GameAudio::Placement placement = GameAudio::Placement::Panned;
+		/// US-T673: 3D sounds use the spatialization plugin (set by AudioOutput's spatial sound once it is up).
+		bool spatialPlugin = false;
 		/// US-T672: whether the main mix is folded down to two channels, set by AudioOutput's speaker mode.
 		bool stereoFold = false;
 
@@ -257,6 +259,8 @@ namespace SpaceGod::Audio
 			at.NonSpatializedRadiusStart = placement == GameAudio::Placement::Headphones ? minCm : 0.0f;
 			at.NonSpatializedRadiusEnd = 0.0f;
 			at.NonSpatializedRadiusMode = ENonSpatializedRadiusSpeakerMapMode::OmniDirectional;
+			at.SpatializationAlgorithm = spatialPlugin && at.bSpatialize ? ESoundSpatializationAlgorithm::SPATIALIZATION_HRTF
+				: ESoundSpatializationAlgorithm::SPATIALIZATION_Default;
 		}
 
 		USoundAttenuation* Attenuation(float minDistance, float maxDistance)
@@ -441,6 +445,17 @@ namespace SpaceGod::Audio
 	{
 		if (value == placement) return;
 		placement = value;
+		State& s = S();
+		for (const TPair<uint64, USoundAttenuation*>& entry : s.attenuations) Place(entry.Value->Attenuation, static_cast<float>(entry.Key >> 32));
+		for (const Voice& v : s.voices)
+			if (UAudioComponent* c = v.Component.Get())
+				if (c->AttenuationSettings) c->AdjustAttenuation(c->AttenuationSettings->Attenuation);
+	}
+
+	void GameAudio::SetSpatialPlugin(bool on)
+	{
+		if (on == spatialPlugin) return;
+		spatialPlugin = on;
 		State& s = S();
 		for (const TPair<uint64, USoundAttenuation*>& entry : s.attenuations) Place(entry.Value->Attenuation, static_cast<float>(entry.Key >> 32));
 		for (const Voice& v : s.voices)

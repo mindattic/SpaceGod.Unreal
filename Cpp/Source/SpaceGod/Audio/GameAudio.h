@@ -81,5 +81,8 @@ namespace SpaceGod::Audio
 		/// US-T672: folds the main mix down to the front left and right channels (Stereo speakers or Headphones on a
 		/// surround device), on the next tick of a built mix; off, the fold is not in the chain.
 		static void SetStereoFold(bool on);
+		/// US-T673: whether 3D sounds go through the audio device's spatialization plugin (HRTF: Binaural or Windows
+		/// spatial sound) instead of the engine's panning. Applies to every sound from now on and to those playing.
+		static void SetSpatialPlugin(bool on);
 	};
 }

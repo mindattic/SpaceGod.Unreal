@@ -28,5 +28,9 @@ namespace SpaceGod::Audio
 		/// 7.1, applied live. Mono plays every sound unpanned (the accessibility mono audio); Headphones narrows near
 		/// sounds; a Surround mode the device does not report says so on the row.
 		static const cs::Ref<Core::ChoiceSetting>& SpeakerMode();
+
+		/// audio.spatialSound (US-T673): Off (today's panning), Binaural (Resonance Audio's HRTF, for headphones), Windows
+		/// spatial sound (Windows Sonic / Dolby Atmos). A choice whose plugin does not run pans and says why on the row.
+		static const cs::Ref<Core::ChoiceSetting>& SpatialSound();
 	};
 }

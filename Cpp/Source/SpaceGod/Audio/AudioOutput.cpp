@@ -5,6 +5,7 @@
 #include "Settings/GameSetting.h"
 #include "UnityCompat/UnityTypes.h"
 
+#include "AudioDevice.h"
 #include "AudioDeviceManager.h"
 #include "AudioThread.h"
 #include "Containers/Ticker.h"
@@ -41,6 +42,10 @@ namespace SpaceGod::Audio
 			int channels = 0;
 			/// Whether audio.speakerMode exists yet (its Applying first runs while it is being built).
 			bool speakersBuilt = false;
+			/// audio.spatialSound's index (US-T673), whether it still has to reach the audio device, and whether it exists yet.
+			int spatial = 0;
+			bool spatialPending = false;
+			bool spatialBuilt = false;
 			FTSTicker::FDelegateHandle ticker;
 		};
 
@@ -189,9 +194,34 @@ namespace SpaceGod::Audio
 			});
 		}
 
+		constexpr const char* SpatialDescription = "How sounds around you are placed: Off pans them between the speakers; Binaural places "
+			"them around your head in headphones; Windows spatial sound hands them to Windows Sonic or Dolby Atmos.";
+
+		/// Puts the chosen spatialization plugin on the play device (on the game thread, as UGameplayStatics::
+		/// SetActiveSpatialPluginByName does; a switch stops what is playing), and lets 3D sounds use it only while it runs.
+		void ApplySpatialNow()
+		{
+			State& s = S();
+			if (!Active()) return;
+			FAudioDeviceManager* manager = FAudioDeviceManager::Get();
+			const ::Audio::FDeviceId id = PlayDevice();
+			FAudioDevice* device = manager && id != 0 ? manager->GetAudioDeviceRaw(id) : nullptr;
+			if (!device) return;
+			s.spatialPending = false;
+			const bool active = device->SetCurrentSpatializationPlugin(s.spatial == 2 ? FName(TEXT("Microsoft Spatial Sound")) : FName(TEXT("Resonance Audio")));
+			const TAudioSpatializationPtr effect = device->GetSpatializationPluginInterface();
+			const bool on = s.spatial != 0 && active && effect.IsValid() && effect->IsSpatializationEffectInitialized();
+			GameAudio::SetSpatialPlugin(on);
+			if (s.spatialBuilt)
+				AudioOutput::SpatialSound()->Description = s.spatial == 0 || on ? cs::String(SpatialDescription)
+					: s.spatial == 2 ? cs::String("Turn on Windows Sonic for Headphones or Dolby Atmos in Windows Sound settings > Spatial sound, then restart the game.")
+					: cs::String("Binaural sound is not available here: sounds are panned.");
+		}
+
 		bool Tick(float)
 		{
 			State& s = S();
+			if (s.spatialPending) ApplySpatialNow();
 			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty() || SpeakerChannels(s.speakerMode) > 0 || TwoChannel(s.speakerMode)) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds)
 				Query();
 			return true;
@@ -228,9 +258,29 @@ namespace SpaceGod::Audio
 				Query();
 			}
 		}
+
+		void ApplySpatial(int mode)
+		{
+			State& s = S();
+			s.spatial = mode;
+			if (PlayerOptions::ScriptedRun() || !GameAudio::Enabled()) return;
+			s.spatialPending = true;
+			ApplySpatialNow();
+			if (s.spatialPending) Watch();
+		}
 	}
 
-	void AudioOutput::Declare() { Device(); SpeakerMode(); }
+	void AudioOutput::Declare() { Device(); SpeakerMode(); SpatialSound(); }
+
+	const cs::Ref<ChoiceSetting>& AudioOutput::SpatialSound()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("audio.spatialSound", SettingGroups::Audio, "Spatial sound",
+			cs::List<cs::String>{ "Off", "Binaural", "Windows spatial sound" }, 0, SpatialDescription,
+			"sound spatial 3d binaural hrtf headphones windows sonic dolby atmos surround")
+			->Applying([](int i) { ApplySpatial(i); });
+		S().spatialBuilt = true;
+		return value;
+	}
 
 	const cs::Ref<ChoiceSetting>& AudioOutput::SpeakerMode()
 	{
