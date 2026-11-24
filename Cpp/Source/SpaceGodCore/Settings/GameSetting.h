@@ -95,6 +95,16 @@ namespace SpaceGod::Core
 		/// <summary>Puts the value back to its default, and forgets it in the profile.</summary>
 		void Reset();
 
+		/// <summary>
+		/// Takes <paramref name="text"/> (as <see cref="Format"/> writes it) as the default, in place of the declared one
+		/// (a shipped default); false (and nothing changed) for anything this setting could not load. A value standing
+		/// at the old default moves with it.
+		/// </summary>
+		bool TrySetDefaultFromText(const cs::String& text);
+
+		/// <summary>Puts the default back to the one the setting was declared with; a value standing at the old default moves with it.</summary>
+		void RestoreFactoryDefault();
+
 		/// <summary>Raised after the value changes (set, reset or loaded from a profile): where a system puts it into effect.</summary>
 		cs::Event<cs::Ref<GameSetting>> Changed;
 
@@ -104,6 +114,13 @@ namespace SpaceGod::Core
 	protected:
 		/// <summary>Called by the subclass when the player (or code) changed the value.</summary>
 		void OnSet();
+
+		/// <summary>Takes what <see cref="Format"/> wrote as the default, leaving the value alone; false for anything else
+		/// (and for a kind that takes no shipped default).</summary>
+		virtual bool TryTakeDefault(const cs::String&) { return false; }
+
+		/// <summary>Puts the default back to the declared one, leaving the value alone.</summary>
+		virtual void TakeFactoryDefault() {}
 
 		/// Not C#: this setting as a cs::Ref (C#'s `this`): the owning one once cs::New has returned, a non-owning alias
 		/// while the constructor is still running (when only the registry's own bookkeeping sees it).
@@ -120,6 +137,10 @@ namespace SpaceGod::Core
 		static bool IsValidKey(const cs::String& key);
 
 		cs::String ToString() const;
+
+	private:
+		/// <summary>Moves a value that stood at the old default (<paramref name="wasDefault"/>) to the new one.</summary>
+		void FollowDefault(bool wasDefault);
 	};
 
 	/// <summary>An on/off setting.</summary>
@@ -128,6 +149,9 @@ namespace SpaceGod::Core
 	public:
 		bool Default = false;
 		bool Value = false;
+
+		/// <summary>The default the setting was declared with, whatever shipped default overlays it.</summary>
+		bool FactoryDefault = false;
 
 		ToggleSetting(const cs::String& key, const cs::String& group, const cs::String& label, bool defaultValue, const cs::String& description = cs::String(),
 			const cs::String& keywords = cs::String(), const cs::Ref<SettingsRegistry>& registry = nullptr);
@@ -149,6 +173,10 @@ namespace SpaceGod::Core
 
 		/// C#: public static implicit operator bool(ToggleSetting s) => s.Value;
 		operator bool() const { return Value; }
+
+	protected:
+		bool TryTakeDefault(const cs::String& text) override;
+		void TakeFactoryDefault() override { Default = FactoryDefault; }
 	};
 
 	/// <summary>A number between <see cref="Min"/> and <see cref="Max"/>, in steps of <see cref="Step"/> (0: any value).</summary>
@@ -156,6 +184,9 @@ namespace SpaceGod::Core
 	{
 	public:
 		double Default = 0, Min = 0, Max = 0, Step = 0;
+
+		/// <summary>The default the setting was declared with, whatever shipped default overlays it.</summary>
+		double FactoryDefault = 0;
 
 	private:
 		/// <summary>How the menu writes a value ("1.25x", "4000 effects"); plain digits if none is given.</summary>
@@ -193,6 +224,10 @@ namespace SpaceGod::Core
 		bool TryLoad(const cs::String& text) override;
 
 		void SetToDefault() override { Value = Default; }
+
+	protected:
+		bool TryTakeDefault(const cs::String& text) override;
+		void TakeFactoryDefault() override { Default = FactoryDefault; }
 	};
 
 	/// <summary>One of a list of named options, remembered by name so options added or reordered later keep the choice.</summary>
@@ -202,6 +237,9 @@ namespace SpaceGod::Core
 		cs::List<cs::String> Options;
 		int Default = 0;
 		int Index = 0;
+
+		/// <summary>The default the setting was declared with, whatever shipped default overlays it.</summary>
+		int FactoryDefault = 0;
 
 		cs::String Selected() const { return Options[Index]; }
 
@@ -225,6 +263,10 @@ namespace SpaceGod::Core
 		bool TryLoad(const cs::String& text) override;
 
 		void SetToDefault() override { Index = Default; }
+
+	protected:
+		bool TryTakeDefault(const cs::String& text) override;
+		void TakeFactoryDefault() override { Default = FactoryDefault; }
 	};
 
 	/// <summary>
@@ -237,6 +279,9 @@ namespace SpaceGod::Core
 		cs::String Default;
 		cs::String Value;
 		int MaxLength = 0;
+
+		/// <summary>The default the setting was declared with, whatever shipped default overlays it.</summary>
+		cs::String FactoryDefault;
 
 	private:
 		/// <summary>Whether a value may be taken; any value of the right length if none is given.</summary>
@@ -265,5 +310,9 @@ namespace SpaceGod::Core
 		bool TryLoad(const cs::String& text) override;
 
 		void SetToDefault() override { Value = Default; }
+
+	protected:
+		bool TryTakeDefault(const cs::String& text) override;
+		void TakeFactoryDefault() override { Default = FactoryDefault; }
 	};
 }

@@ -55,6 +55,28 @@ namespace SpaceGod::Core
 		}
 	}
 
+	bool GameSetting::TrySetDefaultFromText(const cs::String& text)
+	{
+		bool wasDefault = IsDefault();
+		if (!TryTakeDefault(cs::Strings::Trim(text))) return false;
+		FollowDefault(wasDefault);
+		return true;
+	}
+
+	void GameSetting::RestoreFactoryDefault()
+	{
+		bool wasDefault = IsDefault();
+		TakeFactoryDefault();
+		FollowDefault(wasDefault);
+	}
+
+	void GameSetting::FollowDefault(bool wasDefault)
+	{
+		if (!wasDefault || IsDefault()) return;
+		SetToDefault();
+		RaiseChanged();
+	}
+
 	void GameSetting::RaiseChanged() { Changed.Invoke(Self()); }
 
 	void GameSetting::OnSet()
@@ -101,8 +123,17 @@ namespace SpaceGod::Core
 		const cs::String& keywords, const cs::Ref<SettingsRegistry>& registry)
 		: GameSetting(key, group, label, description, keywords)
 	{
-		Default = Value = defaultValue;
+		FactoryDefault = Default = Value = defaultValue;
 		(registry ? registry : SettingsRegistry::Default())->RegisterDeclared(this);
+	}
+
+	bool ToggleSetting::TryTakeDefault(const cs::String& text)
+	{
+		bool value = Value;
+		if (!TryLoad(text)) return false;
+		Default = Value;
+		Value = value;
+		return true;
 	}
 
 	void ToggleSetting::Set(bool value)
@@ -143,8 +174,17 @@ namespace SpaceGod::Core
 		Max = max;
 		Step = step;
 		this->display = std::move(display);
-		Default = Value = Snap(defaultValue);
+		FactoryDefault = Default = Value = Snap(defaultValue);
 		(registry ? registry : SettingsRegistry::Default())->RegisterDeclared(this);
+	}
+
+	bool RangeSetting::TryTakeDefault(const cs::String& text)
+	{
+		double value = Value;
+		if (!TryLoad(text)) return false;
+		Default = Value;
+		Value = value;
+		return true;
 	}
 
 	cs::String RangeSetting::ValueText() const { return display ? display(Value) : cs::Fmt(Value, "0.##"); }
@@ -196,8 +236,17 @@ namespace SpaceGod::Core
 		if (options.Count() == 0) throw cs::ArgumentException(cs::Cat("A choice needs at least one option: ", key));
 		if (defaultIndex < 0 || defaultIndex >= options.Count()) throw cs::ArgumentOutOfRangeException("defaultIndex");
 		Options = options;
-		Default = Index = defaultIndex;
+		FactoryDefault = Default = Index = defaultIndex;
 		(registry ? registry : SettingsRegistry::Default())->RegisterDeclared(this);
+	}
+
+	bool ChoiceSetting::TryTakeDefault(const cs::String& text)
+	{
+		int index = Index;
+		if (!TryLoad(text)) return false;
+		Default = Index;
+		Index = index;
+		return true;
 	}
 
 	void ChoiceSetting::Set(int index)
@@ -236,8 +285,15 @@ namespace SpaceGod::Core
 		MaxLength = maxLength;
 		this->validator = std::move(validator);
 		if (!IsValid(defaultValue)) throw cs::ArgumentException(cs::Cat("A text setting's default must be valid: ", key));
-		Default = Value = defaultValue;
+		FactoryDefault = Default = Value = defaultValue;
 		(registry ? registry : SettingsRegistry::Default())->RegisterDeclared(this);
+	}
+
+	bool TextSetting::TryTakeDefault(const cs::String& text)
+	{
+		if (!IsValid(text)) return false;
+		Default = text;
+		return true;
 	}
 
 	bool TextSetting::IsValid(const cs::String& value) const
