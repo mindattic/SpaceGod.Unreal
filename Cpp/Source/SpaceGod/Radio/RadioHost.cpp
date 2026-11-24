@@ -1,0 +1,118 @@
+#include "Radio/RadioHost.h"
+
+#include "Information/LightSpeed.h"
+
+#include <algorithm>
+
+namespace SpaceGod::Radio
+{
+	using namespace SpaceGod::Core;
+
+	void RadioHost::Tick(int system, const DVec3& here, double now)
+	{
+		if (system != systemId)
+		{
+			// A new system: its own log, made on its first message; the old one's fronts cannot cross the stars.
+			log.reset();
+			receiver.Clear();
+			systemId = system;
+			rebasePending = false;
+		}
+		else if (started && now < jd)
+		{
+			// The clock went back (a rewind, a load): what was sent after it never was.
+			rebasePending = true;
+		}
+		else if (started)
+		{
+			double dtSeconds = (now - jd) * 86400.0;
+			double movedKm = (here - listenerKm).Length();
+			if (movedKm > MinTravelMarginKm && movedKm > LightSpeed::SpeedKmS * JumpFractionOfLight * dtSeconds)
+				rebasePending = true;
+			else if (now > jd)
+				velocityKmPerDay = (here - listenerKm) * (1.0 / (now - jd));
+		}
+		bool wentBack = started && now < jd;
+		if (rebasePending || !started) velocityKmPerDay = DVec3();
+		listenerKm = here;
+		jd = now;
+		started = true;
+		if (log == nullptr)
+			return;
+
+		// A front may be in flight for the longest reach's light time; the listener may cover its speed times that meanwhile.
+		double speedKmS = velocityKmPerDay.Length() / 86400.0;
+		double flightSeconds = RadioPowerTable::LongestRangeKm() / LightSpeed::SpeedKmS;
+		receiver.SetTravelMarginKm(cs::Math::Min(RadioPowerTable::LongestRangeKm(), cs::Math::Max(MinTravelMarginKm, speedKmS * flightSeconds)));
+
+		log->Retire(jd);
+		if (rebasePending)
+		{
+			DoRebase();
+			if (wentBack) receiver.DropAfter(jd);
+		}
+
+		arrivals.clear();
+		receiver.Advance(*log, jd, [this](double atJd) { return ListenerAt(atJd); }, arrivals);
+		for (const RadioArrival& a : arrivals)
+		{
+			heard++;
+			RecentEntry r;
+			r.Message = *a.Message;
+			r.Text = log->Text(a.Index);
+			r.ArrivalJd = a.ArrivalJd;
+			r.DistanceKm = a.DistanceKm;
+			r.AgeDays = a.AgeDays;
+			if (static_cast<int>(recent.size()) >= RecentCapacity) recent.erase(recent.begin());
+			recent.push_back(std::move(r));
+			for (IRadioSink* sink : sinks) sink->OnRadioArrival(*this, a);
+		}
+	}
+
+	uint64_t RadioHost::Emit(const RadioMessage& message)
+	{
+		if (!started || systemId < 0 || message.SystemId != systemId) return NoIndex;
+		if (log == nullptr) log = std::make_shared<RadioLog>();
+		return Schedule(log->Append(message));
+	}
+
+	uint64_t RadioHost::EmitText(const RadioMessage& message, const cs::String& text)
+	{
+		if (!started || systemId < 0 || message.SystemId != systemId) return NoIndex;
+		if (log == nullptr) log = std::make_shared<RadioLog>();
+		return Schedule(log->AppendText(message, text));
+	}
+
+	uint64_t RadioHost::Schedule(uint64_t index)
+	{
+		if (const RadioMessage* m = log->Get(index)) receiver.Emit(index, *m, listenerKm);
+		return index;
+	}
+
+	void RadioHost::Reset()
+	{
+		log.reset();
+		receiver.Clear();
+		recent.clear();
+		started = false;
+		rebasePending = false;
+		velocityKmPerDay = DVec3();
+	}
+
+	void RadioHost::AddSink(IRadioSink* sink)
+	{
+		if (sink != nullptr && std::find(sinks.begin(), sinks.end(), sink) == sinks.end()) sinks.push_back(sink);
+	}
+
+	void RadioHost::RemoveSink(IRadioSink* sink)
+	{
+		sinks.erase(std::remove(sinks.begin(), sinks.end(), sink), sinks.end());
+	}
+
+	void RadioHost::DoRebase()
+	{
+		rebasePending = false;
+		rebases++;
+		receiver.Rebase(*log, [this](double atJd) { return ListenerAt(atJd); }, jd);
+	}
+}
