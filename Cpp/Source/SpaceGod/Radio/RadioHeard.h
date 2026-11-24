@@ -40,7 +40,7 @@ namespace SpaceGod::Radio
 		RadioHeard(const RadioHeard&) = delete;
 		RadioHeard& operator=(const RadioHeard&) = delete;
 
-		void OnRadioArrival(const RadioHost& host, const Core::RadioArrival& arrival) override;
+		void OnRadioArrival(const RadioHost& host, const Core::RadioArrival& arrival, const Core::RadioReceptionResult& reception) override;
 
 		/// <summary>Oldest first.</summary>
 		const std::deque<HeardLine>& Lines() const { return lines; }

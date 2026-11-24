@@ -23,9 +23,9 @@ namespace SpaceGod::Radio
 		app.GameRadio().RemoveSink(this);
 	}
 
-	void RadioHeard::OnRadioArrival(const RadioHost& host, const RadioArrival& a)
+	void RadioHeard::OnRadioArrival(const RadioHost& host, const RadioArrival& a, const RadioReceptionResult& reception)
 	{
-		if (a.Message == nullptr) return;
+		if (a.Message == nullptr || reception.Route == RadioRoute::Digest) return;
 		const RadioMessage& m = *a.Message;
 		const RadioChannel* channel = app.ActiveSystem != nullptr && host.SystemId() >= 0
 			? channels.For(app.ActiveSystem, host.SystemId()).Find(m.ChannelId) : nullptr;
