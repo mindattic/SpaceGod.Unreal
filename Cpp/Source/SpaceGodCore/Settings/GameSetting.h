@@ -35,6 +35,8 @@ namespace SpaceGod::Core
 		static constexpr const char* Economy = "Economy";
 		static constexpr const char* Controls = "Controls";
 		static constexpr const char* Audio = "Audio";
+		static constexpr const char* Multiplayer = "Multiplayer"; // US-T515
+		static constexpr const char* Interface = "Interface"; // US-T515
 		static constexpr const char* Developer = "Developer"; // US-T524: DevFlags
 
 		static const cs::List<cs::String>& Order();
