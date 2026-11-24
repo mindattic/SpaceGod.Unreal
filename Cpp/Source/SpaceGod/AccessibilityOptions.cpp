@@ -3,6 +3,7 @@
 // Before the engine's headers: UnityMath.h (through PlayerOptions.h) declares a member the engine's PI macro would rewrite.
 #include "PlayerOptions.h"
 #include "Settings/GameSetting.h"
+#include "UI/UiStyle.h"
 
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/RenderingCommon.h"
@@ -111,6 +112,16 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ToggleSetting>& AccessibilityOptions::HighContrast()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("access.highContrast", PlayerOptions::Accessibility,
+			"High contrast", false,
+			"Draws menus and panels opaque near-black with white text, bright edges and a bright selection.",
+			"high contrast readability menus panels text visibility low vision")
+			->Applying([](bool on) { UI::UiStyle::SetHighContrast(on && !PlayerOptions::ScriptedRun()); });
+		return value;
+	}
+
 	AccessibilityOptions::CaptionLevel AccessibilityOptions::CaptionsShown()
 	{
 		return PlayerOptions::ScriptedRun() ? CaptionLevel::Off : static_cast<CaptionLevel>(cs::Math::Max(0, cs::Math::Min(2, captions)));
@@ -130,5 +141,6 @@ namespace SpaceGod
 	{
 		ColorBlindMode(); ColorBlindStrength(); ColorBlindCorrect();
 		Captions(); CaptionSize(); CaptionBackground();
+		HighContrast();
 	}
 }

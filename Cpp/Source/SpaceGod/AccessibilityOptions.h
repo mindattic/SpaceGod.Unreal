@@ -5,6 +5,8 @@
 // machine's own, never shared in co-op; a scripted run (PlayerOptions::ScriptedRun) keeps the default.
 // US-T636: Captions (Off, Comms, Comms and sounds; default Off), their size and their background's opacity: what fills
 // Audio::Captions' queue and how the HUD draws it. Same view-setting rules.
+// US-T638: High contrast (default off): UiStyle redraws every menu and panel opaque near-black with white text and bright
+// edges and selection. Same view-setting rules.
 
 #include "Cs/Cs.h"
 
@@ -27,6 +29,7 @@ namespace SpaceGod
 		static const cs::Ref<Core::ChoiceSetting>& Captions();
 		static const cs::Ref<Core::ChoiceSetting>& CaptionSize();
 		static const cs::Ref<Core::RangeSetting>& CaptionBackground();
+		static const cs::Ref<Core::ToggleSetting>& HighContrast();
 
 		enum class CaptionLevel { Off, Comms, CommsAndSounds };
 		enum class CaptionScale { Small, Medium, Large };

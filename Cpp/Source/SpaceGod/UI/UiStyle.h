@@ -121,6 +121,14 @@ namespace SpaceGod::UI::UiStyle
 	/// "<mark>  TITLE": a collapsible panel's title bar text.
 	cs::String Fold(bool open, const cs::String& titleText);
 
+	// ---------------------------------------------------------------- high contrast
+
+	/// Accessibility > High contrast (US-T638): on, every texture and style built below is redrawn in place, so the menus
+	/// and panels a screen already holds follow at once: surfaces opaque near-black, edges and text white, the chosen
+	/// control or row a bright blue with a yellow edge. Off is the palette above, as it was.
+	void SetHighContrast(bool on);
+	bool HighContrast();
+
 	// ---------------------------------------------------------------- textures
 
 	/// A flat fill with a 1 px edge (none when the edge is clear): the 8 x 8 9-slice every control uses (border 2).
