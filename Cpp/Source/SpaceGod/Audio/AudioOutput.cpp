@@ -90,6 +90,16 @@ namespace SpaceGod::Audio
 		/// The channels a Surround choice needs (0: any).
 		int SpeakerChannels(int mode) { return mode == 4 ? 6 : mode == 5 ? 8 : 0; }
 
+		/// Headphones and Stereo speakers (US-T672): the device's channels are asked for, and a surround device plays them
+		/// folded down to two.
+		bool TwoChannel(int mode) { return mode == 1 || mode == 2; }
+
+		void Fold()
+		{
+			State& s = S();
+			GameAudio::SetStereoFold(TwoChannel(s.speakerMode) && s.channels > 2 && Active());
+		}
+
 		/// The row says when the device plays fewer channels than the chosen Surround mode.
 		void Describe()
 		{
@@ -170,6 +180,7 @@ namespace SpaceGod::Audio
 					s.querying = false;
 					s.channels = channels;
 					Describe();
+					Fold();
 					if (!ok) return;
 					s.devices = MoveTemp(list);
 					s.listed = true;
@@ -181,7 +192,7 @@ namespace SpaceGod::Audio
 		bool Tick(float)
 		{
 			State& s = S();
-			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty() || SpeakerChannels(s.speakerMode) > 0) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds)
+			if ((!s.wanted.IsEmpty() || !s.applied.IsEmpty() || SpeakerChannels(s.speakerMode) > 0 || TwoChannel(s.speakerMode)) && FPlatformTime::Seconds() - s.lastQuery >= RecheckSeconds)
 				Query();
 			return true;
 		}
@@ -210,7 +221,8 @@ namespace SpaceGod::Audio
 			Describe();
 			if (PlayerOptions::ScriptedRun()) return;
 			GameAudio::SetPlacement(mode == 1 ? GameAudio::Placement::Headphones : mode == 3 ? GameAudio::Placement::Mono : GameAudio::Placement::Panned);
-			if (SpeakerChannels(mode) > 0 && Active())
+			Fold();
+			if ((SpeakerChannels(mode) > 0 || TwoChannel(mode)) && Active())
 			{
 				Watch();
 				Query();
