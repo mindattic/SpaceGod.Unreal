@@ -3,6 +3,7 @@
 #include "Game/SpaceHUD.h"
 #include "Game/SpacePlayerController.h"
 #include "Bootstrap.h"
+#include "Coop/CoopOptions.h"
 #include "Coop/CoopPeer.h"
 #include "Coop/CoopSmoke.h"
 #include "Coop/SpaceCoopLink.h"
@@ -18,6 +19,7 @@
 #include "Fleet.h"
 #include "Systems/Galaxy.h"
 #include "World.h"
+#include "Settings/GameSetting.h"
 #include "Shared/Profiles/Profiles.h"
 
 #include "Engine/Engine.h"
@@ -95,21 +97,29 @@ void ASpaceGameMode::StartPlay()
 	// SceneManager.LoadScene: reopen this (empty) map for the other scene; a listen server keeps listening, and takes
 	// its co-op clients along (ServerTravel) when it has any (US-T44).
 	TWeakObjectPtr<UWorld> WeakWorld = GetWorld();
+	// US-T659: a local map's listen port is FURL::UrlConfig.DefaultPort (absolute travel), so Host Co-op points it at
+	// Settings > Multiplayer > Host port (a -Port= still wins) and a join puts the engine's own back first.
+	static const int32 EnginePort = FURL::UrlConfig.DefaultPort;
 	SpaceGod::GameLaunch::SceneLoader = [WeakWorld](const cs::String& SceneName)
 	{
 		UWorld* World = WeakWorld.Get();
 		if (!World) return;
 		const FString Map = UWorld::RemovePIEPrefix(World->GetOutermost()->GetName());
 		FString Options = FString::Printf(TEXT("Scene=%s"), *SpaceGod::UnrealSpace::ToFString(SceneName));
+		const FString Seats = FString::Printf(TEXT("?MaxPlayers=%d"), static_cast<int32>(SpaceGod::Coop::CoopOptions::MaxPlayers()->Value));
 		// US-T248: the main menu's Host Co-op opens the game scene listening, as -CoopHost does.
 		const bool bHostAsked = SpaceGod::GameLaunch::TakeHost();
 		if (bHostAsked && World->GetNetMode() == NM_Standalone)
 		{
-			Options += TEXT("?listen");
+			int32 Port = 0;
+			if (!FParse::Value(FCommandLine::Get(), TEXT("Port="), Port) || Port <= 0)
+				Port = static_cast<int32>(SpaceGod::Coop::CoopOptions::HostPort()->Value);
+			FURL::UrlConfig.DefaultPort = Port;
+			Options += TEXT("?listen") + Seats;
 		}
 		else if (World->GetNetMode() == NM_ListenServer)
 		{
-			Options += TEXT("?listen");
+			Options += TEXT("?listen") + Seats;
 			if (World->GetNetDriver() && World->GetNetDriver()->ClientConnections.Num() > 0)
 			{
 				World->ServerTravel(FString::Printf(TEXT("%s?%s"), *Map, *Options));
@@ -124,6 +134,7 @@ void ASpaceGameMode::StartPlay()
 	{
 		UWorld* World = WeakWorld.Get();
 		if (!World || !GEngine) return;
+		FURL::UrlConfig.DefaultPort = EnginePort;
 		GEngine->SetClientTravel(World, *SpaceGod::UnrealSpace::ToFString(Address), TRAVEL_Absolute);
 	};
 	// US-T248: a join that never connects, or a host that goes away, brings the engine back to this map; say why on the

@@ -17,6 +17,7 @@
 
 #include "ActiveProfile.h"
 #include "BuildInfo.h" // US-T245
+#include "Coop/CoopOptions.h" // US-T659
 #include "Difficulty.h" // US-T253
 #include "GameLaunch.h"
 #include "GameSettingsHost.h"
@@ -76,12 +77,12 @@ namespace SpaceGod::UI
 			return true;
 		}
 
-		/// The UDP port a listen server opens: -Port=<n> on the command line, else the engine's default (7777).
+		/// The UDP port a listen server opens: -Port=<n> on the command line, else Settings > Multiplayer > Host port (US-T659).
 		int ListenPort()
 		{
 			int port = 0;
 			if (FParse::Value(FCommandLine::Get(), TEXT("Port="), port) && port > 0) return port;
-			return FURL::UrlConfig.DefaultPort;
+			return static_cast<int>(Coop::CoopOptions::HostPort()->Value);
 		}
 
 		/// This machine's own addresses (not loopback or link-local), for the host to give the players joining.
@@ -660,15 +661,16 @@ namespace SpaceGod::UI
 		const int shown = Mathf::Clamp(saveNames.Count(), 1, 8);
 		float listH = shown * RowH;
 		float addrH = Mathf::Max(1, localAddresses.Count()) * 18.0f;
-		float h = 300 + addrH + listH;
+		float h = 316 + addrH + listH;
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
 		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "HOST CO-OP", title);
-		GUI::Label(Rect(r.x + 20, r.y + 38, w - 40, 32),
+		GUI::Label(Rect(r.x + 20, r.y + 38, w - 40, 48),
 			cs::Cat("Start a game other players can join: they pick Join Co-op on their main menu and type one of the addresses below. ",
-				"UDP port ", ListenPort(), " must be reachable (forward it on your router to play over the internet)  ·  Esc to go back"), small);
+				"UDP port ", ListenPort(), " must be reachable (forward it on your router to play over the internet); up to ",
+				static_cast<int>(Coop::CoopOptions::MaxPlayers()->Value), " players, you included  ·  Esc to go back"), small);
 
-		float y = r.y + 78;
+		float y = r.y + 94;
 		y += DrawCoopName(r, y);
 
 		GUI::Label(Rect(r.x + 20, y, w - 40, 20), "Your addresses", text);
