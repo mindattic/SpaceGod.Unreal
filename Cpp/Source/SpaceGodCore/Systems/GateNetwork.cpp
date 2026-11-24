@@ -123,15 +123,17 @@ namespace SpaceGod::Core
 	void GateNetwork::BridgeWithRelays(const cs::Ref<GateNetwork>& net, cs::List<cs::Ref<StarSystem>>& systems, const cs::Ref<StarSystem>& a, const cs::Ref<StarSystem>& b, double jd, const cs::Ref<Polities>& polities,
 		double maxLinkLy, int& nextVoidBase)
 	{
-		auto prev = a;
-		for (const auto& positionLy : RelayPositions(a->PositionLy, b->PositionLy, maxLinkLy))
+		const cs::Ref<StarSystem> from = a;
+		const cs::Ref<StarSystem> to = b;
+		auto prev = from;
+		for (const auto& positionLy : RelayPositions(from->PositionLy, to->PositionLy, maxLinkLy))
 		{
 			auto relay = StarSystem::CreateVoidBase(cs::Cat("Void Base ", nextVoidBase++), positionLy, jd, polities);
 			systems.Add(relay);
 			net->Link(prev, relay);
 			prev = relay;
 		}
-		net->Link(prev, b);
+		net->Link(prev, to);
 	}
 
 	cs::List<DVec3> GateNetwork::RelayPositions(DVec3 aLy, DVec3 bLy, double maxLy)
