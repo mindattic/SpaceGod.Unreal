@@ -125,18 +125,26 @@ namespace SpaceGod::Cameras
 	private:
 		// (PilotViewResponseHz is gone, US-T129: the view is welded to PilotView, so it turns with the mouse at once.)
 
+		// US-T537: the camera's numbers below are live-tuning knobs ("Tuning: camera", View scope), read each time they are used.
+
 		/// <summary>How far above the line of sight a free-aim chase sits, in chase distances, so the
 		/// hull flies below the crosshair instead of covering it.</summary>
-		static constexpr double PilotViewLift = 0.22;
+		static double PilotViewLift();
 
-		static constexpr float TravelSeconds = 1.6f;
+		static float TravelSeconds();
 		/// <summary>US-T472: the most one frame advances a glide, so a hitch slows it rather than skipping part of it.</summary>
 		static constexpr float MaxTravelStep = 1.0f / 30.0f;
-		static constexpr float LevelSeconds = 1.4f;
+		static float LevelSeconds();
 		/// <summary>Mouse look, in degrees a count at the default sensitivity; the free, focus and pilot views alike.</summary>
-		static constexpr float BaseLookSensitivity = 0.12f;
+		static float BaseLookSensitivity();
+
+		/// <summary>The pilot chase's distance behind the hull, times the framing it was entered with.</summary>
+		static double ChaseDistance();
 
 	public:
+		/// <summary>US-T537: declares the camera's tuning knobs (GameSettingsHost touches it with the other settings).</summary>
+		static void DeclareTuning();
+
 		/// <summary>Controls (U.SPC-T431): how far the mouse turns the view, as a multiple of the usual.</summary>
 		static const cs::Ref<Core::RangeSetting>& LookSensitivitySetting();
 
@@ -166,11 +174,11 @@ namespace SpaceGod::Cameras
 		/// <summary>How fast the pilot chase camera's rotation catches up to the hull's own facing
 		/// (and, with a lock, the blended look-at-target facing) -- high enough to feel tight behind
 		/// the ship, low enough that sharp turns read as a chase rather than a rigid weld.</summary>
-		static constexpr float PilotCamResponseHz = 12.0f;
+		static float PilotCamResponseHz();
 
 		/// <summary>How far the camera leans from the ship's own facing toward looking at a locked
 		/// target (0 = ignores the lock, 1 = looks straight at it regardless of the ship's facing).</summary>
-		static constexpr float PilotLockTrackStrength = 0.6f;
+		static float PilotLockTrackStrength();
 
 		/// The world outlives the camera (the app owns both).
 		ICameraWorld* const world;
@@ -188,15 +196,21 @@ namespace SpaceGod::Cameras
 		Core::DVec3 travelEndDirection;
 		double travelEndZoom = 0;
 		float travelT = 0;
-		/// <summary>How long this glide takes: <see cref="TravelSeconds"/>, or <see cref="QuickTravelSeconds"/> once hurried.</summary>
-		float travelSeconds = TravelSeconds;
+		/// <summary>Whether this glide takes <see cref="QuickTravelSeconds"/> rather than <see cref="TravelSeconds"/>.</summary>
+		bool hurried = false;
+
+		/// <summary>How long this glide takes, read live.</summary>
+		float GlideSeconds() const { return hurried ? QuickTravelSeconds() : TravelSeconds(); }
+
+		/// <summary>The pilot chase's distance scale (<see cref="ChaseDistance"/>); 1 for any other focus.</summary>
+		double ChaseScale() const { return PilotLocked ? ChaseDistance() : 1.0; }
 
 	public:
 		/// <summary>US-T90: a glide from one seat to the next mid-fight, short so a switch reads as instant.</summary>
-		static constexpr float QuickTravelSeconds = 0.3f;
+		static float QuickTravelSeconds();
 
 		/// <summary>US-T90: the glide under way (a seat switched to another) finishes in <see cref="QuickTravelSeconds"/>.</summary>
-		void Hurry() { travelSeconds = QuickTravelSeconds; }
+		void Hurry() { hurried = true; }
 
 	private:
 

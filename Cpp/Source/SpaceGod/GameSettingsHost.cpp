@@ -52,6 +52,7 @@ namespace SpaceGod
 		{
 			Cameras::SpaceCamera::LookSensitivitySetting(); Cameras::SpaceCamera::InvertLook();
 			Cameras::SpaceCamera::LookHorizontal(); Cameras::SpaceCamera::LookVertical(); Cameras::SpaceCamera::MouseSmoothing(); // US-T557
+			Cameras::SpaceCamera::DeclareTuning(); // US-T537
 		});
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::DriftKey::ModeSetting(); }); // US-T165: drift on R, hold or toggle
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::Gamepad::Declare(); }); // US-T250: the pad's dead zone, aim and buttons

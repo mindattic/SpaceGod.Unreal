@@ -7,6 +7,7 @@
 #include "BodyDefinition.h"
 #include "ScaleModel.h"
 #include "Settings/GameSetting.h"
+#include "Settings/Tuning.h"
 
 using namespace SpaceGod::Core;
 
@@ -86,9 +87,71 @@ namespace SpaceGod::Cameras
 		return smoothed;
 	}
 
-	float SpaceCamera::LookSensitivity() { return BaseLookSensitivity * static_cast<float>(LookSensitivitySetting()->Value); }
+	float SpaceCamera::LookSensitivity() { return BaseLookSensitivity() * static_cast<float>(LookSensitivitySetting()->Value); }
 
 	float SpaceCamera::LookY(float dy) { return InvertLook()->Value ? -dy : dy; }
+
+	double SpaceCamera::PilotViewLift()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "pilotViewLift", "Pilot view lift", 0.22, 0, 1, 0.01, "",
+			TuningScope::View, "How far above the line of sight a free-aim chase sits, in chase distances.");
+		return value->Value;
+	}
+
+	float SpaceCamera::PilotCamResponseHz()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "pilotResponse", "Pilot chase response", 12, 1, 60, 0.5, "Hz",
+			TuningScope::View, "How fast the pilot chase turns after the hull's facing: higher is tighter, lower a looser chase.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::PilotLockTrackStrength()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "lockTrack", "Lock track strength", 0.6, 0, 1, 0.05, "",
+			TuningScope::View, "How far the pilot chase leans from the hull's facing toward a locked target (0 ignores it, 1 looks straight at it).");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::TravelSeconds()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "travelSeconds", "Travel time", 1.6, 0.1, 6, 0.1, "s",
+			TuningScope::View, "How long the camera's glide to a focused body or ship takes.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::QuickTravelSeconds()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "quickTravelSeconds", "Quick travel time", 0.3, 0.05, 2, 0.05, "s",
+			TuningScope::View, "How long a hurried glide (a seat switched to another mid-fight) takes.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::LevelSeconds()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "levelSeconds", "Level time", 1.4, 0.1, 6, 0.1, "s",
+			TuningScope::View, "How long the view takes to swing round to a new level, or ease a chase's roll out when let go.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::BaseLookSensitivity()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "lookSensitivity", "Base look sensitivity", 0.12, 0.01, 1, 0.01, "deg",
+			TuningScope::View, "Degrees the view turns per mouse count at the player's 1x sensitivity, before the Controls scales.");
+		return static_cast<float>(value->Value);
+	}
+
+	double SpaceCamera::ChaseDistance()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "chaseDistance", "Chase distance", 1, 0.25, 4, 0.05, "x",
+			TuningScope::View, "The pilot chase's distance behind the hull, times the framing each ship's chase is entered with.");
+		return value->Value;
+	}
+
+	void SpaceCamera::DeclareTuning()
+	{
+		PilotViewLift(); PilotCamResponseHz(); PilotLockTrackStrength(); TravelSeconds(); QuickTravelSeconds(); LevelSeconds();
+		BaseLookSensitivity(); ChaseDistance();
+	}
 
 	SpaceCamera::SpaceCamera(ICameraWorld* inWorld)
 		: world(inWorld)
@@ -200,7 +263,7 @@ namespace SpaceGod::Cameras
 		travelEndDirection = DVec3(endWorld.x, endWorld.y, endWorld.z);
 		travelEndZoom = framing;
 		travelT = 0;
-		travelSeconds = TravelSeconds;
+		hurried = false;
 
 		// The orbit angles that reproduce endDir: offset = Euler(pitch, yaw) * back, in the level frame.
 		auto look = -endLocal;
@@ -286,7 +349,7 @@ namespace SpaceGod::Cameras
 		// Levelling: the old orientation's difference from the new one eases away.
 		if (levelT < 1.0f)
 		{
-			levelT = Mathf::Min(1.0f, levelT + dt / LevelSeconds);
+			levelT = Mathf::Min(1.0f, levelT + dt / LevelSeconds());
 			Rotation = Quaternion::Slerp(levelOffset, Quaternion::identity(), SmootherStep(levelT)) * Rotation;
 		}
 	}
@@ -338,7 +401,7 @@ namespace SpaceGod::Cameras
 				if (toTarget.LengthSquared() > 1e-12)
 				{
 					auto lookAt = Quaternion::LookRotation(ToVector(toTarget.Normalized()), shipRotation * Vector3::up());
-					wantRotation = Quaternion::Slerp(shipRotation, lookAt, PilotLockTrackStrength);
+					wantRotation = Quaternion::Slerp(shipRotation, lookAt, PilotLockTrackStrength());
 				}
 			}
 			// Eases toward the hull's facing (and any lock-on blend) rather than welding to it
@@ -346,17 +409,17 @@ namespace SpaceGod::Cameras
 			// A view the mouse sets (free aim, a fighter's seat, a gun, a capital's look-around) is the mouse's own: it
 			// turns with it at once and the hull catches up after it (US-T129).
 			if (PilotView.has_value()) Rotation = *PilotView;
-			else Rotation = Quaternion::Slerp(Rotation, wantRotation, 1.0f - Mathf::Exp(-dt * PilotCamResponseHz));
+			else Rotation = Quaternion::Slerp(Rotation, wantRotation, 1.0f - Mathf::Exp(-dt * PilotCamResponseHz()));
 			if (cs::Math::Abs(input.Scroll) > 0)
 				zoomTarget = cs::Math::Max(MinZoom(FocusTarget), cs::Math::Min(20.0, zoomTarget * cs::Math::Pow(0.82, input.Scroll)));
 			zoom = cs::Math::Exp(cs::Math::Log(zoom) + (cs::Math::Log(zoomTarget) - cs::Math::Log(zoom)) * (1 - cs::Math::Exp(-dt * 10)));
 			auto chaseBack = Rotation * Vector3::back();
-			double chaseR = world->TargetRadius(FocusTarget);
+			double chaseR = world->TargetRadius(FocusTarget) * ChaseScale();
 			ScenePosition = world->TargetScene(FocusTarget) + DVec3(chaseBack.x, chaseBack.y, chaseBack.z) * (zoom * chaseR);
 			if (PilotView.has_value())
 			{
 				auto lift = Rotation * Vector3::up();
-				ScenePosition += DVec3(lift.x, lift.y, lift.z) * (zoom * chaseR * PilotViewLift);
+				ScenePosition += DVec3(lift.x, lift.y, lift.z) * (zoom * chaseR * PilotViewLift());
 			}
 			// At a gun mount the eye is the mount's own, not a chase (U.SPC-T445).
 			if (PilotEye) ScenePosition = PilotEye();
@@ -383,13 +446,13 @@ namespace SpaceGod::Cameras
 	{
 		// US-T472: a frame's step is capped (MaxTravelStep), so a hitch (a 100 ms frame) slows the glide for a frame rather
 		// than skipping a tenth of it: sg.Feel read those as 20-30 degree look snaps mid fly-in.
-		travelT = Mathf::Min(1.0f, travelT + Mathf::Min(dt, MaxTravelStep) / travelSeconds);
+		travelT = Mathf::Min(1.0f, travelT + Mathf::Min(dt, MaxTravelStep) / GlideSeconds());
 		float e = SmootherStep(travelT);
 
 		auto target = OrbitCentre(FocusTarget);
 		double r = world->TargetRadius(FocusTarget);
 		double startDist = cs::Math::Max(travelStartOffset.Length(), 1e-9);
-		double endDist = travelEndZoom * r;
+		double endDist = travelEndZoom * r * ChaseScale();
 		double dist = cs::Math::Exp(cs::Math::Log(startDist) + (cs::Math::Log(endDist) - cs::Math::Log(startDist)) * e);
 
 		auto startDir = (travelStartOffset / startDist);
@@ -422,7 +485,7 @@ namespace SpaceGod::Cameras
 		if (PilotLocked && PilotView.has_value() && !PilotEye)
 		{
 			auto lift = *PilotView * Vector3::up();
-			ScenePosition += DVec3(lift.x, lift.y, lift.z) * (dist * PilotViewLift * e);
+			ScenePosition += DVec3(lift.x, lift.y, lift.z) * (dist * PilotViewLift() * e);
 		}
 		// Gliding to a gun mount (U.SPC-T445): the glide ends at the mount's eye, not behind the hull.
 		if (PilotLocked && PilotEye)
@@ -432,7 +495,7 @@ namespace SpaceGod::Cameras
 		}
 		// The turn lands ahead of the glide (x1.8), except on a hurried seat switch: its 0.3 s glide turned the view 90-120
 		// degrees in under 0.17 s, 15-20 degrees a frame (sg.Feel, 'fighter again'); there the turn spans the whole glide.
-		float turnRate = travelSeconds < TravelSeconds ? 1.0f : 1.8f;
+		float turnRate = hurried ? 1.0f : 1.8f;
 		Rotation = Quaternion::Slerp(travelStartRotation, lookAt, SmootherStep(Mathf::Min(1.0f, travelT * turnRate)));
 
 		if (travelT >= 1.0f)
