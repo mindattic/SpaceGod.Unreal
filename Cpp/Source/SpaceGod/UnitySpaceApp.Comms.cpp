@@ -5,7 +5,10 @@
 #include "Combat/Battle.h"
 #include "Comms/Comms.h"
 #include "Comms/Pilots.h"
+#include "Audio/GameAudio.h" // US-T602
+#include "Comms/StoryVoice.h" // US-T602
 #include "Coop/CoopPeer.h" // US-T140: the tracked body the same on every peer
+#include "Events/Opportunity.h" // US-T602
 #include "Embodiment/Embodiment.h"
 #include "Session/ISession.h"
 #include "Embodiment/StationSeat.h"
@@ -27,6 +30,7 @@
 #include "SimClock.h"
 #include "UI/Hud.h"
 #include "UI/UiMotion.h" // US-T255
+#include "Voice/CommsVoice.h" // US-T594
 #include "World.h"
 
 #include <algorithm>
@@ -38,6 +42,8 @@ namespace SpaceGod
 	namespace
 	{
 		constexpr int CommsLogKept = 40;
+		/// US-T594: the unit held's own lines, heard in the cabin rather than over the radio.
+		constexpr float OwnLineVolume = 0.6f;
 
 		Color StanceColor(CommsStance s)
 		{
@@ -192,6 +198,7 @@ namespace SpaceGod
 		{
 			auto r = Comms::Say(c, commsTarget, verb);
 			for (const auto& l : r.Lines) commsLog.Add(l);
+			SpeakComms(r.Lines, c, commsTarget, commsTarget.Faction());
 			commsTalking = false;
 			return;
 		}
@@ -215,10 +222,62 @@ namespace SpaceGod
 			if (r.Lines.Count() == 1 && !r.Lines[0].FromSpeaker && r.Lines[0].Who != "comms") EncounterStart(c, commsTarget, r.Lines, &r.Lines[0]);
 		}
 		for (const auto& l : r.Lines) commsLog.Add(l);
+		SpeakComms(r.Lines, c, commsTarget, commsTarget.Faction());
 		while (commsLog.Count() > CommsLogKept) commsLog.RemoveAt(0);
 		if (!r.Toast.empty()) ShowToast(r.Toast);
 		if (r.Battle != nullptr) CloseComms(); // a fight has started: the hands go back to the helm
 		commsContacts = Comms::Contacts(c);
+	}
+
+	void UnitySpaceApp::SpeakComms(const cs::List<CommsLine>& lines, const CommsContext& c, const CommsParty& them,
+		const cs::Ref<Faction>& faction, bool prefetch)
+	{
+		// The other party in their cast voice over the radio (their named pilot, a station's traffic control, else their
+		// faction's), the unit held in the player's own, quieter and dry. Characters::Find, not Comms::PilotOf: the view
+		// never meets anyone. "comms" lines are the channel's own notices, not anyone's voice.
+		auto world = World();
+		if (world == nullptr || world->Fleet == nullptr) return;
+		VoiceCasting cast(world->Fleet->Factions());
+		auto pilot = them.Ship != nullptr ? Characters::Of(world)->Find(them.Ship) : nullptr;
+		for (const auto& l : lines)
+		{
+			if (l.Who == "comms" || l.Text.empty()) continue;
+			Voice::SpokenLine s;
+			s.Who = l.Who;
+			s.Text = l.Text;
+			if (l.FromSpeaker)
+			{
+				s.Voice = cast.Player(c.Speaker);
+				s.Radio = false;
+				s.Volume = OwnLineVolume;
+			}
+			else s.Voice = pilot != nullptr ? cast.Of(pilot) : them.IsStation() ? cast.Of(them.Station) : cast.Of(faction);
+			if (prefetch) Voice::CommsVoice::Prefetch(s);
+			else Voice::CommsVoice::Speak(MoveTemp(s));
+		}
+	}
+
+	void UnitySpaceApp::SpeakHook(const cs::Ref<Opportunity>& op, const cs::String& text)
+	{
+		// Only a caller speaks (StoryVoice::Hook's rule). A reword still on its way is spoken when it lands, if the board
+		// still shows the call then; a call gone from the board by then is never spoken. A lure's raiders are not cast in
+		// their own side's voice: that would give the call away.
+		if (op == nullptr || text.empty() || op->Kind != OpportunityKind::Distress || op->Caller.empty()) return;
+		if (!Audio::GameAudio::Enabled()) return;
+		const cs::String key = StoryVoice::HookKey(*op);
+		if (StoryVoice::Log().Waiting(key) || !hooksSpoken.Add(key)) return;
+		auto world = World();
+		if (world == nullptr || world->Fleet == nullptr) return;
+		VoiceCasting cast(world->Fleet->Factions());
+		auto pilot = op->Ship != nullptr && !op->Bait ? Characters::Of(world)->Find(op->Ship) : nullptr;
+		cs::Ref<Faction> faction = op->Patron;
+		if (faction == nullptr && op->Ship != nullptr) faction = op->Ship->Faction;
+		if (op->Bait) faction = nullptr;
+		Voice::SpokenLine s;
+		s.Who = op->Caller;
+		s.Text = text;
+		s.Voice = pilot != nullptr ? cast.Of(pilot) : cast.Of(faction);
+		Voice::CommsVoice::Speak(MoveTemp(s));
 	}
 
 	cs::String UnitySpaceApp::CommsLoreSpeaker(const CommsParty& p)
@@ -391,10 +450,17 @@ namespace SpaceGod
 			auto who = hailing->Ship != nullptr && Characters::Of(World())->Find(hailing->Ship) != nullptr
 				? Characters::Of(World())->Find(hailing->Ship)->Name : hailing->Name();
 			commsLog.Add({ who, offer, false });
+			commsHailLines = { { who, offer, false } };
+			commsHailSpoken = false;
 			// US-T239: the terms stay the game's line; a Prose surrender conversation, when there is one, follows it.
 			cs::List<CommsLine> opening;
 			if (hailing->Ship != nullptr && EncounterStart(c, CommsParty::OfShip(hailing->Ship), opening, nullptr))
-				for (const auto& l : opening) commsLog.Add(l);
+				for (const auto& l : opening)
+				{
+					commsLog.Add(l);
+					commsHailLines.Add(l);
+				}
+			SpeakComms(commsHailLines, c, CommsParty::OfShip(hailing->Ship), hailing->Faction, true);
 			ShowToast(cs::Cat("INCOMING HAIL: the ", hailing->Name(), " strikes its colours  (Shift+H to answer)"));
 			if (commsOpen && hailing->Ship != nullptr)
 			{
@@ -403,6 +469,11 @@ namespace SpaceGod
 			}
 		}
 		if (hailing == nullptr) commsHailNoted = nullptr;
+		else if (!commsHailSpoken && CommsShown())
+		{
+			commsHailSpoken = true;
+			SpeakComms(commsHailLines, c, CommsParty::OfShip(hailing->Ship), hailing->Faction);
+		}
 
 		if (!commsOpen)
 		{

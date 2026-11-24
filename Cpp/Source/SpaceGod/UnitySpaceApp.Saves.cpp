@@ -284,6 +284,7 @@ namespace SpaceGod
 		}
 		autosaveDueS = PlayerOptions::AutosaveSeconds() > 0 ? PlayerOptions::AutosaveSeconds() : AutosaveIntervalS; // US-T252
 		RewindAfterLoad(); // US-T99: a save loaded starts a new timeline (a keyframe rewound to keeps the old one)
+		RadioReset(); // US-T656: a load restarts the radio history
 		CoopLoaded(); // US-T44
 	}
 

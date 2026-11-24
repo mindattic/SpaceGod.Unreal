@@ -317,6 +317,7 @@ namespace SpaceGod
 		SetSystemVisible(true);
 		Interstellar->SetVisible(false);
 		EnterPiloting(Target::OfShip(ship));
+		RadioRebase(); // US-T656: the listener jumped
 		// Out moving as it went in (U.SPC-T418), in the frame the helm now flies in.
 		DVec3 frameVel = FrameVelocityKmS(pilotFrameBody, Clock->Jd);
 		DVec3 rootVel = FrameVelocityKmS(0, Clock->Jd);

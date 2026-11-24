@@ -74,6 +74,9 @@ namespace SpaceGod::Core
 		uint64_t RetiredCount() const { return retired_; }
 		uint64_t EvictedCount() const { return evicted_; }
 
+		/// <summary>Drops every message sent after jd (a clock rewind: they never were), freeing their indices and texts, and sets the last SentJd back to the newest one kept.</summary>
+		void DropAfter(double jd);
+
 		void Clear();
 
 	private:

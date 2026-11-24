@@ -533,6 +533,7 @@ namespace SpaceGod::Tour
 						s.skipped = e.what();
 					}
 					if (!s.skipped.empty()) UE_LOG(LogSpaceGod, Warning, TEXT("sg.Tour: %s: %s"), *F(stop->Id), *F(s.skipped));
+					app.RadioRebase(); // US-T656: a stop moves the listener
 				}
 				Enter(s.skipped.empty() ? Phase::Ready : Phase::Show);
 				break;
