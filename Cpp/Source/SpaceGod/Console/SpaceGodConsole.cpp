@@ -8,9 +8,16 @@
 #include "Settings/GameSetting.h"
 
 #include "Framework/Application/SlateApplication.h"
+#include "GameFramework/InputSettings.h"
 
 using namespace SpaceGod;
 using namespace SpaceGod::Input;
+
+void USpaceGodConsole::PostInitProperties()
+{
+	Super::PostInitProperties();
+	GetMutableDefault<UInputSettings>()->ConsoleKeys.Empty();
+}
 
 bool USpaceGodConsole::IsToggleKey(const FKey& key)
 {

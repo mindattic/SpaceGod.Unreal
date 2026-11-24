@@ -4,7 +4,8 @@
 // history, scrollback and autocomplete; this subclass only changes what opens and closes it: a press of a keyboard key
 // held by the Console key action (KeyBindings, the backtick by default) steps None -> Typing -> Open -> None while
 // Options > Developer > Console is on (GameConsole::Enabled), instead of [/Script/Engine.InputSettings] ConsoleKeys
-// (left empty). With the setting off the key passes through to the game, and a console left open closes.
+// (emptied in PostInitProperties, so BaseInput.ini's Tilde cannot open it). With the setting off the key passes
+// through to the game, and a console left open closes.
 
 #include "CoreMinimal.h"
 #include "Engine/Console.h"
@@ -16,6 +17,7 @@ class USpaceGodConsole : public UConsole
 	GENERATED_BODY()
 
 public:
+	virtual void PostInitProperties() override;
 	virtual bool InputKey(FInputDeviceId DeviceId, FKey Key, EInputEvent Event, float AmountDepressed = 1.f, bool bGamepad = false) override;
 	virtual void PostRender_Console(UCanvas* Canvas) override;
 
