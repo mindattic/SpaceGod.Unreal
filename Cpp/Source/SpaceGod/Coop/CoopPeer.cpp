@@ -506,6 +506,8 @@ namespace SpaceGod::Coop
 		{
 			if (kind == "hello") Hello(r, rest);
 			else if (kind == "cmd") Command(r, rest);
+			else if (r.Seat < 0 && (kind == "warp" || kind == "pause" || kind == "select" || kind == "travel" || kind == "load"))
+				Warn(cs::Cat("'", kind, "' from a player that has not said hello: dropped"));
 			else if (kind == "warp" || kind == "pause")
 			{
 				clockRequests.emplace_back(r.Seat, msg);
@@ -629,6 +631,11 @@ namespace SpaceGod::Coop
 	{
 		// US-T43: the app's own entries ("h" the helm, "k" a cockpit key, "x" an action that writes the Core), each
 		// "<kind> <seat> ...": a client speaks only for its own seat.
+		if (r.Seat < 0)
+		{
+			Warn(cs::Cat("command '", entry, "' from a player that has not said hello: dropped"));
+			return;
+		}
 		if (entry.size() > 2 && (entry[0] == 'h' || entry[0] == 'k' || entry[0] == 'x') && entry[1] == ' ')
 		{
 			auto f = Wire::Split(entry, ' ', 3);
@@ -780,7 +787,13 @@ namespace SpaceGod::Coop
 			{
 				auto lines = Wire::Split(msg, '\n');
 				auto f = Wire::Split(lines[0], ' ');
-				localSeat = Wire::ParseI(f.at(1));
+				int seatIn = Wire::ParseI(f.at(1));
+				if (seatIn < 0 || seatIn >= MaxPlayers)
+				{
+					Warn(cs::Cat("welcome with seat ", seatIn, " out of range: ignored"));
+					return;
+				}
+				localSeat = seatIn;
 				for (size_t i = 1; i < lines.size(); i++)
 				{
 					auto p = Wire::Split(lines[i], ' ', 2);
@@ -836,6 +849,7 @@ namespace SpaceGod::Coop
 			{
 				// "chunk <id> <i> <data>"
 				size_t a = msg.find(' ', 6), b = msg.find(' ', a + 1);
+				if (a == cs::String::npos || b == cs::String::npos) return;
 				int id = Wire::ParseI(msg.substr(6, a - 6)), i = Wire::ParseI(msg.substr(a + 1, b - a - 1));
 				if (id != clientSyncId || !haveChunks || i < 0 || i >= static_cast<int>(chunks.size())) return;
 				if (chunks[static_cast<size_t>(i)].empty()) chunksGot++;
