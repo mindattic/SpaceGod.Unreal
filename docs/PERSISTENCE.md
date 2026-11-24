@@ -309,3 +309,16 @@ carrier's entry as `Of` would and puts the loaded deck in the slot of its own ha
 saves load and are repaired the same way. Decks no visit holds are rebuilt fresh; the only state they could lose is
 `NextLaunch`, which no craft can read before a fresh landing's turnaround (at least 5 s) outlasts it (3 s).
 
+
+## 12. Shipped defaults (US-T512)
+
+`Cpp/Content/Settings/shipped-defaults.json` is a flat JSON object of setting key to the text the setting writes in a
+profile (`GameSetting::Format`). `GameSettingsHost::Bind` reads it and calls `SettingsRegistry::ApplyShippedDefaults`
+before binding the profile, so each key it names ships as that setting's default while a value the player chose still
+stands over it. With no file the declared defaults stand; a damaged file is logged and ignored. The file is staged
+beside the paks (`DirectoriesToAlwaysStageAsNonUFS`, `Settings`).
+
+`sg.Settings lockin [group|key]` writes every setting there that is not at its default (all of them when none is
+named) into the file and makes it the default, forgetting it in the profile; `sg.Settings unlock <group|key|all>`
+takes them out again, back to the factory default; `sg.Settings list` shows the file. Locking in a simulation
+setting moves what the bench digests, so the command says when `Bench/expected-digests.json` must be re-recorded.
