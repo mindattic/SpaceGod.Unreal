@@ -202,6 +202,45 @@ namespace SpaceGod::Input
 		return i >= 0 && i <= static_cast<int>(PadButton::Count) ? names[i] : "";
 	}
 
+	/// <summary>US-T699: whose names the pad's buttons are shown by (the profile text is always Xbox's, "Pad:A").</summary>
+	enum class PadPrompts : int
+	{
+		Xbox,
+		PlayStation,
+	};
+
+	/// <summary>US-T699: the prompts shown now, process-wide: set each frame by Gamepad::ResolvePrompts from the
+	/// controls.pad.prompts setting and the pad connected; Xbox until then (and in BindingCoreTests).</summary>
+	inline PadPrompts ShownPadPrompts = PadPrompts::Xbox;
+
+	/// <summary>The button as a player reads it on the pad in hand (<see cref="ShownPadPrompts"/>): "A" or "Cross", "LB" or
+	/// "L1", "LS click" or "L3".</summary>
+	inline std::string PadButtonGlyph(PadButton button)
+	{
+		if (ShownPadPrompts == PadPrompts::PlayStation)
+		{
+			switch (button)
+			{
+				case PadButton::A: return "Cross";
+				case PadButton::B: return "Circle";
+				case PadButton::X: return "Square";
+				case PadButton::Y: return "Triangle";
+				case PadButton::LeftBumper: return "L1";
+				case PadButton::RightBumper: return "R1";
+				case PadButton::LeftTrigger: return "L2";
+				case PadButton::RightTrigger: return "R2";
+				case PadButton::View: return "Create";
+				case PadButton::Menu: return "Options";
+				case PadButton::LeftStick: return "L3";
+				case PadButton::RightStick: return "R3";
+				default: break;
+			}
+			return ToString(button);
+		}
+		std::string g = ToString(button);
+		return button == PadButton::LeftStick || button == PadButton::RightStick ? g + " click" : g;
+	}
+
 	/// <summary>A stick pushed one way (an <see cref="InputBinding"/>'s code for <see cref="BindSource::PadStick"/>).</summary>
 	enum class StickDir : int
 	{
@@ -222,8 +261,11 @@ namespace SpaceGod::Input
 	inline const char* StickGlyph(StickDir d)
 	{
 		static const char* const names[] = { "LS up", "LS down", "LS left", "LS right", "RS up", "RS down", "RS left", "RS right" };
+		// US-T699: a PlayStation pad's sticks are its L and R sticks (L3/R3 are their clicks).
+		static const char* const playStation[] = { "L stick up", "L stick down", "L stick left", "L stick right", "R stick up", "R stick down", "R stick left", "R stick right" };
 		int i = static_cast<int>(d);
-		return i >= 0 && i < static_cast<int>(StickDir::Count) ? names[i] : "";
+		if (i < 0 || i >= static_cast<int>(StickDir::Count)) return "";
+		return ShownPadPrompts == PadPrompts::PlayStation ? playStation[i] : names[i];
 	}
 
 	/// <summary>Modifier flags of a key, mouse button or wheel binding (a pad binding has none).</summary>
@@ -413,16 +455,12 @@ namespace SpaceGod::Input
 			return s;
 		}
 
-		/// <summary>A pad binding's glyph ("A", "LT", "LS click", "RS up"); empty for anything else.</summary>
+		/// <summary>A pad binding's glyph ("A", "LT", "LS click", "RS up"; "Cross", "L2", "L3", "R stick up" with
+		/// <see cref="ShownPadPrompts"/> PlayStation, US-T699); empty for anything else.</summary>
 		std::string PadGlyph() const
 		{
-			if (source == BindSource::PadButton)
-			{
-				auto b = static_cast<PadButton>(code);
-				std::string g = ToString(b);
-				return b == PadButton::LeftStick || b == PadButton::RightStick ? g + " click" : g;
-			}
-			if (source == BindSource::PadTrigger) return code == 1 ? "RT" : "LT";
+			if (source == BindSource::PadButton) return PadButtonGlyph(static_cast<PadButton>(code));
+			if (source == BindSource::PadTrigger) return PadButtonGlyph(code == 1 ? PadButton::RightTrigger : PadButton::LeftTrigger);
 			if (source == BindSource::PadStick) return StickGlyph(static_cast<StickDir>(code));
 			return "";
 		}

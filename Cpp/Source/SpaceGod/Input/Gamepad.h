@@ -26,6 +26,7 @@
 
 namespace SpaceGod::Core
 {
+	class ChoiceSetting;
 	class RangeSetting;
 	class ToggleSetting;
 }
@@ -76,6 +77,16 @@ namespace SpaceGod::Input
 		static const cs::Ref<Core::RangeSetting>& VibrationStrength();
 		/// <summary>The force feedback scale in effect: the setting, or 1 in a scripted run.</summary>
 		static float Vibration();
+		/// <summary>Controls (US-T699): whose button names the pad's prompts show: Auto (by the pad connected), Xbox or
+		/// PlayStation.</summary>
+		static const cs::Ref<Core::ChoiceSetting>& Prompts();
+		/// <summary>US-T699: sets <see cref="ShownPadPrompts"/> from <see cref="Prompts"/> and <see cref="ConnectedPadName"/>
+		/// (Auto: PlayStation when the name says DualSense, DualShock, PlayStation, PS4 or PS5); a scripted run keeps Xbox.
+		/// Called each frame after the pad is fed.</summary>
+		static void ResolvePrompts();
+		/// <summary>US-T699: the last pad used, as the platform names its hardware (empty until one is); filled by
+		/// UnrealInputDevice.</summary>
+		static inline std::string ConnectedPadName;
 		/// <summary>Builds every pad setting (the declaration source GameSettingsHost registers).</summary>
 		static void Declare();
 

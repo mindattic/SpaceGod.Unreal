@@ -111,9 +111,40 @@ namespace SpaceGod::Input
 		SwapSticks();
 		InvertMove();
 		VibrationStrength();
+		Prompts();
 	}
 
 	float Gamepad::Vibration() { return PlayerOptions::ScriptedRun() ? 1.0f : static_cast<float>(VibrationStrength()->Value); }
+
+	const cs::Ref<ChoiceSetting>& Gamepad::Prompts()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("controls.pad.prompts", SettingGroups::Controls,
+			"Gamepad button prompts", cs::List<cs::String>{ "Auto", "Xbox", "PlayStation" }, 0,
+			"Whose button names the game shows: Auto picks them by the pad connected (PlayStation for a DualSense or DualShock, Xbox otherwise).",
+			"gamepad controller prompts glyphs buttons icons xbox playstation dualsense dualshock ps4 ps5");
+		return value;
+	}
+
+	void Gamepad::ResolvePrompts()
+	{
+		if (PlayerOptions::ScriptedRun())
+		{
+			ShownPadPrompts = PadPrompts::Xbox;
+			return;
+		}
+		switch (Prompts()->Index)
+		{
+			case 1: ShownPadPrompts = PadPrompts::Xbox; return;
+			case 2: ShownPadPrompts = PadPrompts::PlayStation; return;
+			default: break;
+		}
+		std::string name = ConnectedPadName;
+		for (char& c : name) c = static_cast<char>(c >= 'a' && c <= 'z' ? c - 'a' + 'A' : c);
+		bool sony = false;
+		for (const char* mark : { "DUALSENSE", "DUALSHOCK", "PLAYSTATION", "PS4", "PS5" })
+			sony = sony || name.find(mark) != std::string::npos;
+		ShownPadPrompts = sony ? PadPrompts::PlayStation : PadPrompts::Xbox;
+	}
 
 	// ---------------------------------------------------------------- reads
 

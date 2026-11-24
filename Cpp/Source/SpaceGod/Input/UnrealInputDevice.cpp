@@ -3,6 +3,7 @@
 #include "Console/GameConsole.h" // US-T622
 #include "UnrealSpace.h"
 
+#include "GameFramework/InputDeviceSubsystem.h" // US-T699: which pad is in hand
 #include "GameFramework/PlayerController.h"
 #include "GameFramework/PlayerInput.h"
 #include "InputCoreTypes.h"
@@ -146,6 +147,15 @@ namespace SpaceGod::Input
 			pad.rightStick = Vector2(in->GetRawKeyValue(EKeys::Gamepad_RightX), in->GetRawKeyValue(EKeys::Gamepad_RightY));
 			pad.leftTrigger = FMath::Clamp(in->GetRawKeyValue(EKeys::Gamepad_LeftTriggerAxis), 0.0f, 1.0f);
 			pad.rightTrigger = FMath::Clamp(in->GetRawKeyValue(EKeys::Gamepad_RightTriggerAxis), 0.0f, 1.0f);
+
+			// US-T699: the hardware of the pad used last (kept while the keyboard or mouse is), for Auto button prompts.
+			if (const UInputDeviceSubsystem* devices = UInputDeviceSubsystem::Get())
+			{
+				const FHardwareDeviceIdentifier hw = devices->GetMostRecentlyUsedHardwareDevice(pc->GetPlatformUserId());
+				if (hw.PrimaryDeviceType == EHardwareDevicePrimaryType::Gamepad)
+					Gamepad::ConnectedPadName = TCHAR_TO_UTF8(*(hw.HardwareDeviceIdentifier.ToString() + TEXT(" ") + hw.InputClassName.ToString()));
+			}
+			Gamepad::ResolvePrompts();
 		}
 
 		/// US-T250: the keyboard or the mouse touched this frame (a key or button down, the pointer moved, the wheel).
