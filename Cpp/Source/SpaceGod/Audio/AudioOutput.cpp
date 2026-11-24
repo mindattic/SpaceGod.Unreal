@@ -1,6 +1,5 @@
-// The engine's audio mixer headers use Unreal's PI macro, which Cs.h takes away: included before it.
-#include "AudioMixerDevice.h"
 #include "Audio/AudioOutput.h"
+#include "Audio/AudioMixerIncludes.h"
 #include "Audio/GameAudio.h"
 #include "PlayerOptions.h"
 #include "Settings/GameSetting.h"
