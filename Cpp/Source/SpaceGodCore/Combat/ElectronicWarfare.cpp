@@ -151,7 +151,7 @@ namespace SpaceGod::Core
 		double bestScore = cs::Double::MaxValue;
 		for (const auto& o : b->Units)
 		{
-			if (o->Kind == UnitKind::Fighter || !b->Hostile(u, o) || o->Surrendering || o->Captured) continue;
+			if (o->Kind == UnitKind::Fighter || !b->Hostile(u, o) || o->Surrendering || o->Captured || Battle::IgnoredByAi(u, o)) continue; // US-T528
 			double score = (o->Pos - u->Pos).Length() - o->Combat->Spec->Hull / 1000.0 - (WeakPoints::IsCapital(o) ? 30 : 0);
 			if (score < bestScore)
 			{

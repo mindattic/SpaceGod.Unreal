@@ -938,6 +938,14 @@ namespace SpaceGod::Core
 
 		cs::Ref<BattleUnit> PickTarget(const cs::Ref<BattleUnit>& u);
 
+		/// <summary>US-T528: whether the developer's AI ignores the player has <paramref name="u"/>, a unit the AI flies,
+		/// leave <paramref name="o"/> alone because the player holds it (never with the flag off).</summary>
+		static bool IgnoredByAi(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o);
+
+		/// <summary>US-T528: whether the developer's Freeze AI holds <paramref name="u"/>, a unit the AI flies, where it is
+		/// with its guns silent (never with the flag off, nor for anything the player holds).</summary>
+		bool FrozenByDev(const cs::Ref<BattleUnit>& u) const;
+
 	private:
 		/// <summary>The side's flagship: its working command ship if it has one, where the fleet's senior officers are
 		/// (U.SPC-T477), else its biggest hull.</summary>

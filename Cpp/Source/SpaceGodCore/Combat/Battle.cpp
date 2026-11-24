@@ -379,6 +379,12 @@ namespace SpaceGod::Core
 		{
 			auto u = Units[i];
 			if (!u->Present()) continue;
+			// US-T528: the developer's Freeze AI holds every unit the AI flies where it is.
+			if (FrozenByDev(u))
+			{
+				u->Vel = DVec3::Zero;
+				continue;
+			}
 			if (u->Kind == UnitKind::Fighter)
 			{
 				// One the player has taken flies on their stick; the rest of its squadron flies on as before (U.SPC-T422).
@@ -421,7 +427,7 @@ namespace SpaceGod::Core
 		for (int i = 0; i < Units.Count(); i++)
 		{
 			auto u = Units[i];
-			if (!u->Present()) continue;
+			if (!u->Present() || FrozenByDev(u)) continue; // US-T528: and a frozen AI unit's guns stay silent
 			if (u->PlayerControlled()) StepPlayerWeapons(u, dt);
 			Fire(u, dt);
 			// A mine asked for is laid now or not at all, not saved up for when the mount is ready; a volley
@@ -602,7 +608,7 @@ namespace SpaceGod::Core
 			HelmOrdersLapse(u);
 		}
 		u->RetargetIn -= dt;
-		if (u->Target == nullptr || !u->Target->Present() || u->RetargetIn <= 0)
+		if (u->Target == nullptr || !u->Target->Present() || u->RetargetIn <= 0 || IgnoredByAi(u, u->Target)) // US-T528
 		{
 			u->Target = PickTarget(u);
 			// Under a command ship its staff has the next mark picked out already; with it lost, nobody has (U.SPC-T477).
@@ -637,7 +643,7 @@ namespace SpaceGod::Core
 		auto crippling = CalledCrippleFor(u);
 		for (const auto& o : Units)
 		{
-			if (!Hostile(u, o) || o->Captured || o->Surrendering) continue;
+			if (!Hostile(u, o) || o->Captured || o->Surrendering || IgnoredByAi(u, o)) continue; // US-T528
 			// A hunter wants its quarry's captain alive: a disabled flagship is boarded, not finished off.
 			if (o->Combat->Disabled() && WantsAlive != nullptr && WantsAlive(u, o) && SideCanBoard(u->Side)) continue;
 			// Raiders rob a merchant or civilian hull, they don't destroy it (U.SPC-T374): once it lies dead in space
@@ -865,7 +871,7 @@ namespace SpaceGod::Core
 
 		// The player first, if near enough to be worth the chase.
 		for (const auto& o : Units)
-			if (o->PlayerControlled() && Hostile(u, o) && (o->Pos - u->Pos).Length() < Difficulty::PirateHuntKm(u->Faction->IsPirate, HuntPlayerKm)) // US-T253
+			if (o->PlayerControlled() && !IgnoredByAi(u, o) && Hostile(u, o) && (o->Pos - u->Pos).Length() < Difficulty::PirateHuntKm(u->Faction->IsPirate, HuntPlayerKm)) // US-T253
 			{
 				u->Target = o;
 				break;
@@ -3446,7 +3452,17 @@ namespace SpaceGod::Core
 		return !u->PlayerControlled() && !o->CargoRefused && RaidDoctrine::Robs(u->Faction, o->Ship);
 	}
 
-	bool Battle::HoldsFireOn(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o) { return o->Combat->Disabled() && Spares(u, o); }
+	bool Battle::HoldsFireOn(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o) { return IgnoredByAi(u, o) || (o->Combat->Disabled() && Spares(u, o)); }
+
+	bool Battle::IgnoredByAi(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o)
+	{
+		return DevFlags::AiIgnoresPlayer()->Value && o != nullptr && o->PlayerControlled() && !u->PlayerControlled();
+	}
+
+	bool Battle::FrozenByDev(const cs::Ref<BattleUnit>& u) const
+	{
+		return DevFlags::FreezeAi()->Value && !u->PlayerControlled() && !(Flown.Count() > 0 && Flown.ContainsKey(u));
+	}
 
 	bool Battle::RaidDone(const cs::Ref<BattleUnit>& u)
 	{

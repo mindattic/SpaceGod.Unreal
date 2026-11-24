@@ -339,7 +339,7 @@ namespace SpaceGod::Core
 
 	bool FighterAI::Fair(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& t)
 	{
-		return t != nullptr && b->Hostile(u, t) && !t->Surrendering && !t->Captured;
+		return t != nullptr && b->Hostile(u, t) && !t->Surrendering && !t->Captured && !Battle::IgnoredByAi(u, t); // US-T528
 	}
 
 	void FighterAI::Lead(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, double dt, const cs::Ref<BattleUnit>& pinned)
@@ -539,7 +539,7 @@ namespace SpaceGod::Core
 		double bestScore = cs::Double::MaxValue;
 		for (const auto& o : b->Units)
 		{
-			if (!b->Hostile(u, o) || o->Surrendering || o->Captured) continue;
+			if (!b->Hostile(u, o) || o->Surrendering || o->Captured || Battle::IgnoredByAi(u, o)) continue; // US-T528
 			if (o->Kind == UnitKind::Fighter && bomber) continue;
 			double d = (o->Pos - u->Pos).Length();
 			double score = d;
@@ -618,7 +618,7 @@ namespace SpaceGod::Core
 		// re-check the target's own state here so neither the lead nor a wingman copying its
 		// target gets a last torpedo off at a hull that is already struck or already gone.
 		if (!f->Bomber || phase != FighterPhase::AttackRun || u->Target == nullptr || u->Target->Kind == UnitKind::Fighter
-			|| !b->Hostile(u, u->Target) || u->Target->Surrendering || u->Target->Captured) return;
+			|| !b->Hostile(u, u->Target) || u->Target->Surrendering || u->Target->Captured || Battle::IgnoredByAi(u, u->Target)) return; // US-T528
 		auto to = u->Target->Pos - u->Pos;
 		double dist = to.Length();
 		if (dist > WeaponSpec::Torpedo()->RangeKm || DVec3::Dot(u->Forward, to / dist) < TorpedoBoresightCos) return;
