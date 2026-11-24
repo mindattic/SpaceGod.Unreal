@@ -4,6 +4,7 @@
 // arrival is realised once, when heard: "[<channel> <MHz>] <sender>: <text>  - sent <light time> ago, <range>".
 // View-local like the host: nothing here enters the simulation or saves.
 
+#include "Comms/VoiceCasting.h"
 #include "Cs/Cs.h"
 #include "Radio/RadioChannels.h"
 #include "Radio/RadioHost.h"
@@ -13,6 +14,11 @@
 namespace SpaceGod
 {
 	class UnitySpaceApp;
+}
+
+namespace SpaceGod::Core
+{
+	class World;
 }
 
 namespace SpaceGod::Radio
@@ -49,6 +55,9 @@ namespace SpaceGod::Radio
 		void Clear() { lines.clear(); }
 
 	private:
+		/// <summary>US-T685: the voice a message's emitter is cast in (VoiceCasting).</summary>
+		static Core::VoiceSpec VoiceOf(const cs::Ref<Core::World>& world, const Core::RadioMessage& m);
+
 		UnitySpaceApp& app;
 		Core::RadioChannels channels;
 		std::deque<HeardLine> lines;

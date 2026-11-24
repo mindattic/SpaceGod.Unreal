@@ -31,6 +31,7 @@
 #include "UI/Hud.h"
 #include "UI/UiMotion.h" // US-T255
 #include "Voice/CommsVoice.h" // US-T594
+#include "Voice/VoiceArbiter.h" // US-T685
 #include "World.h"
 
 #include <algorithm>
@@ -253,7 +254,7 @@ namespace SpaceGod
 			}
 			else s.Voice = pilot != nullptr ? cast.Of(pilot) : them.IsStation() ? cast.Of(them.Station) : cast.Of(faction);
 			if (prefetch) Voice::CommsVoice::Prefetch(s);
-			else Voice::CommsVoice::Speak(MoveTemp(s));
+			else Voice::VoiceArbiter::Comms(MoveTemp(s)); // US-T685: ahead of the radio, cutting a radio line playing
 		}
 	}
 
@@ -277,7 +278,7 @@ namespace SpaceGod
 		s.Who = op->Caller;
 		s.Text = text;
 		s.Voice = pilot != nullptr ? cast.Of(pilot) : cast.Of(faction);
-		Voice::CommsVoice::Speak(MoveTemp(s));
+		Voice::VoiceArbiter::Comms(MoveTemp(s)); // US-T685
 	}
 
 	cs::String UnitySpaceApp::CommsLoreSpeaker(const CommsParty& p)

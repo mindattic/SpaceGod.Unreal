@@ -9,6 +9,7 @@
 #include "Systems/Galaxy.h"
 #include "Systems/InterstellarTraffic.h"
 #include "UnityCompat/UnityRuntime.h"
+#include "Voice/VoiceArbiter.h" // US-T685
 
 #include <chrono>
 #include <cstdint>
@@ -22,6 +23,8 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioTick()
 	{
 		if (Clock == nullptr) return;
+		// US-T685: the spoken radio lines take their turns on the one voice; under high warp only urgent ones are kept.
+		Voice::VoiceArbiter::Tick(Clock->Paused() ? 0.0f : static_cast<float>(Clock->Warp().SimSecondsPerSecond * Clock->Speed));
 		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
 		cs::Ref<Newswire> news = Galaxy != nullptr && Galaxy->Traffic != nullptr ? Galaxy->Traffic->News : nullptr;
 		if (news != radioNews)

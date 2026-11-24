@@ -6,6 +6,7 @@
 #include "Audio/Music.h" // US-T243
 #include "Voice/CommsVoice.h" // US-T589
 #include "Voice/TtsService.h" // US-T587
+#include "Voice/VoiceArbiter.h" // US-T685
 #include "UnitySpaceApp.h"
 #include "SessionAudio.h"
 #include "UnrealSpace.h"
@@ -120,6 +121,7 @@ void AUnitySpaceAppActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		App->OnDestroy();
 		App.reset();
 	}
+	SpaceGod::Voice::VoiceArbiter::Stop(); // US-T685: radio lines waiting or playing end with the scene too
 	SpaceGod::Voice::CommsVoice::Stop(); // US-T589: lines still waiting belong to the scene that ends
 	// US-T587: the speech worker and its Piper process end with the run (a scene change keeps them).
 	if (EndPlayReason == EEndPlayReason::Quit || EndPlayReason == EEndPlayReason::EndPlayInEditor) SpaceGod::Voice::TtsService::Shutdown();
