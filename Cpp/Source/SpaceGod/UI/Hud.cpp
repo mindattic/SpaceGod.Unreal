@@ -57,6 +57,7 @@
 #include "Persistence/SaveGame.h"
 #include "Sensors/Sensors.h"
 #include "Sensors/SensorPosture.h"
+#include "Settings/DevFlags.h" // US-T525
 #include "Settings/GameSetting.h"
 #include "Systems/VoidSites.h"
 #include "Systems/CruiseDrive.h"
@@ -85,6 +86,24 @@ namespace SpaceGod::UI
 			using ::SpaceGod::Input::KeyBindings;
 			return cs::Cat(KeyBindings::Keys(KeyAction::QuickSave), " quicksave   ", KeyBindings::Keys(KeyAction::QuickLoad), " quickload   ",
 				KeyBindings::Keys(KeyAction::Saves), " close");
+		}
+
+		// US-T525: while any developer flag is on, a DEV badge naming them, beside the dev menu's hint at the bottom right.
+		void DrawDevBadge(UnitySpaceApp& app, const cs::Ref<GUIStyle>& style)
+		{
+			if (!DevFlags::AnyOn()) return;
+			cs::String names;
+			for (const auto& flag : DevFlags::All())
+				if (flag->Value) names = names.empty() ? flag->Label : cs::Cat(names, "  ·  ", flag->Label);
+			auto content = GUIContent(cs::Cat("DEV  ", names));
+			float w = style->CalcSize(content).x + 12;
+			auto r = Rect(Screen::width - HudLayout::DevHintWidth - HudLayout::Gap - w, Screen::height - HudLayout::DevHintStrip, w, 18);
+			if (!app.UiRects.Contains(r)) app.UiRects.Add(r);
+			GUI::Box(r, cs::String());
+			auto old = GUI::contentColor;
+			GUI::contentColor = Color(1.0f, 0.45f, 0.3f, 1.0f);
+			GUI::Label(Rect(r.x + 6, r.y, r.width - 6, r.height), content, style);
+			GUI::contentColor = old;
 		}
 	}
 
@@ -255,6 +274,7 @@ namespace SpaceGod::UI
 		DrawLaneEffects();
 		DrawPossession(); // US-T446: the possession show's breath, and the possessed view's frame (with the HUD off too)
 		DrawSelfDestruct(); // US-T97: shown with the HUD off too
+		DrawDevBadge(*app, small); // US-T525: with the HUD off too
 		if (!app->ShowHud)
 		{
 			drawers.Draw(frame); // US-T440: the alerts and what a key opened (the saves, the comms) only
