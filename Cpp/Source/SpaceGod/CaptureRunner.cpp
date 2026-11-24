@@ -4,6 +4,8 @@
 #include "Camera/SpaceCamera.h"
 #include "MindAtticCapture.h"
 
+#include "Containers/Ticker.h"
+#include "HAL/FileManager.h"
 #include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
 #include "Misc/Parse.h"
@@ -15,9 +17,67 @@ using namespace SpaceGod::Core;
 
 namespace SpaceGod
 {
+	namespace PreviewSet
+	{
+		namespace
+		{
+			FString& Slot()
+			{
+				static FString current;
+				return current;
+			}
+		}
+
+		FString Current() { return Slot(); }
+
+		FString Ensure(const FString& title, const FString& ticket)
+		{
+			FString& current = Slot();
+			if (current.IsEmpty())
+			{
+				current = MindAttic::Media::Capture::NewPreviewSet(title, ticket);
+				if (current.IsEmpty()) Debug::LogError("[Unity.SpaceGod] MindAttic.Media.Capture could not make a preview set (is the capture agent installed?).");
+				else Debug::Log(cs::Cat("[Unity.SpaceGod] Preview set ", cs::String(TCHAR_TO_UTF8(*current))));
+			}
+			return current;
+		}
+
+		FString DatedTitle(const TCHAR* prefix)
+		{
+			return FString::Printf(TEXT("%s %s"), prefix, *FDateTime::Now().ToString(TEXT("%Y-%m-%d")));
+		}
+
+		void AddWhenWritten(const FString& dir, const FString& file, const FString& tag, const FString& caption)
+		{
+			const double deadline = FPlatformTime::Seconds() + 10.0;
+			FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([dir, file, tag, caption, deadline](float)
+			{
+				if (IFileManager::Get().FileSize(*file) <= 0)
+				{
+					if (FPlatformTime::Seconds() < deadline) return true;
+					Debug::LogError(cs::Cat("[Unity.SpaceGod] Screenshot ", cs::String(TCHAR_TO_UTF8(*file)), " was never written; not added to the preview set."));
+					return false;
+				}
+				const TArray<FString> copies = MindAttic::Media::Capture::AddToPreviewSet(dir, { file }, tag, caption);
+				if (copies.IsEmpty()) Debug::LogError(cs::Cat("[Unity.SpaceGod] Could not add ", cs::String(TCHAR_TO_UTF8(*file)), " to the preview set."));
+				else Debug::Log(cs::Cat("[Unity.SpaceGod] Added to the preview set: ", cs::String(TCHAR_TO_UTF8(*copies[0]))));
+				return false;
+			}), 0.1f);
+		}
+	}
+
 	namespace
 	{
 		namespace Capture = MindAttic::Media::Capture;
+
+		/// US-T695: -preview (or -preview=<ticket>) was on the command line; `ticket` is the value when given.
+		bool PreviewRequested(FString& ticket)
+		{
+			ticket.Reset();
+			const TCHAR* cmd = FCommandLine::Get();
+			if (FParse::Value(cmd, TEXT("-preview="), ticket)) return true;
+			return FParse::Param(cmd, TEXT("preview"));
+		}
 
 		// MindAttic.Media.Capture's CaptureUnity, as far as the runner reads it (US-T72: the MindAttic.Media.Capture.Unreal
 		// plugin). -capturedir=<dir> (tools/play.ps1 -Mode demo, US-T58) keeps the tour's shots as Unreal screenshots in
@@ -73,6 +133,12 @@ namespace SpaceGod
 	}
 
 	CaptureRunner* CaptureRunner::Current() { return CurrentSlot(); }
+
+	FString& CaptureRunner::TourSet()
+	{
+		static FString set;
+		return set;
+	}
 
 	CaptureRunner::CaptureRunner(UnitySpaceApp* inApp) : hostApp(inApp)
 	{
@@ -133,6 +199,15 @@ namespace SpaceGod
 			}
 		}
 
+		// US-T695: -preview makes the tour's preview set now; each stop's shot goes into it.
+		TourSet().Reset();
+		FString ticket;
+		if (PreviewRequested(ticket))
+		{
+			if (capturing) TourSet() = PreviewSet::Ensure(PreviewSet::DatedTitle(TEXT("SpaceGod tour")), ticket);
+			else Debug::LogWarning("[Unity.SpaceGod] -preview needs -capture (screen, video or -capturedir=); the tour takes no shots, so no preview set.");
+		}
+
 		// A time reset rebuilds the galaxy under the tour (its ships, bodies and battles are gone):
 		// stop there rather than run on, framing and waiting on objects that no longer exist.
 		// (Held by the handlers as C#'s closures hold them.)
@@ -153,6 +228,19 @@ namespace SpaceGod
 		}
 
 		if (capturing) Debug::Log(cs::Cat("[Unity.SpaceGod] Tour captured to ", CaptureSessionFolder()));
+		if (!TourSet().IsEmpty())
+		{
+			// -capturedir= shots are added from the core ticker once written: let the last one land first.
+			auto wait = 0.0f;
+			while (LegacyShots() && wait < 1.0f)
+			{
+				wait += Time::unscaledDeltaTime;
+				co_yield nullptr;
+			}
+			const FString shown = Capture::ShowPreviewSet(TourSet());
+			if (shown.IsEmpty()) Debug::LogError(cs::Cat("[Unity.SpaceGod] Could not open the preview set ", cs::String(TCHAR_TO_UTF8(*TourSet()))));
+			else Debug::Log(cs::Cat("[Unity.SpaceGod] Preview set opened (", cs::String(TCHAR_TO_UTF8(*shown)), "): ", cs::String(TCHAR_TO_UTF8(*TourSet()))));
+		}
 		Application::Quit();
 	}
 
@@ -178,10 +266,19 @@ namespace SpaceGod
 			// The shot is written at the end of this frame.
 			co_yield nullptr;
 			Debug::Log(cs::Cat("[Unity.SpaceGod] Captured ", path));
+			if (!TourSet().IsEmpty())
+			{
+				const FString stop(UTF8_TO_TCHAR(name.c_str()));
+				FString file(UTF8_TO_TCHAR(path.c_str()));
+				if (FPaths::IsRelative(file)) file = FPaths::ConvertRelativePathToFull(FPaths::ProjectDir(), file);
+				PreviewSet::AddWhenWritten(TourSet(), file, stop, stop);
+			}
 			co_return;
 		}
 		// var shot = CaptureUnity.Engine.ScreenshotAsync(name);
-		const int32 shot = Capture::Screenshot(FString(UTF8_TO_TCHAR(name.c_str())));
+		// US-T695: with -preview the host also copies the shot into the tour's set, captioned with the stop's name.
+		const FString stop(UTF8_TO_TCHAR(name.c_str()));
+		const int32 shot = Capture::Screenshot(stop, Capture::Data(), TourSet(), TourSet().IsEmpty() ? FString() : stop);
 		// while (!shot.IsCompleted) yield return null;
 		bool ok = false;
 		FString detail;
