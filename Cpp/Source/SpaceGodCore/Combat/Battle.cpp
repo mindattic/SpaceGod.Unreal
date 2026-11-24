@@ -57,6 +57,7 @@
 #include "Embodiment/MechWalker.h" // US-T270: the mechs out, stepped and shot at with the fight
 #include "Economy/Settlement.h"
 #include "Sensors/SensorPosture.h"
+#include "Settings/DevFlags.h" // US-T527
 #include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "Systems/JumpGate.h"
@@ -67,7 +68,8 @@ namespace SpaceGod::Core
 	namespace
 	{
 		/// <summary>US-T257: tags the effects a hit emits with whose shot it was (<see cref="CombatFx.By"/>), for the HUD's
-		/// hit markers alone, while it resolves; puts back whatever was set before. Nothing in the fight reads it.</summary>
+		/// hit markers alone, while it resolves; puts back whatever was set before. Nothing in the fight reads it but the
+		/// developer's One-hit kills (US-T527).</summary>
 		struct FxShot
 		{
 			Battle& b;
@@ -431,6 +433,10 @@ namespace SpaceGod::Core
 				if (u->PlayerVolleyRelease) u->VolleyCharge = 0;
 				u->PlayerVolleyRelease = false;
 				u->PlayerFireGroup = 0;
+				// US-T527: the developer's No weapon cooldown has every gun the player holds ready again the moment it fires.
+				if (DevFlags::NoWeaponCooldown()->Value)
+					for (const auto& s : u->Combat->Subsystems)
+						if (s->Def->Weapon != nullptr) s->Cooldown = 0;
 			}
 		}
 		StepMissiles(dt);
@@ -2455,6 +2461,10 @@ namespace SpaceGod::Core
 		bool strikeTorpedo, WeaponFamily family)
 	{
 		if (!target->Present()) return;
+		// US-T527: the developer's Invulnerable keeps every hit off a hull the player holds; One-hit kills has a hit from a
+		// weapon the player holds destroy what it lands on, through its shields.
+		if (target->PlayerControlled() && DevFlags::Invulnerable()->Value) return;
+		bool lethal = FxBy != nullptr && FxBy->PlayerControlled() && DevFlags::OneHitKills()->Value;
 		// US-T253: the difficulty scales what reaches a hull a player holds (Normal: as it was).
 		damage = Difficulty::Incoming(target->PlayerControlled(), damage);
 		auto c = target->Combat;
@@ -2482,7 +2492,7 @@ namespace SpaceGod::Core
 				// Sub names the emitter whose field took it, so the bubble it raises is that patch's (U.SPC-T40).
 				Emit(FxKind::ShieldHit, shieldPoint, target->Pos, target->LengthKm, target->Side, target, generator->Index);
 				WeaponSystems::Cue(family, WeaponCueEvent::ShieldImpact, shieldPoint, soaked, target->Side, Id);
-				if (damage <= 0) return;
+				if (damage <= 0 && !lethal) return;
 			}
 		}
 		// Past the field, the shot meets the hull (US-T189): a plasma bolt or a torpedo guts it, a laser only scorches.
@@ -2528,6 +2538,7 @@ namespace SpaceGod::Core
 		else c->Hull -= damage;
 		// US-T91: the hit lands on a section of the hull's structure too, which may tear pieces of it away.
 		if (c->Hull > 0) StrikeSections(target, at, damage);
+		if (lethal) c->Hull = 0;
 
 		if (c->Hull <= 0)
 		{
@@ -2560,6 +2571,7 @@ namespace SpaceGod::Core
 	void Battle::ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp)
 	{
 		if (!target->Present() || hp <= 0) return;
+		if (target->PlayerControlled() && DevFlags::Invulnerable()->Value) return; // US-T527
 		hp = Difficulty::Incoming(target->PlayerControlled(), hp); // US-T253
 		auto c = target->Combat;
 		double shieldBefore = c->Shield();

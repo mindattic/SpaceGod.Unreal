@@ -7,6 +7,7 @@
 #include "Combat/Broadsides.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Settings/DevFlags.h" // US-T527
 #include "Settings/GameSetting.h"
 #include "Ships.h"
 
@@ -252,6 +253,12 @@ namespace SpaceGod::Core
 	{
 		auto c = u->Combat;
 		if (dt <= 0 || !Carries(c)) return;
+		// US-T527: the developer's No heat: a hull the player holds builds none.
+		if (u->PlayerControlled() && DevFlags::NoHeat()->Value)
+		{
+			u->HullHeat = 0;
+			return;
+		}
 		double net = Made(u, reload * Throttle(u)) - Shed(c);
 		u->HullHeat = cs::Math::Max(0.0, cs::Math::Min(MaxHeat, u->HullHeat + net * dt / cs::Math::Max(1.0, SinkSeconds()->Value)));
 		double over = u->HullHeat - 1;
