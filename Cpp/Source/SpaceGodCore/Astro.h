@@ -14,9 +14,9 @@ namespace SpaceGod::Core
 		static constexpr double SecondsPerDay = 86400.0;
 		static constexpr double DaysPerCentury = 36525.0;
 		static constexpr double J2000 = 2451545.0;
-		static constexpr double Deg2Rad = cs::Math::PI / 180.0;
-		static constexpr double Rad2Deg = 180.0 / cs::Math::PI;
-		static constexpr double TwoPi = cs::Math::PI * 2.0;
+		static constexpr double Deg2Rad = cs::Math::Tau / 360.0;
+		static constexpr double Rad2Deg = 360.0 / cs::Math::Tau;
+		static constexpr double TwoPi = cs::Math::Tau;
 
 		/// <summary>Standard gravity in km/day², the unit ship drives are specified in (g).</summary>
 		static constexpr double GravityKmPerDay2 = 9.80665e-3 * SecondsPerDay * SecondsPerDay;
