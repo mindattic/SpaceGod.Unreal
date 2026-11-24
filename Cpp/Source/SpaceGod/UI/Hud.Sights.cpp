@@ -143,8 +143,9 @@ namespace SpaceGod::UI
 		dir = dir.sqrMagnitude() < 1e-12f ? Vector2(0, 1) : dir.normalized();
 		auto centre = Vector2(Screen::width * 0.5f, Screen::height * 0.5f);
 		float margin = ArrowMaxPx * 0.5f + 14.0f;
-		float sx = (centre.x - margin) / Mathf::Max(Mathf::Abs(dir.x), 1e-4f);
-		float sy = (centre.y - margin) / Mathf::Max(Mathf::Abs(dir.y), 1e-4f);
+		float inset = InterfaceOptions::SafeZoneFraction(); // US-T600: the ring the arrows ride kept inside the safe zone
+		float sx = (centre.x - margin - Screen::width * inset) / Mathf::Max(Mathf::Abs(dir.x), 1e-4f);
+		float sy = (centre.y - margin - Screen::height * inset) / Mathf::Max(Mathf::Abs(dir.y), 1e-4f);
 		auto p = centre + dir * Mathf::Min(sx, sy);
 
 		float close = Mathf::InverseLerp(ArrowMinPx, ArrowMaxPx, size);

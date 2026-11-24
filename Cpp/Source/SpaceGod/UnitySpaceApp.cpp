@@ -625,6 +625,7 @@ namespace SpaceGod
 		UpdateGodInterior(); // US-T442: inside a body or a hull, the god view draws it from within
 		UpdateHover();
 		HandleSelectionClicks();
+		RadioTick(); // US-T656
 
 		ToastAge += dt;
 		bool lockCursor = (Input.LookHeld || (AtControls() && !ClickPanelOpen())) && !ModelViewer::CapturesInput() && !cheatMenu->IsOpen; // US-T126

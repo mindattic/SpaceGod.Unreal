@@ -9,7 +9,7 @@
 // BindingCoreTests can check it (Cpp/Source/SpaceGodCore/Tests/Bindings).
 //
 // The text, one binding:
-//   [Trigger:]input        Trigger: Press, Hold, DoubleTap, LongPress; none = the action's own (see Trigger::Auto)
+//   [Trigger:]input        Trigger: Press, Hold, DoubleTap, LongPress, Toggle; none = the action's own (see Trigger::Auto)
 //   input, a key:          [Ctrl+][Shift+][Alt+]KeyName       "T", "Shift+T", "NumpadMultiply", "LeftShift"
 //   input, the mouse:      [mods]MouseLeft|MouseRight|MouseMiddle|Mouse4|Mouse5|WheelUp|WheelDown
 //   input, the pad:        Pad:A|B|X|Y|LB|RB|View|Menu|LS|RS|DPadUp|DPadDown|DPadLeft|DPadRight     (buttons)
@@ -255,7 +255,9 @@ namespace SpaceGod::Input
 	///   Hold       a held action is held while the input is; any other fires on the press and again on the release
 	///              (a toggle is on only while held).
 	///   DoubleTap  the second press within BindingTuning::DoubleTapS fires (and is held while that press is).
-	///   LongPress  fires once the input has been held BindingTuning::LongPressS (and is held from then until let go).</summary>
+	///   LongPress  fires once the input has been held BindingTuning::LongPressS (and is held from then until let go).
+	///   Toggle     a held action latches on a press and off on the next (dropped when the binding changes or a menu takes
+	///              the input); any other fires on the press.</summary>
 	enum class Trigger : int
 	{
 		Auto,
@@ -263,6 +265,7 @@ namespace SpaceGod::Input
 		Hold,
 		DoubleTap,
 		LongPress,
+		Toggle,
 		Count,
 	};
 
@@ -275,6 +278,7 @@ namespace SpaceGod::Input
 			case Trigger::Hold: return "Hold";
 			case Trigger::DoubleTap: return "DoubleTap";
 			case Trigger::LongPress: return "LongPress";
+			case Trigger::Toggle: return "Toggle";
 			default: return "";
 		}
 	}
@@ -288,6 +292,7 @@ namespace SpaceGod::Input
 			case Trigger::Hold: return "Hold";
 			case Trigger::DoubleTap: return "Double-tap";
 			case Trigger::LongPress: return "Long press";
+			case Trigger::Toggle: return "Toggle";
 			default: return "";
 		}
 	}
@@ -404,6 +409,7 @@ namespace SpaceGod::Input
 			else if (trigger == Trigger::LongPress) s += " (long press)";
 			else if (trigger == Trigger::Hold) s += " (hold)";
 			else if (trigger == Trigger::Press) s += " (press)";
+			else if (trigger == Trigger::Toggle) s += " (toggle)";
 			return s;
 		}
 
@@ -432,7 +438,7 @@ namespace SpaceGod::Input
 				return true;
 			}
 			Trigger trig = Trigger::Auto;
-			for (Trigger c : { Trigger::Press, Trigger::Hold, Trigger::DoubleTap, Trigger::LongPress })
+			for (Trigger c : { Trigger::Press, Trigger::Hold, Trigger::DoubleTap, Trigger::LongPress, Trigger::Toggle })
 			{
 				std::string p = std::string(TriggerToken(c)) + ":";
 				if (t.compare(0, p.size(), p) == 0)
@@ -566,7 +572,7 @@ namespace SpaceGod::Input
 	/// <summary>What a binding's mode remembers between frames.</summary>
 	struct TriggerState
 	{
-		bool latch = false;      // Press on a held action: latched on
+		bool latch = false;      // Press or Toggle on a held action: latched on
 		bool active = false;     // DoubleTap: the second press is held
 		bool longFired = false;  // LongPress: fired for this hold
 		double downAt = -1;      // LongPress: when the input went down (-1: up)
@@ -589,6 +595,7 @@ namespace SpaceGod::Input
 		switch (Resolve(t, heldKind))
 		{
 			case Trigger::Press:
+			case Trigger::Toggle:
 				if (heldKind)
 				{
 					if (pressed) s.latch = !s.latch;

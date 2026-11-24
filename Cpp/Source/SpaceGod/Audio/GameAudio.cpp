@@ -1,5 +1,6 @@
 #include "Audio/GameAudio.h"
 #include "Audio/AudioMixerIncludes.h"
+#include "Audio/StereoFold.h"
 #include "EngineSettings.h"
 #include "SessionAudio.h"
 #include "UnrealSpace.h"
@@ -22,6 +23,7 @@
 #include "Sound/SoundClass.h"
 #include "Sound/SoundSubmix.h"
 #include "Sound/SoundWaveProcedural.h"
+#include "UObject/Package.h"
 
 #include <array>
 
@@ -54,6 +56,9 @@ namespace SpaceGod::Audio
 			/// The night compressor (US-T552), and the audio device it is on (0: on none).
 			USubmixEffectDynamicsProcessorPreset* night = nullptr;
 			::Audio::FDeviceId nightDevice = 0;
+			/// The stereo fold-down (US-T672), and the audio device it is on (0: on none).
+			USpaceGodStereoFoldPreset* fold = nullptr;
+			::Audio::FDeviceId foldDevice = 0;
 		};
 
 		State& S()
@@ -68,6 +73,11 @@ namespace SpaceGod::Audio
 		/// US-T552: Sound while paused (0 Play, 1 Duck, 2 Mute) and Dynamic range (0 Full, 1 Night), set by their Applying.
 		int whilePaused = 0;
 		int dynamicRange = 0;
+
+		/// US-T613: how 3D sounds are placed, set by AudioOutput's speaker mode.
+		GameAudio::Placement placement = GameAudio::Placement::Panned;
+		/// US-T672: whether the main mix is folded down to two channels, set by AudioOutput's speaker mode.
+		bool stereoFold = false;
 
 		/// How loud a ducked bus is while the pause menu is open.
 		constexpr float PausedDuck = 0.3f;
@@ -113,19 +123,45 @@ namespace SpaceGod::Audio
 		/// A bus's own volume on a sound's component (Master's is the listener's, applied to everything already).
 		float Mix(AudioBus bus) { return bus == AudioBus::Master ? 1.0f : busVolumes[static_cast<int>(bus)] * Paused(bus); }
 
+		/// The device a main submix effect is wanted on: the one the game plays on while <paramref name="on"/>, else 0.
+		/// Takes the effect of <paramref name="preset"/> off the device it is on (<paramref name="placed"/>) when that
+		/// differs; returns the device to add it to, 0 when nothing is to be added.
+		::Audio::FDeviceId MainEffectDevice(UWorld* world, bool on, USoundEffectSubmixPreset* preset, ::Audio::FDeviceId& placed)
+		{
+			FAudioDeviceHandle device = on && world ? world->GetAudioDevice() : FAudioDeviceHandle();
+			const ::Audio::FDeviceId want = device.IsValid() ? device.GetDeviceID() : 0;
+			if (want == placed) return 0;
+			if (placed != 0)
+				if (FAudioDeviceManager* manager = GEngine ? GEngine->GetAudioDeviceManager() : nullptr)
+					if (FAudioDevice* old = manager->GetAudioDeviceRaw(placed))
+						static_cast<::Audio::FMixerDevice*>(old)->RemoveMasterSubmixEffect(preset->GetUniqueID());
+			placed = 0;
+			return want;
+		}
+
+		/// Stereo speakers and Headphones on a surround device fold the main submix down to two channels; otherwise the
+		/// effect is not in the chain.
+		void ApplyStereoFold()
+		{
+			State& s = S();
+			UWorld* world = PlayWorld();
+			const ::Audio::FDeviceId want = MainEffectDevice(world, stereoFold, s.fold, s.foldDevice);
+			if (want == 0) return;
+			if (!s.fold)
+			{
+				s.fold = NewObject<USpaceGodStereoFoldPreset>(GetTransientPackage(), TEXT("SpaceGod_StereoFold"));
+				s.fold->AddToRoot();
+			}
+			UAudioMixerBlueprintLibrary::AddMasterSubmixEffect(world, s.fold);
+			s.foldDevice = want;
+		}
+
 		/// Night puts a compressor on the main submix of the device the game plays on; Full takes it off.
 		void ApplyDynamicRange()
 		{
 			State& s = S();
 			UWorld* world = PlayWorld();
-			FAudioDeviceHandle device = world ? world->GetAudioDevice() : FAudioDeviceHandle();
-			const ::Audio::FDeviceId want = dynamicRange == 1 && device.IsValid() ? device.GetDeviceID() : 0;
-			if (want == s.nightDevice) return;
-			if (s.nightDevice != 0)
-				if (FAudioDeviceManager* manager = GEngine ? GEngine->GetAudioDeviceManager() : nullptr)
-					if (FAudioDevice* old = manager->GetAudioDeviceRaw(s.nightDevice))
-						static_cast<::Audio::FMixerDevice*>(old)->RemoveMasterSubmixEffect(s.night->GetUniqueID());
-			s.nightDevice = 0;
+			const ::Audio::FDeviceId want = MainEffectDevice(world, dynamicRange == 1, s.night, s.nightDevice);
 			if (want == 0) return;
 			if (!s.night)
 			{
@@ -156,6 +192,7 @@ namespace SpaceGod::Audio
 			const bool volumesChanged = s.appliedVolumes != mixes;
 			s.appliedVolumes = mixes;
 			ApplyDynamicRange();
+			ApplyStereoFold();
 			for (int i = s.voices.Num() - 1; i >= 0; i--)
 			{
 				Voice& v = s.voices[i];
@@ -212,6 +249,16 @@ namespace SpaceGod::Audio
 			Debug::Log("[Unity.SpaceGod] Audio: buses Master, Music, Effects, Interface, Ambience, Voice ready.");
 		}
 
+		/// The speaker mode's placement on an attenuation: Mono plays it unpanned; Headphones keeps sounds inside their
+		/// min distance (<paramref name="minCm"/>) in the middle, panning as they leave it; Panned is the engine's own.
+		void Place(FSoundAttenuationSettings& at, float minCm)
+		{
+			at.bSpatialize = placement != GameAudio::Placement::Mono;
+			at.NonSpatializedRadiusStart = placement == GameAudio::Placement::Headphones ? minCm : 0.0f;
+			at.NonSpatializedRadiusEnd = 0.0f;
+			at.NonSpatializedRadiusMode = ENonSpatializedRadiusSpeakerMapMode::OmniDirectional;
+		}
+
 		USoundAttenuation* Attenuation(float minDistance, float maxDistance)
 		{
 			State& s = S();
@@ -228,6 +275,7 @@ namespace SpaceGod::Audio
 			at.AttenuationShapeExtents = FVector(minCm, 0, 0);
 			at.FalloffDistance = maxCm - minCm;
 			at.DistanceAlgorithm = EAttenuationDistanceModel::NaturalSound;
+			Place(at, minCm);
 			s.attenuations.Add(key, a);
 			return a;
 		}
@@ -380,6 +428,23 @@ namespace SpaceGod::Audio
 	}
 
 	int GameAudio::Playing() { return S().voices.Num(); }
+
+	void GameAudio::SetPlacement(Placement value)
+	{
+		if (value == placement) return;
+		placement = value;
+		State& s = S();
+		for (const TPair<uint64, USoundAttenuation*>& entry : s.attenuations) Place(entry.Value->Attenuation, static_cast<float>(entry.Key >> 32));
+		for (const Voice& v : s.voices)
+			if (UAudioComponent* c = v.Component.Get())
+				if (c->AttenuationSettings) c->AdjustAttenuation(c->AttenuationSettings->Attenuation);
+	}
+
+	void GameAudio::SetStereoFold(bool on)
+	{
+		stereoFold = on;
+		if (S().built) ApplyStereoFold();
+	}
 
 	void GameAudio::Declare()
 	{

@@ -54,6 +54,8 @@ namespace SpaceGod::Core
 		uint32_t ChannelId = 0;
 		/// <summary>Who sent it (a ship, station or pilot key); 0 when anonymous.</summary>
 		uint64_t EmitterKey = 0;
+		/// <summary>Who it is addressed to (a ship, station or pilot key); 0 when to all.</summary>
+		uint64_t AddresseeKey = 0;
 		int32_t FactionId = -1;
 		int32_t SystemId = -1;
 		/// <summary>Where the emitter was when it sent, heliocentric km.</summary>

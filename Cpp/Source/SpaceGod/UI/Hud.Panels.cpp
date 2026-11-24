@@ -337,6 +337,7 @@ namespace SpaceGod::UI
 			headH.Add(Mathf::Max(16.0f, opportunityHook->CalcHeight(GUIContent(heads[i]), textW)));
 			// US-T139: the caller's own words (a BYOKey voice when the player brought one, else the story pools).
 			hooks.Add(Core::StoryVoice::Hook(op));
+			app->SpeakHook(op, hooks[i]); // US-T602
 			hookH.Add(hooks[i].empty() ? 0.0f : opportunityHook->CalcHeight(GUIContent(hooks[i]), textW));
 			h += headH[i] + hookH[i] + 4;
 		}

@@ -2,7 +2,9 @@
 
 #include "Audio/GameAudio.h"
 #include "Voice/PiperTts.h"
+#include "Voice/RadioEffect.h"
 #include "Voice/SapiTts.h"
+#include "Voice/VoiceCache.h"
 
 #include "Containers/Queue.h"
 #include "HAL/Event.h"
@@ -23,11 +25,15 @@ namespace SpaceGod::Voice
 		{
 			TtsId Id = 0;
 			TtsRequest Request;
+			/// As the game thread saw the engine when it was queued (0 when not known yet).
+			VoiceKey Key = 0;
 		};
 
 		struct Result
 		{
 			TtsId Id = 0;
+			/// Under the engine that answered it (0 when none could).
+			VoiceKey Key = 0;
 			Audio::SoundClip Clip;
 		};
 
@@ -37,6 +43,8 @@ namespace SpaceGod::Voice
 			FCriticalSection Lock;
 			/// Guarded by Lock; at most Capacity.
 			TArray<Job> Waiting;
+			/// Guarded by Lock: VoiceCache::EngineIdOf the engine the worker speaks with, empty until it has chosen.
+			cs::String EngineId;
 			/// Worker in, game thread out.
 			TQueue<Result, EQueueMode::Spsc> Done;
 			FEvent* Wake = FPlatformProcess::GetSynchEventFromPool(false);
@@ -47,8 +55,24 @@ namespace SpaceGod::Voice
 
 			~Worker() override { FPlatformProcess::ReturnSynchEventToPool(Wake); }
 
+			/// The engine that speaks now (Piper, else SAPI), its id published for the game thread's keys.
+			ITtsEngine* Choose()
+			{
+				ITtsEngine* engine = Piper->Available() ? Piper.get() : Sapi->Available() ? Sapi.get() : nullptr;
+				if (engine != Chosen)
+				{
+					Chosen = engine;
+					ChosenId = engine ? VoiceCache::EngineIdOf(*engine) : cs::String();
+					FScopeLock scope(&Lock);
+					EngineId = ChosenId;
+				}
+				return engine;
+			}
+
 			uint32 Run() override
 			{
+				VoiceCache::Prune();
+				Choose();
 				while (!Stopping)
 				{
 					Job job;
@@ -68,9 +92,17 @@ namespace SpaceGod::Voice
 						Wake->Wait(100);
 						continue;
 					}
-					Result result { job.Id, {} };
-					if (Piper->Available()) result.Clip = Piper->Synthesize(job.Request);
-					else if (Sapi->Available()) result.Clip = Sapi->Synthesize(job.Request);
+					Result result { job.Id, 0, {} };
+					if (ITtsEngine* engine = Choose())
+					{
+						result.Key = VoiceCache::KeyOf(ChosenId, job.Request);
+						if (!VoiceCache::Load(result.Key, result.Clip))
+						{
+							result.Clip = engine->Synthesize(job.Request);
+							if (job.Request.Effect) RadioEffect::Apply(result.Clip, result.Key);
+							if (result.Clip.IsValid() && !Stopping) VoiceCache::Store(result.Key, result.Clip);
+						}
+					}
 					Done.Enqueue(MoveTemp(result));
 				}
 				return 0;
@@ -83,6 +115,11 @@ namespace SpaceGod::Voice
 				Sapi->Abort();
 				Wake->Trigger();
 			}
+
+		private:
+			/// Worker thread only.
+			ITtsEngine* Chosen = nullptr;
+			cs::String ChosenId;
 		};
 
 		/// Game thread only.
@@ -93,6 +130,11 @@ namespace SpaceGod::Voice
 			TMap<TtsId, TtsDone> Callbacks;
 			/// Evicted on the game thread: answered at the next Tick.
 			TArray<TtsId> Evicted;
+			/// Memory hits: answered at the next Tick.
+			TArray<Result> Hits;
+			/// Queued and in-flight requests and prefetches with a known key, so a prefetch is not spoken twice.
+			TMap<TtsId, VoiceKey> Keys;
+			VoiceCache Cache;
 			TtsId Next = 0;
 			bool ExitHooked = false;
 		};
@@ -121,6 +163,39 @@ namespace SpaceGod::Voice
 			}
 			return s.Runnable.get();
 		}
+
+		VoiceKey KeyOf(Worker& worker, const TtsRequest& request)
+		{
+			cs::String engineId;
+			{
+				FScopeLock scope(&worker.Lock);
+				engineId = worker.EngineId;
+			}
+			return VoiceCache::KeyOf(engineId, request);
+		}
+
+		/// Puts a job on the worker's queue; 0 when it is full of requests of higher priority.
+		TtsId Enqueue(Worker& worker, TtsRequest request, VoiceKey key)
+		{
+			State& s = S();
+			const TtsId id = ++s.Next;
+			{
+				FScopeLock scope(&worker.Lock);
+				if (worker.Waiting.Num() >= TtsService::Capacity)
+				{
+					int32 lowest = 0;
+					for (int32 i = 1; i < worker.Waiting.Num(); ++i)
+						if (worker.Waiting[i].Request.Priority < worker.Waiting[lowest].Request.Priority) lowest = i;
+					if (worker.Waiting[lowest].Request.Priority >= request.Priority) return 0;
+					s.Evicted.Add(worker.Waiting[lowest].Id);
+					worker.Waiting.RemoveAt(lowest);
+				}
+				worker.Waiting.Add(Job { id, MoveTemp(request), key });
+			}
+			if (key) s.Keys.Add(id, key);
+			worker.Wake->Trigger();
+			return id;
+		}
 	}
 
 	TtsId TtsService::Request(TtsRequest request, TtsDone done)
@@ -129,28 +204,36 @@ namespace SpaceGod::Voice
 		Worker* worker = Started();
 		if (!worker) return 0;
 		State& s = S();
-		const TtsId id = ++s.Next;
+		const VoiceKey key = KeyOf(*worker, request);
+		Audio::SoundClip clip;
+		TtsId id = 0;
+		if (key && s.Cache.Find(key, clip))
 		{
-			FScopeLock scope(&worker->Lock);
-			if (worker->Waiting.Num() >= Capacity)
-			{
-				int32 lowest = 0;
-				for (int32 i = 1; i < worker->Waiting.Num(); ++i)
-					if (worker->Waiting[i].Request.Priority < worker->Waiting[lowest].Request.Priority) lowest = i;
-				if (worker->Waiting[lowest].Request.Priority >= request.Priority) return 0;
-				s.Evicted.Add(worker->Waiting[lowest].Id);
-				worker->Waiting.RemoveAt(lowest);
-			}
-			worker->Waiting.Add(Job { id, MoveTemp(request) });
+			id = ++s.Next;
+			s.Hits.Add(Result { id, key, MoveTemp(clip) });
 		}
-		s.Callbacks.Add(id, MoveTemp(done));
-		worker->Wake->Trigger();
+		else id = Enqueue(*worker, MoveTemp(request), key);
+		if (id) s.Callbacks.Add(id, MoveTemp(done));
 		return id;
+	}
+
+	void TtsService::Prefetch(TtsRequest request)
+	{
+		if (!Audio::GameAudio::Enabled()) return;
+		Worker* worker = Started();
+		if (!worker) return;
+		State& s = S();
+		const VoiceKey key = KeyOf(*worker, request);
+		Audio::SoundClip clip;
+		if (key && (s.Cache.Find(key, clip) || s.Keys.FindKey(key))) return;
+		request.Priority = PrefetchPriority;
+		Enqueue(*worker, MoveTemp(request), key);
 	}
 
 	void TtsService::Cancel(TtsId id)
 	{
 		State& s = S();
+		s.Keys.Remove(id);
 		if (!s.Callbacks.Remove(id) || !s.Runnable) return;
 		FScopeLock scope(&s.Runnable->Lock);
 		s.Runnable->Waiting.RemoveAll([id](const Job& job) { return job.Id == id; });
@@ -160,12 +243,22 @@ namespace SpaceGod::Voice
 	{
 		State& s = S();
 		if (!s.Runnable) return;
+		TArray<Result> hits = MoveTemp(s.Hits);
+		for (const Result& hit : hits)
+			if (TtsDone done; s.Callbacks.RemoveAndCopyValue(hit.Id, done) && done) done(hit.Id, hit.Clip);
 		for (const TtsId id : s.Evicted)
+		{
+			s.Keys.Remove(id);
 			if (TtsDone done; s.Callbacks.RemoveAndCopyValue(id, done) && done) done(id, {});
+		}
 		s.Evicted.Reset();
 		Result result;
 		while (s.Runnable && s.Runnable->Done.Dequeue(result))
+		{
+			s.Keys.Remove(result.Id);
+			s.Cache.Put(result.Key, result.Clip);
 			if (TtsDone done; s.Callbacks.RemoveAndCopyValue(result.Id, done) && done) done(result.Id, result.Clip);
+		}
 	}
 
 	void TtsService::Shutdown()
@@ -180,5 +273,7 @@ namespace SpaceGod::Voice
 		s.Runnable.reset();
 		s.Callbacks.Reset();
 		s.Evicted.Reset();
+		s.Hits.Reset();
+		s.Keys.Reset();
 	}
 }

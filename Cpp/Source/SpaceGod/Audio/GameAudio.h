@@ -69,5 +69,14 @@ namespace SpaceGod::Audio
 
 		/// How many one-shots and loops are playing (the audit, the log).
 		static int Playing();
+
+		/// How 3D sounds are placed (US-T613, from Settings > Sound > Speaker mode): Panned, the engine's own; Headphones,
+		/// near sounds narrowed toward the middle; Mono, nothing panned.
+		enum class Placement { Panned, Headphones, Mono };
+		/// Applies to every sound from now on and to those playing.
+		static void SetPlacement(Placement placement);
+		/// US-T672: folds the main mix down to the front left and right channels (Stereo speakers or Headphones on a
+		/// surround device), on the next tick of a built mix; off, the fold is not in the chain.
+		static void SetStereoFold(bool on);
 	};
 }
