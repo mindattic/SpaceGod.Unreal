@@ -120,7 +120,8 @@ namespace SpaceGod
 		if (f.size() < 2) return;
 		if (f[0] == "warp")
 		{
-			Clock->SetWarp(Wire::ParseI(f[1]));
+			try { Clock->SetWarp(Wire::ParseI(f[1])); }
+			catch (...) { return; } // (bughunt) a peer's malformed level
 			ShowToast(cs::Cat(CoopPeer::Current()->NameOf(seat), ": time ", Clock->Warp().Label));
 		}
 		else if (f[0] == "pause" && (f[1] == "1") != Clock->PauseHeld()) TogglePause();

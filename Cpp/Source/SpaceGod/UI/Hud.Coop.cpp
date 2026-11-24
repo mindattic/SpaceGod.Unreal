@@ -322,6 +322,8 @@ namespace SpaceGod::UI
 			auto idle = h != nullptr ? At(h->Ships, a.at(0)) : nullptr;
 			if (idle == nullptr) return true;
 			int from = Wire::ParseI(a.at(1)), to = Wire::ParseI(a.at(2));
+			const int stops = world->Catalog()->Count(); // (bughunt) a peer's stops are unchecked
+			if (from < 0 || from >= stops || to < 0 || to >= stops) return true;
 			app->ShowToast(h->Order(idle, StandingOrder::TradeRoute(cs::List<int>{ from, to }))
 				? cs::Cat("The ", idle->Name(), " runs ", (*world->Catalog())[from]->Name, " - ", (*world->Catalog())[to]->Name)
 				: cs::Cat("The ", idle->Name(), " cannot take that route"));
