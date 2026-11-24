@@ -5,6 +5,7 @@
 #include "Audio/GameAudio.h" // US-T240
 #include "DisplayExtras.h" // US-T544
 #include "EngineSettings.h"
+#include "GraphicsEffects.h" // US-T549
 #include "GraphicsSettings.h"
 #include "InterfaceOptions.h" // US-T559
 #include "PlayerOptions.h" // US-T252
@@ -55,6 +56,7 @@ namespace SpaceGod
 		// US-T251: the rest of Settings > Graphics (the preset, scalability knobs, anti-aliasing (render.msaa before),
 		// resolution scale, upscaler and field of view), right under the frame-rate cap.
 		SettingsRegistry::AddDeclarationSource([] { GraphicsSettings::Declare(); });
+		SettingsRegistry::AddDeclarationSource([] { GraphicsEffects::Declare(); }); // US-T549, US-T700: motion blur, AO, anisotropy, sharpening, depth of field, grain, aberration, flares
 		SettingsRegistry::AddDeclarationSource([] { DisplayExtras::Declare(); }); // US-T544: the Display page's brightness, HDR and background cap
 		SettingsRegistry::AddDeclarationSource([] { PlayerOptions::Declare(); }); // US-T252: Settings > Gameplay and Accessibility
 		SettingsRegistry::AddDeclarationSource([] { InterfaceOptions::Declare(); }); // US-T559: Settings > Interface
