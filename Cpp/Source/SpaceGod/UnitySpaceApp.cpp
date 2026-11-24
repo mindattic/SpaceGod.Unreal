@@ -511,6 +511,7 @@ namespace SpaceGod
 		if (UpdateComms()) Input.Handover(); // US-T137: the comms panel (Shift+H) has the keys while open; US-T138: the held pilot
 		if (hud != nullptr && hud->UpdateDrawer(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T200: the bottom drawer (Shift+U) has the keys while open
 		if (hud != nullptr && hud->UpdateBattlePlotKey(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T367: Shift+F10, the battle plot on or off
+		if (hud != nullptr && hud->UpdateRadioTunerKey(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T677: Shift+C, the radio tuner on or off
 		if (hud != nullptr && hud->UpdateTradeKeys(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T329: the trade desk's Tab / PgUp / PgDn, on the frame pressed
 		if (hud != nullptr && hud->UpdateMechlabKeys(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T331: the Mechlab's arrows and Enter, on the frame pressed
 		if (hud != nullptr && hud->UpdateListKeys(!cheatMenu->IsOpen && !commsOpen)) Input.Handover(); // US-T393: the picker's and the save panel's Up / Down / Enter

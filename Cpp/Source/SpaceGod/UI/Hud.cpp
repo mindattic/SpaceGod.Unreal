@@ -294,6 +294,7 @@ namespace SpaceGod::UI
 		DrawBoarding();
 		DrawHail();
 		DrawBattlePlot(); // US-T367
+		DrawRadioTuner(); // US-T677
 		DrawCourseMarker();
 		drawers.Draw(frame); // US-T438: the drawers and their edge tabs, every HUD panel among them (US-T440)
 		PublishColumn();

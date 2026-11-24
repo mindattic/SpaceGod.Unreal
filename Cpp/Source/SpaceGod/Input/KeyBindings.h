@@ -68,6 +68,8 @@ namespace SpaceGod::Input
 		Number1, Number2, Number3, Number4, Number5, Number6, Number7, Number8, Number9, Number0,
 		// Pad steps (US-T629): the d-pad's reactor shares at the controls, time and ship steps in command
 		PadStepLeft, PadStepUp, PadStepRight, PadStepDown,
+		// US-T677: appended at the end (the table is indexed by the enum's order)
+		RadioTuner,
 		Count,
 	};
 

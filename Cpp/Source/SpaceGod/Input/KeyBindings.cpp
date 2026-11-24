@@ -289,6 +289,7 @@ namespace SpaceGod::Input
 				{ KeyAction::PadStepUp, "padStepUp", "Pad steps: up", Both, EdgeKind, { Pad(PadButton::DPadUp) }, "At the controls power to shields; in command time faster." },
 				{ KeyAction::PadStepRight, "padStepRight", "Pad steps: right", Both, EdgeKind, { Pad(PadButton::DPadRight) }, "At the controls power to engines; in command the next ship." },
 				{ KeyAction::PadStepDown, "padStepDown", "Pad steps: down", Both, EdgeKind, { Pad(PadButton::DPadDown) }, "At the controls an even share of power; in command time slower." },
+				{ KeyAction::RadioTuner, "radioTuner", "Screen: radio tuner", Both, EdgeKind, { InputBinding(Key::C, S) }, "The radio tuner: the dial, this system's channels with their activity, tune, monitor or mute each, presets 1-8 and a scan." }, // US-T677
 			};
 			return actions;
 		}
