@@ -73,9 +73,54 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ChoiceSetting>& InterfaceOptions::ChatterDensitySetting()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("radio.chatterDensity", SettingGroups::Interface, "Chatter density",
+			cs::List<cs::String>{ "Off", "Low", "Normal", "High" }, 2,
+			"How busy the radio's ambient talk is: traffic control, patrols, traders and raiders between the news.",
+			"chatter density radio ambient talk traffic busy quiet noise comms");
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& InterfaceOptions::RadioSubtitles()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("radio.subtitles", SettingGroups::Interface, "Radio subtitles", true,
+			"The radio log: what is heard on the air, written bottom left.",
+			"radio subtitles captions log text chatter comms transcript");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& InterfaceOptions::MaxVoices()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("comms.maxVoices", SettingGroups::Interface, "Max voices", 1, 1, 3, 1,
+			"How many radio lines may be spoken over one another at once.",
+			cs::Func<cs::String, double>([](double v) { return cs::Fmt(v, "0"); }),
+			"max voices voice radio spoken overlap parallel simultaneous comms speech");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& InterfaceOptions::MinRadioPriority()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("radio.minPriority", SettingGroups::Interface, "Minimum radio priority", 0, 0, 3, 1,
+			"Radio lines below this are only counted into the channel summaries: 0 hears all the chatter, 3 only distress.",
+			cs::Func<cs::String, double>([](double v)
+			{
+				switch (cs::ToInt(cs::Math::Round(v)))
+				{
+				case 1: return cs::String("1 (no chatter)");
+				case 2: return cs::String("2 (important)");
+				case 3: return cs::String("3 (distress only)");
+				default: return cs::String("0 (everything)");
+				}
+			}),
+			"minimum radio priority filter chatter distress important urgent comms digest");
+		return value;
+	}
+
 	void InterfaceOptions::Declare()
 	{
 		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone();
+		ChatterDensitySetting(); RadioSubtitles(); MaxVoices(); MinRadioPriority();
 	}
 
 	// ---------------------------------------------------------------- reads
@@ -117,5 +162,32 @@ namespace SpaceGod
 		const auto& s = SafeZone();
 		double pct = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
 		return static_cast<float>(cs::Math::Max(0.0, cs::Math::Min(10.0, pct)) / 100.0);
+	}
+
+	double InterfaceOptions::ChatterDensity()
+	{
+		switch (Choice(ChatterDensitySetting()))
+		{
+		case 0: return 0.0;
+		case 1: return 0.4;
+		case 3: return 2.0;
+		default: return 1.0;
+		}
+	}
+
+	bool InterfaceOptions::ShowsRadioSubtitles() { return Toggle(RadioSubtitles()); }
+
+	int InterfaceOptions::RadioVoices()
+	{
+		const auto& s = MaxVoices();
+		double v = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
+		return cs::Math::Max(1, cs::Math::Min(3, cs::ToInt(cs::Math::Round(v))));
+	}
+
+	int InterfaceOptions::RadioMinPriority()
+	{
+		const auto& s = MinRadioPriority();
+		double v = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
+		return cs::Math::Max(0, cs::Math::Min(3, cs::ToInt(cs::Math::Round(v))));
 	}
 }

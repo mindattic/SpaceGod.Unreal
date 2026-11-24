@@ -50,6 +50,8 @@ namespace SpaceGod::Core
 		int32_t FactionId = -1;
 		/// <summary>The listener's unit (ship or pilot key) a message may be addressed to; 0 for none.</summary>
 		uint64_t UnitKey = 0;
+		/// <summary>US-T704: lines below this priority go to the digest (Settings > Interface > Minimum radio priority).</summary>
+		int MinPriority = 0;
 	};
 
 	/// <summary>One arrival's reception.</summary>
@@ -70,8 +72,6 @@ namespace SpaceGod::Core
 		static constexpr double NoisySnr = 1.5625;
 		/// <summary>The share of a Noisy line's words dropped.</summary>
 		static constexpr double NoisyDropout = 0.3;
-		/// <summary>Lines below this priority go to the digest (a setting later).</summary>
-		static constexpr int MinPriority = 0;
 		/// <summary>Score at or above which a line is spoken, and at or above which it is shown.</summary>
 		static constexpr double SpokenScore = 4.0;
 		static constexpr double SubtitledScore = 1.0;
@@ -92,7 +92,7 @@ namespace SpaceGod::Core
 		/// <summary>The priority weight (1, 2, 4, 8) times the addressed, faction, primary and proximity factors.</summary>
 		static double Score(const RadioMessage& message, double distanceKm, const RadioListener& listener);
 
-		/// <summary>Clarity, the tuner's Accepts, the minimum priority and the score thresholds. O(1).</summary>
+		/// <summary>Clarity, the tuner's Accepts, the listener's minimum priority and the score thresholds. O(1).</summary>
 		static RadioReceptionResult Route(const RadioMessage& message, double distanceKm, const RadioListener& listener);
 	};
 }

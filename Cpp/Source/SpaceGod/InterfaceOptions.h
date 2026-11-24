@@ -36,6 +36,17 @@ namespace SpaceGod
 		/// wide screens. 0 by default: the HUD on the screen's edges as it always was.
 		static const cs::Ref<Core::RangeSetting>& SafeZone();
 
+		// US-T704: the radio, as each machine hears it (never shared in co-op, nothing in the simulation or its digests).
+		/// How busy the ambient chatter is: Off, Low, Normal (the default) or High (ChatterSampler::Density 0, 0.4, 1, 2).
+		static const cs::Ref<Core::ChoiceSetting>& ChatterDensitySetting();
+		/// The HUD's radio log (UI/Hud.Radio.cpp). On by default.
+		static const cs::Ref<Core::ToggleSetting>& RadioSubtitles();
+		/// How many radio lines are spoken at once, 1 to 3 (VoiceArbiter). 1 by default.
+		static const cs::Ref<Core::RangeSetting>& MaxVoices();
+		/// The lowest priority (0 chatter to 3 distress) shown or spoken; lower ones only count into the digest
+		/// (RadioReception). 0 by default: everything.
+		static const cs::Ref<Core::RangeSetting>& MinRadioPriority();
+
 		/// Builds every one of these settings (the declaration source GameSettingsHost registers).
 		static void Declare();
 
@@ -61,5 +72,14 @@ namespace SpaceGod
 
 		/// The HUD's inset from each edge as a fraction of the screen's size (0 to 0.1).
 		static float SafeZoneFraction();
+
+		/// ChatterSampler::Density for the chosen chatter density.
+		static double ChatterDensity();
+		/// Whether the radio log is drawn.
+		static bool ShowsRadioSubtitles();
+		/// Radio lines spoken at once (1 to 3).
+		static int RadioVoices();
+		/// RadioListener::MinPriority (0 to 3).
+		static int RadioMinPriority();
 	};
 }

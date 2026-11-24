@@ -4,6 +4,7 @@
 
 #include "UI/Hud.h"
 
+#include "InterfaceOptions.h"
 #include "PlayerOptions.h"
 #include "Radio/RadioHeard.h"
 #include "UI/Icons.h"
@@ -32,6 +33,7 @@ namespace SpaceGod::UI
 
 	void Hud::DrawRadioLog()
 	{
+		if (!InterfaceOptions::ShowsRadioSubtitles()) return; // US-T704: Settings > Interface > Radio subtitles
 		const auto& lines = app->RadioHeardLines().Lines();
 		if (lines.empty()) return;
 		float now = Time::unscaledTime;

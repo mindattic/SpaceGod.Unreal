@@ -110,7 +110,7 @@ namespace SpaceGod::Core
 			return r;
 		}
 		r.Score = Score(message, distanceKm, listener);
-		if (r.Acceptance != RadioAcceptance::Heard || r.Clarity == RadioClarity::Unreadable || message.Priority < MinPriority)
+		if (r.Acceptance != RadioAcceptance::Heard || r.Clarity == RadioClarity::Unreadable || message.Priority < listener.MinPriority)
 			r.Route = RadioRoute::Digest;
 		else if (r.Score >= SpokenScore)
 			r.Route = RadioRoute::Spoken;

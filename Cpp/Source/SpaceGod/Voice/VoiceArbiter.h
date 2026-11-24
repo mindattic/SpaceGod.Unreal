@@ -49,8 +49,11 @@ namespace SpaceGod::Voice
 		static int Waiting();
 
 		static constexpr int Capacity = 8;
-		/// Radio lines playing at once.
-		static constexpr int MaxPlaying = 1;
+		/// US-T704: the most radio lines playing at once (Settings > Interface > Max voices). The first plays through
+		/// CommsVoice; the others on their own lanes (TtsService::Request, GameAudio::Play2DStoppable), cut like it.
+		static constexpr int MaxLanes = 3;
+		/// Radio lines playing at once now: the setting, 1 on a scripted run.
+		static int MaxPlaying();
 		/// A radio line not started within this many real seconds is dropped.
 		static constexpr double StaleSeconds = 20.0;
 		/// Above this warp only urgent radio lines are kept.

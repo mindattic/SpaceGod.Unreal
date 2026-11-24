@@ -4,6 +4,7 @@
 
 #include "Audio/GameAudio.h"
 #include "Information/News.h"
+#include "InterfaceOptions.h"
 #include "PlayerOptions.h"
 #include "SimClock.h"
 #include "Systems/Galaxy.h"
@@ -44,7 +45,9 @@ namespace SpaceGod
 		RadioListener listener;
 		listener.Channels = GameRadioChannels();
 		listener.Tuner = &radioTuner;
+		listener.MinPriority = InterfaceOptions::RadioMinPriority(); // US-T704
 		radio.SetListener(listener, &radioTuner);
+		radioAmbient.Density = InterfaceOptions::ChatterDensity(); // US-T704: Settings > Interface > Chatter density
 		// US-T703: after the host's tick, the digest's period summaries go to the log (one may be spoken); scripted runs keep
 		// none.
 		auto takeDigest = [this]()
