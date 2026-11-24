@@ -20,6 +20,8 @@
 #include "Information/LightSpeed.h"
 #include "Ships.h"
 #include "World.h"
+#include "Settings/GameSetting.h"
+#include "Settings/Tuning.h"
 #include "Systems/SpaceFeatures.h"
 
 namespace SpaceGod::Core
@@ -38,6 +40,48 @@ namespace SpaceGod::Core
 
 	// ---------------------------------------------------------------- Signatures
 
+	const cs::Ref<RangeSetting>& Signatures::DriveFactor()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "driveFactor", "Drive plume", 40, 0, 200, 1, "",
+			TuningScope::Simulation, "What a burn adds to a ship's signature, for a 9,000 t hull at 0.1 g (scaled by its thrust).");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Signatures::WeaponsFire()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "weaponsFire", "Weapons fire", 24, 0, 120, 1, "",
+			TuningScope::Simulation, "What guns, lasers and missile motors add to a ship's signature while it fights.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Signatures::SilentFactor()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "silentFactor", "Silent running heat", 0.08, 0, 1, 0.01, "x",
+			TuningScope::Simulation, "What silent running leaves of a hull's heat.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Signatures::HulkFactor()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "hulkFactor", "Hulk heat", 0.03, 0, 1, 0.01, "x",
+			TuningScope::Simulation, "What a derelict hulk still gives off of its hull heat.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Signatures::Battle()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "battle", "Battle signature", 25, 0, 125, 1, "",
+			TuningScope::Simulation, "How bright a battle looks from outside it, to a witness.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Signatures::Haven()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "haven", "Haven signature", 25, 0, 125, 1, "",
+			TuningScope::Simulation, "How bright a hidden pirate haven is to a ship's scanners.");
+		return s;
+	}
+
 	bool Signatures::Silent(const cs::Ref<Ship>& s)
 	{
 		return s != nullptr && (s->SilentRunning || (s->Faction != nullptr && s->Faction->IsPirate && s->Controller()->Ambushing()));
@@ -55,7 +99,7 @@ namespace SpaceGod::Core
 		double mass = cs::Math::Max(1.0, s->DryMassTonnes());
 		double ratio = mass / ReferenceMassTonnes;
 		double hull = cs::Math::Pow(ratio, 2.0 / 3.0);
-		if (s->Derelict) return hull * HulkFactor;
+		if (s->Derelict) return hull * HulkFactor()->Value;
 		bool silent = Silent(s);
 		double em = silent ? 0 : s->Spec->IsMilitary && (s->Combat == nullptr || s->Combat->Armed()) ? MilitaryEm : CivilEm;
 		// US-T93, the player's power-down and ping (a crew's hull never has either, so its sum is the original's):
@@ -67,9 +111,9 @@ namespace SpaceGod::Core
 			bool restarting = c->PowerDown == static_cast<int>(PowerState::Restarting);
 			return hull * c->ResidualHeat + (restarting ? em * c->ResidualHeat : 0) + ping;
 		}
-		if (silent) hull *= SilentFactor;
-		double drive = burning ? DriveFactor * ratio * s->Spec->AccelG / 0.1 : 0;
-		double weapons = (firing.has_value() ? *firing : s->Battle != nullptr) ? WeaponsFire : 0;
+		if (silent) hull *= SilentFactor()->Value;
+		double drive = burning ? DriveFactor()->Value * ratio * s->Spec->AccelG / 0.1 : 0;
+		double weapons = (firing.has_value() ? *firing : s->Battle != nullptr) ? WeaponsFire()->Value : 0;
 		double sum = hull + em + drive + weapons;
 		if (ping > 0) sum += ping;
 		return sum;
@@ -89,6 +133,29 @@ namespace SpaceGod::Core
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& SensorSuite::ScannerRangeShare()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "scannerRangeShare", "Scanner range share", 0.5, 0, 2, 0.05, "x",
+			TuningScope::Simulation, "What each scanner suite fitted adds to a hull's base sensor range, as a share of it.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& SensorSuite::RangeScale()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "range", "Sensor range", 1, 0.1, 5, 0.05, "x",
+			TuningScope::Simulation, "How far every ship's and station's scanners see, times this.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& SensorSuite::ArrayScanners()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("sensors", "arrayScanners", "Sensor array", 3, 0, 12, 0.5, "",
+			TuningScope::Simulation, "What a command ship's sensor array is worth in scanner suites.");
+		return s;
+	}
+
+	double SensorSuite::ReachKm(double signature) const { return signature > 0 ? RangeKm * RangeScale()->Value * cs::Math::Sqrt(signature) : 0; }
+
 	void SensorSuite::RegisterBase(ShipClass cls, SensorSuite suite) { baseByClass()[cls] = suite; }
 
 	SensorSuite SensorSuite::BaseOf(ShipClass cls, bool military)
@@ -101,9 +168,9 @@ namespace SpaceGod::Core
 	{
 		if (s == nullptr) return Civil;
 		auto b = s->Spec == nullptr ? Civil : BaseOf(s->Spec->Class, s->Spec->IsMilitary);
-		double n = (s->Loadout ? s->Loadout->Count(ModuleKind::Scanner) : 0) + ArrayScanners * FleetCoordination::Count(s, FacilityKinds::SensorArray)
+		double n = (s->Loadout ? s->Loadout->Count(ModuleKind::Scanner) : 0) + ArrayScanners()->Value * FleetCoordination::Count(s, FacilityKinds::SensorArray)
 		           + ElectronicWarfare::SensorScanners * ElectronicWarfare::ReconAboard(s);
-		return SensorSuite(b.RangeKm * (1 + ScannerRangeShare * n), b.Resolution + ScannerResolution * n);
+		return SensorSuite(b.RangeKm * (1 + ScannerRangeShare()->Value * n),b.Resolution + ScannerResolution * n);
 	}
 
 	// ---------------------------------------------------------------- ContactSighting / Contact
@@ -432,7 +499,7 @@ namespace SpaceGod::Core
 				if (t.Signature > 0 && mineList != nullptr)
 					for (const auto& o : *mineList)
 					{
-						double reach = o.Suite.RangeKm * t.Root;
+						double reach = o.Suite.RangeKm * SensorSuite::RangeScale()->Value * t.Root;
 						double d2 = (o.Helio - t.Helio).LengthSquared();
 						if (d2 > reach * reach) continue;
 						// Line of sight to the player's hull (US-T93): a body between hides it. No crew's look is changed.
@@ -635,5 +702,5 @@ namespace SpaceGod::Core
 		return false;
 	}
 
-	double Sensors::HavenReachKm(const cs::Ref<Ship>& s) { return SensorSuite::Of(s).ReachKm(Signatures::Haven); }
+	double Sensors::HavenReachKm(const cs::Ref<Ship>& s) { return SensorSuite::Of(s).ReachKm(Signatures::Haven()->Value); }
 }

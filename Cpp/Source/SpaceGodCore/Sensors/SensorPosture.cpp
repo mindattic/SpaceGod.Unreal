@@ -5,6 +5,7 @@
 #include "Combat/CombatState.h"
 #include "Ephemeris.h"
 #include "Sensors/Sensors.h"
+#include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "World.h"
 
@@ -82,7 +83,7 @@ namespace SpaceGod::Core
 			case SensorKey::GoDark:
 				// From online the hull starts as warm as it ran (silent running had it damped already); from a restart, as
 				// warm as the restart had brought it back.
-				if (c->PowerDown == static_cast<int>(PowerState::Online)) c->ResidualHeat = s->SilentRunning ? Signatures::SilentFactor : 1;
+				if (c->PowerDown == static_cast<int>(PowerState::Online)) c->ResidualHeat = s->SilentRunning ? Signatures::SilentFactor()->Value : 1;
 				c->PowerDown = static_cast<int>(PowerState::Dark);
 				c->RestartLeftS = 0;
 				return true;

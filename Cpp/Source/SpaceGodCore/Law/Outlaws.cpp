@@ -26,6 +26,7 @@
 #include "Law/Law.h"
 #include "Persistence/ObjectGraph.h"
 #include "Sensors/Sensors.h"
+#include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "World.h"
 
@@ -243,7 +244,7 @@ namespace SpaceGod::Core
 		auto p = Law()->PlayerRecord();
 		if (p != nullptr && p->Wanted() && world->PilotedShip != nullptr && pilotBody >= 0 && !cs::Double::IsNaN(pilotJd) && jd - pilotJd < 1)
 		{
-			double sig = world->Sensors != nullptr && world->Sensors->PilotSignature() > 0 ? world->Sensors->PilotSignature() : Signatures::Battle;
+			double sig = world->Sensors != nullptr && world->Sensors->PilotSignature() > 0 ? world->Sensors->PilotSignature() : Signatures::Battle()->Value;
 			cs::String witness = Law()->FindWitness(pilotHelio, jd, nullptr, sig);
 			if (!witness.empty()) Sight(p, Hide(pilotBody, cs::Cat("near ", BodyName(pilotBody))), jd, witness);
 		}

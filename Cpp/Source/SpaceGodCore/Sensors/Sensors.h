@@ -10,6 +10,7 @@
 namespace SpaceGod::Core
 {
 	class Faction;
+	class RangeSetting;
 	class Ship;
 	class World;
 	enum class ShipClass : int;
@@ -45,26 +46,26 @@ namespace SpaceGod::Core
 		/// <summary>The hull mass whose coasting heat is one signature unit, tonnes (a freighter).</summary>
 		static constexpr double ReferenceMassTonnes = 9000;
 
-		/// <summary>What a burn adds for a reference hull at 0.1 g, scaled by thrust (mass times acceleration).</summary>
-		static constexpr double DriveFactor = 40;
+		/// <summary>What a burn adds for a reference hull at 0.1 g, scaled by thrust (mass times acceleration). Knob tune.sensors.driveFactor.</summary>
+		static const cs::Ref<RangeSetting>& DriveFactor();
 
 		/// <summary>A warship's active systems (fire control, shields up) and a civilian's lesser ones.</summary>
 		static constexpr double MilitaryEm = 1; static constexpr double CivilEm = 0.2;
 
-		/// <summary>Guns, lasers and missile motors in a fight.</summary>
-		static constexpr double WeaponsFire = 24;
+		/// <summary>Guns, lasers and missile motors in a fight. Knob tune.sensors.weaponsFire.</summary>
+		static const cs::Ref<RangeSetting>& WeaponsFire();
 
-		/// <summary>What silent running leaves of a hull's heat (EM goes to nothing).</summary>
-		static constexpr double SilentFactor = 0.08;
+		/// <summary>What silent running leaves of a hull's heat (EM goes to nothing). Knob tune.sensors.silentFactor.</summary>
+		static const cs::Ref<RangeSetting>& SilentFactor();
 
-		/// <summary>What a derelict hulk still gives off of its hull heat.</summary>
-		static constexpr double HulkFactor = 0.03;
+		/// <summary>What a derelict hulk still gives off of its hull heat. Knob tune.sensors.hulkFactor.</summary>
+		static const cs::Ref<RangeSetting>& HulkFactor();
 
-		/// <summary>A battle seen from outside it (weapons fire over a hull): the reference for witnesses.</summary>
-		static constexpr double Battle = 25;
+		/// <summary>A battle seen from outside it (weapons fire over a hull): the reference for witnesses. Knob tune.sensors.battle.</summary>
+		static const cs::Ref<RangeSetting>& Battle();
 
-		/// <summary>A hidden haven: reactors and docks buried in a rock, but still warm.</summary>
-		static constexpr double Haven = 25;
+		/// <summary>A hidden haven: reactors and docks buried in a rock, but still warm. Knob tune.sensors.haven.</summary>
+		static const cs::Ref<RangeSetting>& Haven();
 
 		/// <summary>
 		/// Running dark: the ship's own choice (<see cref="Ship.SilentRunning"/>), or raiders lying in wait
@@ -93,8 +94,12 @@ namespace SpaceGod::Core
 		/// settlement's traffic control.</summary>
 		static const SensorSuite Civil; static const SensorSuite Military; static const SensorSuite Station;
 
-		/// <summary>What each scanner suite fitted (<see cref="ModuleKind.Scanner"/>) adds: half the base range again, and resolution.</summary>
-		static constexpr double ScannerRangeShare = 0.5; static constexpr double ScannerResolution = 0.5;
+		/// <summary>What each scanner suite fitted (<see cref="ModuleKind.Scanner"/>) adds: half the base range again (knob
+		/// tune.sensors.scannerRangeShare), and resolution.</summary>
+		static SPACEGODCORE_API const cs::Ref<RangeSetting>& ScannerRangeShare(); static constexpr double ScannerResolution = 0.5;
+
+		/// <summary>Every suite's reach, times this (knob tune.sensors.range).</summary>
+		static SPACEGODCORE_API const cs::Ref<RangeSetting>& RangeScale();
 
 		/// <summary>A gate picket's long-range search suite (U.SPC-T480): six times a warship's reach and twice its
 		/// resolution, so it makes out a raider lying dark off its gate and an arrival's class as it comes through.</summary>
@@ -117,8 +122,8 @@ namespace SpaceGod::Core
 		static SPACEGODCORE_API SensorSuite BaseOf(ShipClass cls, bool military);
 
 		/// <summary>What a command ship's sensor array (<see cref="FacilityKinds.SensorArray"/>, U.SPC-T477) is worth in
-		/// scanner suites.</summary>
-		static constexpr double ArrayScanners = 3;
+		/// scanner suites. Knob tune.sensors.arrayScanners.</summary>
+		static SPACEGODCORE_API const cs::Ref<RangeSetting>& ArrayScanners();
 
 		/// <summary>The suite <paramref name="s"/> carries: its hull's base, more with each scanner fitted, much more
 		/// with a sensor array inside it, and more again with recon fighters aboard to scout ahead (U.SPC-T485).</summary>
@@ -128,7 +133,7 @@ namespace SpaceGod::Core
 		static SensorSuite Best(SensorSuite a, SensorSuite b) { return SensorSuite(cs::Math::Max(a.RangeKm, b.RangeKm), cs::Math::Max(a.Resolution, b.Resolution)); }
 
 		/// <summary>How far this suite sees a signature, km.</summary>
-		double ReachKm(double signature) const { return signature > 0 ? RangeKm * cs::Math::Sqrt(signature) : 0; }
+		SPACEGODCORE_API double ReachKm(double signature) const;
 	};
 	// C# static readonly SensorSuite fields: constant-initialised, so no cross-file init order.
 	inline constexpr SensorSuite SensorSuite::Civil = SensorSuite(2e5, 1);
