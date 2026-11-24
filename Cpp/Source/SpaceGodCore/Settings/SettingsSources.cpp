@@ -48,6 +48,7 @@
 #include "Combat/WeakPatches.h"
 #include "Economy/TradeDesk.h"
 #include "Rendering/Skyboxes.h"
+#include "Sensors/Sensors.h"
 #include "Settings/DevFlags.h"
 #include "Systems/CruiseDrive.h"
 #include "Systems/FleetDoctrine.h"
@@ -107,6 +108,9 @@ namespace SpaceGod::Core
 		TradeRules::RunClassConstructor(); found++;                         // Economy/TradeDesk.cs
 		// ---- Core/Rendering/
 		SkyboxSettings::DefaultSky(); SkyboxSettings::Brightness(); SkyboxSettings::NebulaResolution(); found++; // Rendering/Skyboxes.cs
+		// ---- Core/Sensors/
+		Signatures::DriveFactor(); Signatures::WeaponsFire(); Signatures::SilentFactor(); Signatures::HulkFactor(); Signatures::Battle();
+		Signatures::Haven(); SensorSuite::ScannerRangeShare(); SensorSuite::RangeScale(); SensorSuite::ArrayScanners(); found++; // US-T542 (not a C# source)
 		// ---- Core/Settings/
 		DevFlags::All(); found++;                                           // US-T524 (not a C# source)
 		// ---- Core/Systems/
