@@ -21,6 +21,9 @@ namespace SpaceGod::Voice
 {
 	namespace
 	{
+		/// US-T649: the Voice engine setting (0 Auto, 1 Piper, 2 Windows), set on the game thread, read by the worker.
+		std::atomic<int> preferredEngine { 0 };
+
 		struct Job
 		{
 			TtsId Id = 0;
@@ -58,7 +61,10 @@ namespace SpaceGod::Voice
 			/// The engine that speaks now (Piper, else SAPI), its id published for the game thread's keys.
 			ITtsEngine* Choose()
 			{
-				ITtsEngine* engine = Piper->Available() ? Piper.get() : Sapi->Available() ? Sapi.get() : nullptr;
+				const int preferred = preferredEngine.load(std::memory_order_relaxed);
+				ITtsEngine* engine = preferred == 1 ? (Piper->Available() ? Piper.get() : nullptr)
+					: preferred == 2 ? (Sapi->Available() ? Sapi.get() : nullptr)
+					: Piper->Available() ? Piper.get() : Sapi->Available() ? Sapi.get() : nullptr;
 				if (engine != Chosen)
 				{
 					Chosen = engine;
@@ -260,6 +266,8 @@ namespace SpaceGod::Voice
 			if (TtsDone done; s.Callbacks.RemoveAndCopyValue(result.Id, done) && done) done(result.Id, result.Clip);
 		}
 	}
+
+	void TtsService::SetEngine(int engine) { preferredEngine.store(engine >= 0 && engine <= 2 ? engine : 0, std::memory_order_relaxed); }
 
 	void TtsService::Shutdown()
 	{

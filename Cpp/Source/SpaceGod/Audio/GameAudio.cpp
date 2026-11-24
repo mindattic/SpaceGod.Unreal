@@ -6,6 +6,8 @@
 #include "UnrealSpace.h"
 #include "UnityCompat/UnityTypes.h"
 #include "Settings/GameSetting.h"
+#include "PlayerOptions.h"
+#include "Voice/TtsService.h"
 
 #include "AudioDevice.h"
 #include "AudioDeviceManager.h"
@@ -472,6 +474,7 @@ namespace SpaceGod::Audio
 	void GameAudio::Declare()
 	{
 		MusicVolume(); EffectsVolume(); InterfaceVolume(); AmbienceVolume(); VoiceVolume();
+		SpokenCommsSetting(); VoiceEngineSetting(); RadioEffectSetting();
 		MuteInBackground(); SoundWhilePaused(); DynamicRange();
 	}
 
@@ -510,6 +513,38 @@ namespace SpaceGod::Audio
 			"How loud the voices on comms are, under the master volume.", "sound speech dialogue comms loudness", AudioBus::Voice);
 		return value;
 	}
+
+	// US-T649: comms and radio rows in the Sound group, right after Voice volume. View settings: this machine's own, never
+	// shared in co-op; a scripted run reads the factory defaults whatever the profile says.
+	const cs::Ref<ToggleSetting>& GameAudio::SpokenCommsSetting()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("comms.spoken", SettingGroups::Audio, "Spoken comms", true,
+			"Comms and radio lines read aloud; off, they are silent and their text still shows.",
+			"voice speech spoken comms radio tts read aloud talk mute");
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GameAudio::VoiceEngineSetting()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("comms.voiceEngine", SettingGroups::Audio, "Voice engine",
+			cs::List<cs::String>{ "Auto", "Piper", "Windows" }, 0,
+			"What speaks the comms: Auto uses Piper when it is installed and the Windows voice otherwise; Piper or Windows uses only that one.",
+			"voice engine tts speech piper windows sapi synthesizer")
+			->Applying([](int i) { SpaceGod::Voice::TtsService::SetEngine(PlayerOptions::ScriptedRun() ? 0 : i); });
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& GameAudio::RadioEffectSetting()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("radio.effect", SettingGroups::Audio, "Radio effect", true,
+			"The radio sound on spoken lines: a narrow band, a little static and a squelch click before and after.",
+			"radio effect static squelch filter band voice comms crackle");
+		return value;
+	}
+
+	bool GameAudio::SpokenComms() { return PlayerOptions::ScriptedRun() ? SpokenCommsSetting()->FactoryDefault : SpokenCommsSetting()->Value; }
+
+	bool GameAudio::RadioEffectOn() { return PlayerOptions::ScriptedRun() ? RadioEffectSetting()->FactoryDefault : RadioEffectSetting()->Value; }
 
 	const cs::Ref<ToggleSetting>& GameAudio::MuteInBackground()
 	{

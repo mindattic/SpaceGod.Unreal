@@ -47,7 +47,7 @@ namespace SpaceGod::Voice
 
 	void CommsVoice::Speak(SpokenLine line)
 	{
-		if (!Audio::GameAudio::Enabled() || line.Text.empty()) return;
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms() || line.Text.empty()) return;
 		Playback& s = P();
 		if (s.Lines.Num() >= Capacity)
 		{
@@ -55,7 +55,7 @@ namespace SpaceGod::Voice
 			s.Lines.RemoveAt(0);
 			s.TurnSince = 0;
 		}
-		TtsRequest request { MoveTemp(line.Text), MoveTemp(line.Voice), line.Priority, line.Radio };
+		TtsRequest request { MoveTemp(line.Text), MoveTemp(line.Voice), line.Priority, line.Radio && Audio::GameAudio::RadioEffectOn() };
 		QueuedLine& waiting = s.Lines.AddDefaulted_GetRef();
 		waiting.Volume = line.Volume;
 		waiting.Id = TtsService::Request(MoveTemp(request), [](TtsId id, const Audio::SoundClip& clip)
@@ -71,15 +71,15 @@ namespace SpaceGod::Voice
 
 	void CommsVoice::Prefetch(const SpokenLine& line)
 	{
-		if (!Audio::GameAudio::Enabled() || line.Text.empty()) return;
-		TtsService::Prefetch({ line.Text, line.Voice, line.Priority, line.Radio });
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms() || line.Text.empty()) return;
+		TtsService::Prefetch({ line.Text, line.Voice, line.Priority, line.Radio && Audio::GameAudio::RadioEffectOn() });
 	}
 
 	void CommsVoice::Tick()
 	{
 		Playback& s = P();
 		if (s.Lines.IsEmpty()) return;
-		if (!Audio::GameAudio::Enabled())
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms())
 		{
 			Stop();
 			return;

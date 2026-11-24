@@ -63,6 +63,15 @@ namespace SpaceGod::Audio
 		static const cs::Ref<Core::RangeSetting>& InterfaceVolume();
 		static const cs::Ref<Core::RangeSetting>& AmbienceVolume();
 		static const cs::Ref<Core::RangeSetting>& VoiceVolume();
+		/// US-T649: Spoken comms (on): off, CommsVoice and VoiceArbiter stay silent; the text still shows.
+		static const cs::Ref<Core::ToggleSetting>& SpokenCommsSetting();
+		/// US-T649: Voice engine (Auto, Piper, Windows), handed to TtsService.
+		static const cs::Ref<Core::ChoiceSetting>& VoiceEngineSetting();
+		/// US-T649: Radio effect (on): whether radio lines get RadioEffect (part of the voice cache key).
+		static const cs::Ref<Core::ToggleSetting>& RadioEffectSetting();
+		/// The two toggles above as they apply now (a scripted run: their factory defaults).
+		static bool SpokenComms();
+		static bool RadioEffectOn();
 		/// US-T552: silent while the window is in the background (on: Unreal's own default, as before).
 		static const cs::Ref<Core::ToggleSetting>& MuteInBackground();
 		/// US-T552: what the game's sound does while the pause menu is open (Play, Duck, Mute); menu sounds still play.

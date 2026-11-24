@@ -34,6 +34,9 @@ namespace SpaceGod::Voice
 		static void Tick();
 		/// Stops the worker and its engine (exit); a later Request starts them again.
 		static void Shutdown();
+		/// US-T649: Settings > Sound > Voice engine: 0 Auto (Piper when available, else SAPI), 1 Piper only, 2 Windows
+		/// (SAPI) only. The worker picks it up before its next line; the cache key follows the engine that speaks.
+		static void SetEngine(int engine);
 
 		/// The most requests waiting at once.
 		static constexpr int Capacity = 16;

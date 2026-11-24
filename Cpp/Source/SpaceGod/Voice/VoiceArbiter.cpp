@@ -63,7 +63,7 @@ namespace SpaceGod::Voice
 
 	void VoiceArbiter::Comms(SpokenLine line)
 	{
-		if (!Audio::GameAudio::Enabled() || line.Text.empty()) return;
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms() || line.Text.empty()) return;
 		Arbiter& s = A();
 		if (s.RadioPlaying > 0)
 		{
@@ -76,7 +76,7 @@ namespace SpaceGod::Voice
 
 	void VoiceArbiter::Radio(RadioLine line)
 	{
-		if (!Audio::GameAudio::Enabled() || line.Line.Text.empty()) return;
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms() || line.Line.Text.empty()) return;
 		Arbiter& s = A();
 		if (s.Count >= Capacity)
 		{
@@ -114,7 +114,7 @@ namespace SpaceGod::Voice
 	void VoiceArbiter::Tick(float warpRate)
 	{
 		Arbiter& s = A();
-		if (!Audio::GameAudio::Enabled())
+		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms())
 		{
 			while (s.Count > 0) RemoveAt(s, s.Count - 1);
 			s.RadioPlaying = 0;
