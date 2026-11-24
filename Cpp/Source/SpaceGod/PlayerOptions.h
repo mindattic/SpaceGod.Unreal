@@ -7,6 +7,7 @@
 // groups first (PlayerGroups) and folds the rest under "Advanced (simulation)".
 
 #include "Cs/Cs.h"
+#include "DateText.h"
 #include "UnityCompat/UnityTypes.h"
 
 namespace SpaceGod::Core
@@ -52,6 +53,10 @@ namespace SpaceGod
 		static const cs::Ref<Core::RangeSetting>& CameraShake();
 		/// US-T555: the pause menu opens when the window loses focus, outside co-op. Off by default.
 		static const cs::Ref<Core::ToggleSetting>& PauseOnFocusLoss();
+		/// US-T617: times of day in 24-hour (as always) or 12-hour form.
+		static const cs::Ref<Core::ChoiceSetting>& Clock();
+		/// US-T617: dates as year-month-day (as always), day/month/year or month/day/year.
+		static const cs::Ref<Core::ChoiceSetting>& Dates();
 
 		// ---------------------------------------------------------------- Accessibility
 
@@ -108,6 +113,15 @@ namespace SpaceGod
 		static float ShakeScale();
 		/// Pause when the window loses focus is on (never in a scripted run).
 		static bool PausesOnFocusLoss();
+
+		/// US-T617: Clock and Date order (24-hour, year-month-day in a scripted run).
+		static Core::ClockFormat ClockMode();
+		static Core::DateOrder DateMode();
+		/// A date, a time of day, or both, as Clock and Date order write them (Core::DateText's forms).
+		static cs::String Date(const cs::DateTime& t);
+		static cs::String Time(const cs::DateTime& t, bool seconds = false);
+		static cs::String DateAndTime(const cs::DateTime& t, bool seconds = false, const char* gap = " ");
+		static cs::String MonthDay(const cs::DateTime& t, bool year = false, bool padDay = true);
 
 		/// A run that is driven and photographed (the smoke, shots, audits, the demo, captures, headless) draws at 100% scale and
 		/// text whatever the profile says, so every shot is alike.

@@ -6,6 +6,7 @@
 #include <tuple>
 
 #include "UnitySpaceApp.h"
+#include "PlayerOptions.h"
 #include "Input/InputDevice.h" // US-T329
 #include "Input/KeyBindings.h" // US-T390
 
@@ -204,7 +205,7 @@ namespace SpaceGod::UI
 		for (const auto& t : tips)
 		{
 			GUI::contentColor = t->Weight >= 4 ? UiStyle::Warning : Color::white();
-			GUI::Label(Rect(x, y, view.width - 8, rowH), cs::Cat(Astro::ToDateTime(t->Jd).ToString("yyyy-MM-dd"), "  ", t->Text), small);
+			GUI::Label(Rect(x, y, view.width - 8, rowH), cs::Cat(PlayerOptions::Date(Astro::ToDateTime(t->Jd)), "  ", t->Text), small);
 			y += rowH;
 		}
 	}
