@@ -22,6 +22,7 @@
 #include "GameSettingsHost.h"
 #include "Persistence/Profiles.h" // US-T248: the co-op name and recent hosts
 #include "Persistence/SaveGame.h"
+#include "PlayerOptions.h"
 #include "Settings/GameSetting.h" // US-T253
 #include "Shared/Profiles/ProfileStore.h"
 #include "UI/CreditsScreen.h" // US-T246
@@ -580,7 +581,7 @@ namespace SpaceGod::UI
 			GUI::Label(Rect(row0.x + 6, row0.y + 3, 150, 20), UnitySpaceApp::SaveTitle(slot, hdr), text);
 			GUI::Label(Rect(row0.x + 160, row0.y + 4, row0.width - 330, 20),
 				cs::Cat(UnitySpaceApp::DescribeSave(hdr), hdr->Setup.empty() ? cs::String() : cs::Cat("   ·   ", hdr->Setup), // US-T247: how it began
-					"   ·   saved ", hdr->SavedUtc.ToLocalTime().ToString("MMM d HH:mm")), small);
+					"   ·   saved ", PlayerOptions::MonthDay(hdr->SavedUtc.ToLocalTime(), false, false), " ", PlayerOptions::Time(hdr->SavedUtc.ToLocalTime())), small);
 			if (GUI::Button(Rect(row0.xMax() - 156, row0.y + 2, 74, 20), "Load", buttonActive)) GameLaunch::Load(slot);
 			if (GUI::Button(Rect(row0.xMax() - 78, row0.y + 2, 74, 20), deleteArmed == slot ? "Sure?" : "Delete", button))
 			{

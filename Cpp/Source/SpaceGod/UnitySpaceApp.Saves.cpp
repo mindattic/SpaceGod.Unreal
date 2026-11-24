@@ -341,7 +341,7 @@ namespace SpaceGod
 	cs::String UnitySpaceApp::DescribeSave(const cs::Ref<SaveHeader>& h)
 	{
 		if (h == nullptr) return "empty";
-		cs::String text = cs::Cat(h->ActiveSystem, ", ", h->SimUtc().ToString("yyyy-MM-dd HH:mm"), " UTC");
+		cs::String text = cs::Cat(h->ActiveSystem, ", ", PlayerOptions::DateAndTime(h->SimUtc()), " UTC");
 		if (!h->PilotedShip.empty()) text += cs::Cat(", flying ", h->PilotedShip, " (", cs::Fmt(h->Credits, "N0"), " cr)");
 		return text;
 	}

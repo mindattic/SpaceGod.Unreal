@@ -462,7 +462,7 @@ namespace SpaceGod::UI
 		for (int i = cs::Math::Max(0, n - 6); i < n; i++, by += 16)
 		{
 			auto e = h->Ledger[i];
-			GUI::Label(Rect(r.x + 12, by, w - 24, 16), cs::Cat(Astro::ToDateTime(e->Jd).ToString("yyyy-MM-dd"), "  ", e->Text,
+			GUI::Label(Rect(r.x + 12, by, w - 24, 16), cs::Cat(PlayerOptions::Date(Astro::ToDateTime(e->Jd)), "  ", e->Text,
 				cs::Math::Abs(e->Amount) >= 1 ? cs::Cat("  ", e->Amount > 0 ? "+" : "", Credits(e->Amount), e->Cash ? "" : " (loss)") : cs::String()), small);
 		}
 		GUI::contentColor = old;
@@ -1296,8 +1296,8 @@ namespace SpaceGod::UI
 	cs::String Hud::NewsLine(const WorldEvent& e)
 	{
 		return app->Clock->Utc().Year() == Astro::ToDateTime(e.Jd).Year()
-			? cs::Cat(Astro::ToDateTime(e.Jd).ToString("MMM dd"), "   ", e.Text)
-			: cs::Cat(Astro::ToDateTime(e.Jd).ToString("yyyy MMM dd"), "   ", e.Text);
+			? cs::Cat(PlayerOptions::MonthDay(Astro::ToDateTime(e.Jd)), "   ", e.Text)
+			: cs::Cat(PlayerOptions::MonthDay(Astro::ToDateTime(e.Jd), true), "   ", e.Text);
 	}
 
 	// ---------------------------------------------------------------- news feed

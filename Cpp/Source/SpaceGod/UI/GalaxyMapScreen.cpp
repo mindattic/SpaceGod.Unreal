@@ -2,6 +2,7 @@
 #include "UI/UiMotion.h" // US-T255
 
 #include "UnitySpaceApp.h"
+#include "PlayerOptions.h"
 #include "UI/Hud.h"
 #include "UI/Icons.h"
 
@@ -1259,7 +1260,7 @@ namespace SpaceGod::UI
 				if (course->Interdictions.Count() > 0)
 					Line(y, x, w, cs::Cat("Pulled out by ", cs::Strings::Join(", ", course->Interdictions), " on the way: ",
 						FtlNavigation::Describe(course->CrossingDays), " crossing under the ordinary drive"), PirateColor);
-				Line(y, x, w, cs::Cat("ETA ", Astro::ToDateTime(course->EtaJd()).ToString("yyyy-MM-dd HH:mm"), " UTC, ", FtlNavigation::Describe(course->TotalDays()),
+				Line(y, x, w, cs::Cat("ETA ", PlayerOptions::DateAndTime(Astro::ToDateTime(course->EtaJd())), " UTC, ", FtlNavigation::Describe(course->TotalDays()),
 					" from now"), CourseColor);
 				Line(y, x, w, cs::Cat("Reaction mass: ", cs::Fmt(course->FuelTonnes(), "N0"), " t of ", cs::Fmt(course->TanksTonnes, "N0"),
 					" t in the tanks (one jump reaches ", (cs::Double::IsInfinity(course->RangeLy) ? cs::String("anywhere") : cs::Cat(cs::Fmt(course->RangeLy, "0.#"), " ly")), ")"), Dim);

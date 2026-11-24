@@ -6,6 +6,7 @@
 
 #include "InterfaceOptions.h" // US-T560
 #include "UnitySpaceApp.h"
+#include "PlayerOptions.h"
 #include "UI/Icons.h"
 
 #include "Astro.h"
@@ -461,7 +462,7 @@ namespace SpaceGod::UI
 		auto r = Place(w, h); // US-T440: the top bar's drawer, at the top edge
 		auto clock = app->Clock;
 
-		GUI::Label(Rect(r.x + 14, r.y + 7, 220, 20), cs::Cat(clock->Utc().ToString("yyyy-MM-dd  HH:mm"), " UTC"), title);
+		GUI::Label(Rect(r.x + 14, r.y + 7, 220, 20), cs::Cat(PlayerOptions::DateAndTime(clock->Utc(), false, "  "), " UTC"), title);
 		cs::String rate = clock->Paused() ? cs::String("PAUSED")
 			: clock->Pausing() ? cs::Cat("PAUSING  x", cs::Fmt(clock->Speed, "0.00"))
 			: clock->Resuming() ? cs::Cat("RESUMING  x", cs::Fmt(clock->Speed, "0.00"), "  of ", clock->Warp().Label)

@@ -380,7 +380,7 @@ namespace SpaceGod::UI
 			GUI::Box(row0, GUIContent::none(), i == savesCursor ? rowSelected : row); // US-T393: the keys' cursor
 			GUI::Label(Rect(row0.x + 6, row0.y + 2, 150, 18), UnitySpaceApp::SaveTitle(slot, hdr), text);
 			GUI::contentColor = hdr == nullptr ? Dim : Color::white();
-			cs::String line = hdr == nullptr ? cs::String("empty") : cs::Cat(UnitySpaceApp::DescribeSave(hdr), "   ·   saved ", hdr->SavedUtc.ToLocalTime().ToString("MMM d HH:mm"));
+			cs::String line = hdr == nullptr ? cs::String("empty") : cs::Cat(UnitySpaceApp::DescribeSave(hdr), "   ·   saved ", PlayerOptions::MonthDay(hdr->SavedUtc.ToLocalTime(), false, false), " ", PlayerOptions::Time(hdr->SavedUtc.ToLocalTime()));
 			GUI::Label(Rect(row0.x + 160, row0.y + 3, row0.width - 400, 18), line, small);
 			GUI::contentColor = old;
 			if (!blocked.empty()) continue;
@@ -489,7 +489,7 @@ namespace SpaceGod::UI
 		cs::String jump = c->Stops + left > 1 ? cs::Cat("JUMP ", c->Stops + 1, " OF ", c->Stops + left, "   ·   ") : cs::String();
 		// The trip compressed on the sim clock (U.SPC-T420): when it drops out, by the calendar and in real seconds at this pace.
 		DrawBanner(cs::Cat("FTL  ·  ", jump, "BOUND FOR ", cs::Strings::ToUpperInvariant(c->ToName), "   ·   ", cs::Fmt(ly, "0.00"), " LY TO GO   ·   ",
-			cs::Fmt(speedC, "N0"), " C   ·   ETA ", Astro::ToDateTime(c->ArriveJd()).ToString("yyyy-MM-dd"),
+			cs::Fmt(speedC, "N0"), " C   ·   ETA ", PlayerOptions::Date(Astro::ToDateTime(c->ArriveJd())),
 			"   ·   ", c->Stopover ? "VOID STOP" : "DROPPING OUT", " IN ", Mathf::CeilToInt(static_cast<float>(app->FtlSecondsLeft())), " S AT ", cs::Strings::ToUpperInvariant(app->Clock->Warp().Label), "  (, .)"));
 	}
 
@@ -637,7 +637,7 @@ namespace SpaceGod::UI
 		cs::String jump = cs::Cat(cs::Fmt(c->Ly, "0.00"), " ly under FTL, ", FtlNavigation::Describe(c->SpoolDays + c->FtlDays),
 			c->Stops > 0 ? cs::Cat(" in ", c->Jumps(), " jumps   ·   ", c->Stops, " void stop", c->Stops == 1 ? "" : "s", " (", FtlNavigation::Describe(c->StopDays), " cooling and spooling)") : cs::String());
 		cs::String pulled = c->Interdictions.Count() == 0 ? cs::String() : cs::Cat("   ·   pulled out by ", cs::Strings::Join(", ", c->Interdictions), " (", FtlNavigation::Describe(c->CrossingDays), " under normal drive)");
-		return cs::Cat(run, cool, jump, pulled, "   ·   ETA ", Astro::ToDateTime(c->EtaJd()).ToString("yyyy-MM-dd HH:mm"), " (", FtlNavigation::Describe(c->TotalDays()), ")",
+		return cs::Cat(run, cool, jump, pulled, "   ·   ETA ", PlayerOptions::DateAndTime(Astro::ToDateTime(c->EtaJd())), " (", FtlNavigation::Describe(c->TotalDays()), ")",
 			"   ·   fuel ", cs::Fmt(c->FuelTonnes(), "N0"), " of ", cs::Fmt(c->TanksTonnes, "N0"), " t");
 	}
 

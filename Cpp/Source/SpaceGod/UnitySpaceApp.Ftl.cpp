@@ -557,7 +557,7 @@ namespace SpaceGod
 			Clock->SetWarp(Core::FtlNavigation::WarpFor(FtlAutopilot->RunDaysLeft(jd), ftlWarpBefore));
 		ShowToast(cs::Cat("FTL AUTOPILOT for ", cs::Strings::ToUpperInvariant(c->Target->Name), ": ",
 			(c->NeedsOutRun() ? cs::Cat("out beyond the rim (", cs::Fmt(c->OutRunKm / Core::Astro::AuKm, "0.##"), " AU, ", Core::FtlNavigation::Describe(c->OutRunDays), "), then ") : cs::String()),
-			"onto the star, spool and engage; ETA ", Core::Astro::ToDateTime(c->EtaJd()).ToString("yyyy-MM-dd"), "  (End takes the helm back)"));
+			"onto the star, spool and engage; ETA ", PlayerOptions::Date(Core::Astro::ToDateTime(c->EtaJd())), "  (End takes the helm back)"));
 		return true;
 	}
 
