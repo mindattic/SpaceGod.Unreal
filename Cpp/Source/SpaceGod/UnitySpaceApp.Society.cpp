@@ -124,9 +124,9 @@ namespace SpaceGod
 		if (civ == nullptr) return;
 		double jd = Clock->Jd;
 		// Another galaxy's people (a load, a new game): their worlds' past is not this one's.
-		if (civ.get() != trendCiv)
+		if (trendCiv.lock() != civ)
 		{
-			trendCiv = civ.get();
+			trendCiv = civ;
 			societyTrends.clear();
 			houseFortunes.clear(); // US-T408
 			firmFortunes.clear();
@@ -223,14 +223,15 @@ namespace SpaceGod
 		int n = civ->Events.Count();
 		int lastId = n > 0 && civ->Events[n - 1] != nullptr ? civ->Events[n - 1]->Id : 0;
 		// Another galaxy's people (a load, a new game): their ids name other people, so the list starts over.
-		if (civ.get() != watchCiv)
+		if (watchCiv.lock() != civ)
 		{
-			if (watchCiv != nullptr)
+			if (watchCivSet)
 			{
 				SocietyWatched.clear();
 				watchLastSeen.clear(); // US-T351
 			}
-			watchCiv = civ.get();
+			watchCiv = civ;
+			watchCivSet = true;
 			watchSeenId = lastId;
 			watchHeld = 0;
 			watchToast.clear();

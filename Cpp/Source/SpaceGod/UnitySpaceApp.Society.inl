@@ -68,7 +68,8 @@ private:
 	cs::Ref<UI::SocietyScreen> societyScreen;
 	/// <summary>US-T304: the civilization the watch list is about, the last event looked at, and the toast held back meanwhile
 	/// (the newest watched event, and how many more came with it) so a fast warp does not flicker one over another.</summary>
-	const void* watchCiv = nullptr;
+	std::weak_ptr<void> watchCiv; // weak, so a freed civilization's address reused by the next one is still another galaxy
+	bool watchCivSet = false;
 	int watchSeenId = 0, watchHeld = 0;
 	cs::String watchToast;
 	double watchToastAt = -1e9;
@@ -81,7 +82,7 @@ private:
 	void UpdateSocietyWatch();
 	/// <summary>US-T308: the worlds' trends, the civilization they are about, and the day the next sample is due.</summary>
 	std::map<cs::String, std::vector<SocietyTrendSample>> societyTrends;
-	const void* trendCiv = nullptr;
+	std::weak_ptr<void> trendCiv;
 	double trendNextJd = -1e18;
 	/// <summary>US-T408: every house's and trading firm's fortune, by id, sampled alongside the worlds' trends.</summary>
 	std::map<int, std::vector<SocietyFortuneSample>> houseFortunes, firmFortunes;
