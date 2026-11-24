@@ -4,6 +4,7 @@
 
 #include "Combat/PilotTuning.h"
 #include "Combat/ShipCatalog.h"
+#include "DisplayExtras.h"
 #include "GameSettingsHost.h"
 #include "PlayerOptions.h"
 #include "Settings/GameSetting.h"
@@ -101,7 +102,7 @@ namespace SpaceGod::UI
 		for (const auto& g : groups)
 			if (Tuning::IsTuningGroup(g)) order.Add(g);
 		for (const auto& g : groups)
-			if (!order.Contains(g) && !PlayerOptions::IsPlayerGroup(g)) order.Add(g);
+			if (!order.Contains(g) && !PlayerOptions::IsPlayerGroup(g) && g != DisplayExtras::Group) order.Add(g); // US-T545: the Display page's
 		return order;
 	}
 

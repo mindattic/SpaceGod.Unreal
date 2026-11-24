@@ -248,6 +248,10 @@ namespace SpaceGod::UI
 		static bool MatchesAll(const cs::String& words, const cs::String& query);
 
 		void DrawDisplay();
+		/// US-T545: the Display group's own rows (DisplayExtras) in <paramref name="view"/>, live, for the Settings keys.
+		void DrawDisplayRows(Rect view);
+		/// US-T545: Reset for those rows, at <paramref name="r"/>.
+		void DrawDisplayReset(Rect r);
 		void DrawConfirm();
 
 		/// US-T252: "Return to the title screen?" / "Exit the game?" over the first page; Yes leaves, No (or Esc) stays.

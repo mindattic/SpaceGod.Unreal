@@ -78,7 +78,7 @@ namespace SpaceGod::UI
 		if (!escape)
 		{
 			if (page == Page::Main) MainKeys(); // US-T311
-			else if (page == Page::Settings || page == Page::Developer) SettingsKeys(); // US-T322, US-T517
+			else if (page == Page::Settings || page == Page::Developer || page == Page::Display) SettingsKeys(); // US-T322, US-T517, US-T545
 			return;
 		}
 		if (textEditing != nullptr)
@@ -101,6 +101,8 @@ namespace SpaceGod::UI
 			case Page::Display:
 				// Leaving the page discards what was picked but not applied.
 				page = Page::Settings;
+				settingsPick = -1; // US-T545
+				settingsScroll = Vector2::zero();
 				break;
 			case Page::Settings:
 				// Esc clears a search before it leaves the page.
@@ -128,6 +130,8 @@ namespace SpaceGod::UI
 	void PauseMenu::OpenDisplay()
 	{
 		page = Page::Display;
+		settingsPick = -1; // US-T545: its own rows, from the top
+		settingsScroll = Vector2::zero();
 		allResolutions = DisplayOptions::Resolutions();
 		pending = DisplayOptions::Current;
 		notice.clear();
@@ -898,12 +902,14 @@ namespace SpaceGod::UI
 
 	void PauseMenu::DrawDisplay()
 	{
-		const float w = 600, h = 456;
+		// US-T545: wider and taller for the Display group's own rows under the Apply block (they scroll in a small window).
+		const float w = 680, rowsTop = 446;
+		float h = Mathf::Max(456.0f, Mathf::Min(rowsTop + 4 * SettingRowH + 56, Screen::height - 40.0f));
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
 		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "DISPLAY", title);
 		GUI::Label(Rect(r.x + 20, r.y + 38, w - 40, 18),
-			cs::Cat("Nothing changes until Apply  ·  now: ", DisplayOptions::Current.ToString()), small);
+			cs::Cat("Size, mode and VSync wait for Apply; the rows below take effect at once  ·  now: ", DisplayOptions::Current.ToString()), small);
 
 		// Aspect ratio first (U.SPC-T284): it narrows the resolution list below to widescreen, ultrawide and so on.
 		GUI::Label(Rect(r.x + 20, r.y + 64, 120, 20), "Aspect ratio", text);
@@ -953,13 +959,24 @@ namespace SpaceGod::UI
 		else if (pending.Mode == DisplayMode::Exclusive && !allResolutions.Exists([this](const DisplayResolution& m) { return m.SameSize(pending.Width, pending.Height) && m.RefreshHz > 0; }))
 			GUI::Label(Rect(x, vy + 66, cw, 40), "The screen does not offer this size as a mode: borderless windowed will show it", small);
 
+		// US-T545: brightness, HDR, its peak and the background frame cap, live like any setting.
+		float listBottom = r.yMax() - 56;
+		if (listBottom - (r.y + rowsTop) >= SettingRowH * 0.5f)
+			DrawDisplayRows(Rect(r.x + 20, r.y + rowsTop, w - 40, listBottom - (r.y + rowsTop)));
+		else
+		{
+			shownSettings.Clear();
+			navGroups.Clear();
+		}
+
 		// Apply only once something differs from what is on the screen; Cancel throws the picks away.
 		float by = r.yMax() - 46;
+		DrawDisplayReset(Rect(r.x + 20, by, 200, 30));
 		bool enabled = GUI::enabled;
 		GUI::enabled = enabled && pending != DisplayOptions::Current;
 		if (GUI::Button(Rect(r.xMax() - 20 - 230, by, 110, 30), "Apply", button)) ApplyPending();
 		GUI::enabled = enabled;
-		if (GUI::Button(Rect(r.xMax() - 20 - 110, by, 110, 30), "Cancel", button)) page = Page::Settings;
+		if (GUI::Button(Rect(r.xMax() - 20 - 110, by, 110, 30), "Cancel", button)) Back();
 	}
 
 	void PauseMenu::DrawConfirm()
