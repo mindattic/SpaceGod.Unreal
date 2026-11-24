@@ -118,6 +118,12 @@ the game quits (the detached export means the game never waits on it).
   `MindAtticCapture.h`; `CaptureRunner` and `CaptureBackend` wire it in. From Blueprints the same calls are on
   `UMindAtticCaptureLibrary` (Raise, Marker, screenshots, recording, replay, preview sets).
 
+## Comms radio
+
+Radio messages travel at light speed from where they were sent, and the lines heard are spoken by Piper (else the Windows
+voice) on a background thread. [docs/COMMS_RADIO.md](docs/COMMS_RADIO.md) covers the TTS limits, the propagation design
+and its costs, the 0.25 ms frame budget, the radio settings and the `sg.Radio` / `stat SpaceGodRadio` commands.
+
 ## Controls
 
 Unity.SpaceGod's own bindings, unchanged (in game, H / F1 shows them all).
