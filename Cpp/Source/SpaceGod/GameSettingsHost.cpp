@@ -1,14 +1,17 @@
 #include "GameSettingsHost.h"
 #include "AccessibilityOptions.h" // US-T634
 #include "ActiveProfile.h"
+#include "Audio/AudioOutput.h" // US-T612
 #include "Audio/GameAudio.h" // US-T240
 #include "DisplayExtras.h" // US-T544
 #include "EngineSettings.h"
 #include "GraphicsSettings.h"
+#include "InterfaceOptions.h" // US-T559
 #include "PlayerOptions.h" // US-T252
 #include "UnitySpaceApp.h"
 #include "Camera/SpaceCamera.h"
 #include "Console/GameConsole.h" // US-T620
+#include "Coop/CoopOptions.h" // US-T562
 #include "Input/DriftKey.h"
 #include "Input/Gamepad.h" // US-T250
 #include "Input/KeyBindings.h" // US-T249
@@ -48,11 +51,14 @@ namespace SpaceGod
 		// The Runtime assembly's [SettingsSource] classes, each accessor touched in C# field order.
 		SettingsRegistry::AddDeclarationSource([] { EngineSettings::FrameRateCap(); EngineSettings::MasterVolume(); });
 		SettingsRegistry::AddDeclarationSource([] { Audio::GameAudio::Declare(); }); // US-T240: the bus volumes, under the master volume
+		SettingsRegistry::AddDeclarationSource([] { Audio::AudioOutput::Declare(); }); // US-T612: the output device
 		// US-T251: the rest of Settings > Graphics (the preset, scalability knobs, anti-aliasing (render.msaa before),
 		// resolution scale, upscaler and field of view), right under the frame-rate cap.
 		SettingsRegistry::AddDeclarationSource([] { GraphicsSettings::Declare(); });
 		SettingsRegistry::AddDeclarationSource([] { DisplayExtras::Declare(); }); // US-T544: the Display page's brightness, HDR and background cap
 		SettingsRegistry::AddDeclarationSource([] { PlayerOptions::Declare(); }); // US-T252: Settings > Gameplay and Accessibility
+		SettingsRegistry::AddDeclarationSource([] { InterfaceOptions::Declare(); }); // US-T559: Settings > Interface
+		SettingsRegistry::AddDeclarationSource([] { Coop::CoopOptions::Declare(); }); // US-T562: Settings > Multiplayer
 		SettingsRegistry::AddDeclarationSource([] { AccessibilityOptions::Declare(); }); // US-T634: the colour-blind filter
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::AutoReorientSetting(); });
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::TutorialHintsSetting(); }); // US-T254: the first-time hints
@@ -101,6 +107,7 @@ namespace SpaceGod
 			Registry()->Bind(store);
 		}
 		GraphicsSettings::AfterBind(store); // US-T251: a first launch benchmarks for its preset
+		Coop::CoopOptions::AfterBind(); // US-T562: the old co-op name carries over
 	}
 
 	cs::String GameSettingsHost::ShippedDefaultsPath()

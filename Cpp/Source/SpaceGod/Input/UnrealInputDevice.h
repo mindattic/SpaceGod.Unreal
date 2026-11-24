@@ -16,16 +16,12 @@
 #include "Input/InputDevice.h"
 
 class APlayerController;
-struct FKey;
 
 namespace SpaceGod::Input
 {
 	class UnrealInputDevice final
 	{
 	public:
-		/// <summary>The key's Unreal FKey (an invalid FKey for Key::None).</summary>
-		static const FKey& KeyOf(Key key);
-
 		/// <summary>Reads this frame's keyboard and mouse from <paramref name="pc"/> into <see cref="InputDevice::current"/>
 		/// (null or invalid: no device, everything idle). Call once a frame, before the app's Update.</summary>
 		static void Feed(APlayerController* pc, float dt);
