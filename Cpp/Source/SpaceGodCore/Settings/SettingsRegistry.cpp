@@ -30,6 +30,7 @@ namespace SpaceGod::Core
 			settings.Add(setting);
 		}
 		setting->Attach(shared_from_this());
+		ApplyShipped(*setting);
 		// Declared after a profile was bound (a class first touched later): take the profile's value now.
 		auto s = store;
 		if (s != nullptr) Load(*setting, *s);
@@ -50,6 +51,7 @@ namespace SpaceGod::Core
 			pending.Add(setting);
 		}
 		setting->Attach(shared_from_this());
+		ApplyShipped(*setting);
 		// Declared after a profile was bound (a class first touched later): take the profile's value now.
 		auto s = store;
 		if (s != nullptr) Load(*setting, *s);
@@ -144,6 +146,37 @@ namespace SpaceGod::Core
 		store = newStore;
 		if (newStore == nullptr) return;
 		for (const auto& s : All()) Load(*s, *newStore);
+	}
+
+	void SettingsRegistry::ApplyShippedDefaults(const cs::Dictionary<cs::String, cs::String>& defaults)
+	{
+		{
+			std::lock_guard<std::recursive_mutex> lock(gate);
+			shipped = defaults;
+		}
+		for (const auto& s : All()) ApplyShipped(*s);
+	}
+
+	bool SettingsRegistry::IsLockedIn(const cs::String& key)
+	{
+		std::lock_guard<std::recursive_mutex> lock(gate);
+		return lockedIn.Contains(key);
+	}
+
+	void SettingsRegistry::ApplyShipped(GameSetting& s)
+	{
+		cs::String text;
+		bool has, was;
+		{
+			std::lock_guard<std::recursive_mutex> lock(gate);
+			has = shipped.TryGetValue(s.Key, text);
+			was = lockedIn.Contains(s.Key);
+		}
+		bool took = has && s.TrySetDefaultFromText(text);
+		if (!took && was) s.RestoreFactoryDefault();
+		std::lock_guard<std::recursive_mutex> lock(gate);
+		if (took) lockedIn.Add(s.Key);
+		else lockedIn.Remove(s.Key);
 	}
 
 	void SettingsRegistry::Load(GameSetting& s, ISettingStore& from)

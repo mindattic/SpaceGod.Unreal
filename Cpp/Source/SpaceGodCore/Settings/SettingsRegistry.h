@@ -59,6 +59,9 @@ namespace SpaceGod::Core
 		/// Not C#: settings registered from their constructors and not adopted yet (see the file comment).
 		cs::List<GameSetting*> pending;
 
+		cs::Dictionary<cs::String, cs::String> shipped; // StringComparer.Ordinal
+		cs::HashSet<cs::String> lockedIn;
+
 	public:
 		/// <summary>Raised when the store refuses a write (a full or read-only disk): the value still stands for this run.</summary>
 		cs::Event<cs::Ref<GameSetting>, const cs::Exception&> StoreFailed;
@@ -107,7 +110,23 @@ namespace SpaceGod::Core
 		/// </summary>
 		void Bind(const cs::Ref<ISettingStore>& newStore);
 
+		/// <summary>
+		/// Lays <paramref name="defaults"/> (key to the text <see cref="GameSetting.Format"/> writes, as
+		/// <see cref="ShippedDefaults.Parse"/> reads it) over the declared defaults: each known key whose text its setting
+		/// takes becomes that setting's default, unknown keys and refused text are ignored, and a setting locked in by an
+		/// earlier call but not by this one goes back to its factory default. A setting registered later takes its shipped
+		/// default as it registers. Called before <see cref="Bind"/>, so a profile's values still stand over these.
+		/// </summary>
+		void ApplyShippedDefaults(const cs::Dictionary<cs::String, cs::String>& defaults);
+
+		/// <summary>Whether <paramref name="key"/>'s setting took a shipped default.</summary>
+		bool IsLockedIn(const cs::String& key);
+
 	private:
+		/// Lays the shipped default for <paramref name="s"/>'s key over its default, or restores its factory default when
+		/// none (or a refused one) is shipped and it had one.
+		void ApplyShipped(GameSetting& s);
+
 		static void Load(GameSetting& s, ISettingStore& from);
 
 	public:
