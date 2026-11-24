@@ -11,6 +11,7 @@
 namespace SpaceGod::Core
 {
 	class GameSetting;
+	class TextSetting;
 }
 
 namespace SpaceGod::UI
@@ -107,6 +108,11 @@ namespace SpaceGod::UI
 		bool displayRowShown = false;
 		float settingsViewH = 0;
 
+		/// US-T571: the text setting whose field is typed in (null while none is) and what is typed so far (taken only on
+		/// Enter); and the last value refused: the setting's key and the line shown in place of its description.
+		cs::Ref<Core::TextSetting> textEditing;
+		cs::String textDraft, textRefusedKey, textRefused;
+
 		/// The words that find the Display page in a search, as the registry's settings are found by theirs.
 		static constexpr const char* DisplaySearchWords = "display graphics resolution screen window mode borderless fullscreen exclusive vsync aspect ratio ultrawide";
 
@@ -198,6 +204,11 @@ namespace SpaceGod::UI
 		void SettingsKeys();
 		/// US-T322: the group <paramref name="g"/> shown, the search cleared and the list back at its top.
 		void ShowGroup(const cs::String& g);
+		/// US-T571: the keys while a text setting's field is typed in (true: they are the field's): Enter takes the draft,
+		/// letting the field go, or keeps it focused with the refusal under the setting's name. False while none is.
+		bool TextKeys();
+		/// US-T571: the field typed in let go of, its draft and any refusal dropped.
+		void DropText();
 
 		/// One setting's row: its name and what it does on the left, its control and Reset on the right.
 		void DrawSetting(const cs::Ref<Core::GameSetting>& setting, Rect r, bool showGroup);

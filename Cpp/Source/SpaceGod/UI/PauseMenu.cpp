@@ -80,6 +80,11 @@ namespace SpaceGod::UI
 			else if (page == Page::Settings) SettingsKeys(); // US-T322
 			return;
 		}
+		if (textEditing != nullptr)
+		{
+			DropText(); // US-T571: Esc lets the text field go, its draft dropped, before it leaves the page
+			return;
+		}
 		if (leaving != Leave::None)
 		{
 			leaving = Leave::None; // US-T252: Esc answers the question with Stay
@@ -513,10 +518,12 @@ namespace SpaceGod::UI
 		settingsScroll = Vector2::zero();
 		settingsPick = -1; // US-T322
 		captureAction = captureSlot = -1; // US-T249: a slot listening on the page left behind stops
+		DropText(); // US-T571
 	}
 
 	void PauseMenu::SettingsKeys()
 	{
+		if (TextKeys()) return; // US-T571: a text field typed in holds every key
 		if (!UiInput::present()) return;
 		auto pressed = [](KeyCode k) { return UiInput::WasPressedThisFrame(k); };
 		bool ctrl = UiInput::IsPressed(KeyCode::LeftControl) || UiInput::IsPressed(KeyCode::RightControl);
@@ -564,6 +571,11 @@ namespace SpaceGod::UI
 		if (pressed(KeyCode::Delete))
 		{
 			setting->Reset();
+			return;
+		}
+		if (cs::As<TextSetting>(setting)) // US-T571: Enter types in its field
+		{
+			if (pressed(KeyCode::Return) || pressed(KeyCode::KeypadEnter)) GUI::FocusControl(cs::Cat("SettingText.", setting->Key));
 			return;
 		}
 		if (auto binding = cs::As<Input::KeyBindingSetting>(setting)) // US-T437: the slots, by the keys
@@ -638,7 +650,8 @@ namespace SpaceGod::UI
 		const float controlW = 250, resetW = 60;
 		float textW = r.width - controlW - resetW - 24;
 		GUI::Label(Rect(r.x + 4, r.y + 4, textW, 20), showGroup ? cs::Cat(GroupTitle(setting->Group), "  ·  ", setting->Label) : setting->Label, label);
-		GUI::Label(Rect(r.x + 4, r.y + 24, textW, SettingRowH - 26), setting->Description, small);
+		bool refused = !textRefused.empty() && textRefusedKey == setting->Key; // US-T571
+		GUI::Label(Rect(r.x + 4, r.y + 24, textW, SettingRowH - 26), refused ? textRefused : setting->Description, small);
 
 		float cx = r.x + textW + 12, cy = r.y + 10;
 		if (auto toggle = cs::As<ToggleSetting>(setting))
@@ -659,6 +672,22 @@ namespace SpaceGod::UI
 			if (GUI::Button(Rect(cx, cy, 32, 28), "<", button)) choice->Cycle(-1);
 			GUI::Label(Rect(cx + 36, cy, controlW - 72, 28), choice->Selected(), rowSelected);
 			if (GUI::Button(Rect(cx + controlW - 32, cy, 32, 28), ">", button)) choice->Cycle(1);
+		}
+		else if (auto textSetting = cs::As<TextSetting>(setting)) // US-T571: typed in, taken on Enter
+		{
+			cs::String name = cs::Cat("SettingText.", setting->Key);
+			bool editing = textEditing == textSetting;
+			GUI::SetNextControlName(name);
+			cs::String typed = GUI::TextField(Rect(cx, cy + 1, controlW, 26), editing ? textDraft : textSetting->Value, textSetting->MaxLength, field);
+			bool focused = GUI::GetNameOfFocusedControl() == name;
+			if (focused && !editing)
+			{
+				if (textEditing != nullptr) DropText();
+				textEditing = textSetting;
+				textDraft = typed;
+			}
+			else if (focused) textDraft = typed;
+			else if (editing) DropText();
 		}
 		else
 		{
