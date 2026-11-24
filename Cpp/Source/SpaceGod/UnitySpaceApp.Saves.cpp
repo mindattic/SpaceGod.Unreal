@@ -114,6 +114,8 @@ namespace SpaceGod
 			else ShowToast("No quicksave yet (F5 to quicksave)");
 		}
 		if (Input.ToggleSaves) ShowSaves = !ShowSaves;
+		// US-T606: a closed panel forgets its mode, so the saves key, its drawer tab and the pause menu open the combined panel.
+		if (!ShowSaves) SavesShownMode = SavesMode::Both;
 	}
 
 	cs::String UnitySpaceApp::SaveBlocker() const

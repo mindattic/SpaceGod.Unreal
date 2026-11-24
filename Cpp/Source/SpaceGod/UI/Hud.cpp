@@ -338,22 +338,27 @@ namespace SpaceGod::UI
 		savesCursorSlot = savesCursor >= 0 ? (*saveNames)[savesCursor] : cs::String(); // US-T398
 		bool loadKeyed = savesEnterKey;
 		savesEnterKey = false;
+		// US-T606: the panel's mode picks its title and buttons: Save offers New Save and overwrite, Load offers load and delete.
+		auto mode = app->SavesShownMode;
+		bool saving = mode != UnitySpaceApp::SavesMode::Load, loading = mode != UnitySpaceApp::SavesMode::Save;
 		auto r = Place(w, h); // US-T440: the saves' drawer (floating, centred)
-		GUI::Label(Rect(r.x + 12, r.y + 6, w - 60, 22), cs::Cat("SAVE & LOAD  ·  ", cs::Strings::ToUpperInvariant(ActiveProfile::Current()->Name)), title);
+		GUI::Label(Rect(r.x + 12, r.y + 6, w - 60, 22), cs::Cat(!loading ? "SAVE GAME  ·  " : !saving ? "LOAD GAME  ·  " : "SAVE & LOAD  ·  ",
+			cs::Strings::ToUpperInvariant(ActiveProfile::Current()->Name)), title);
 		if (GUI::Button(Rect(r.xMax() - 34, r.y + 6, 24, 22), "X", button)) app->ShowSaves = false;
 		auto old = GUI::contentColor;
 		GUI::contentColor = Dim;
 		cs::String blocked = app->SaveBlocker();
+		cs::String enterHint = loading ? "   Up / Down, Enter load   ·   " : "   Up / Down, Enter save   ·   ";
 		GUI::Label(Rect(r.x + 12, r.y + 30, w - 24, 18), !blocked.empty() ? blocked :
 			PlayerOptions::AutosaveSeconds() > 0 // US-T252: Settings > Gameplay > Autosave
-				? cs::Cat(SaveKeysHint(), "   Up / Down, Enter load   ·   autosaves every ", cs::Fmt(PlayerOptions::AutosaveSeconds() / 60.0f, "0"), " minutes and on quit") // US-T393
-				: cs::Cat(SaveKeysHint(), "   Up / Down, Enter load   ·   autosaves on quit (Settings > Gameplay)"), small);
+				? cs::Cat(SaveKeysHint(), enterHint, "autosaves every ", cs::Fmt(PlayerOptions::AutosaveSeconds() / 60.0f, "0"), " minutes and on quit") // US-T393
+				: cs::Cat(SaveKeysHint(), enterHint, "autosaves on quit (Settings > Gameplay)"), small);
 		GUI::contentColor = old;
 
 		bool enabled = GUI::enabled;
 		GUI::enabled = enabled && blocked.empty();
 		cs::String next = nextManualSlot;
-		if (GUI::Button(Rect(r.x + 8, r.y + 54, 160, 26), "New Save", buttonActive))
+		if (saving && GUI::Button(Rect(r.x + 8, r.y + 54, 160, 26), "New Save", buttonActive))
 		{
 			app->RequestSave(next, UnitySpaceApp::SlotName(next));
 			savesReadAt = -10.0f;
@@ -376,18 +381,18 @@ namespace SpaceGod::UI
 			GUI::Label(Rect(row0.x + 160, row0.y + 3, row0.width - 400, 18), line, small);
 			GUI::contentColor = old;
 			if (!blocked.empty()) continue;
-			if (!SaveSlots::IsAutosave(slot) && GUI::Button(Rect(row0.xMax() - 228, row0.y + 1, 70, 20), "Save", button))
+			if (saving && !SaveSlots::IsAutosave(slot) && GUI::Button(Rect(row0.xMax() - 228, row0.y + 1, 70, 20), "Save", button))
 			{
 				app->RequestSave(slot, hdr != nullptr ? hdr->Label : cs::String());
 				savesReadAt = -10.0f;
 				deleteArmed.clear();
 			}
-			if (hdr != nullptr && GUI::Button(Rect(row0.xMax() - 152, row0.y + 1, 70, 20), "Load", button))
+			if (loading && hdr != nullptr && GUI::Button(Rect(row0.xMax() - 152, row0.y + 1, 70, 20), "Load", button))
 			{
 				app->RequestLoad(slot);
 				deleteArmed.clear();
 			}
-			if (hdr != nullptr && GUI::Button(Rect(row0.xMax() - 76, row0.y + 1, 72, 20), deleteArmed == slot ? "Sure?" : "Delete", deleteArmed == slot ? buttonActive : button))
+			if (loading && hdr != nullptr && GUI::Button(Rect(row0.xMax() - 76, row0.y + 1, 72, 20), deleteArmed == slot ? "Sure?" : "Delete", deleteArmed == slot ? buttonActive : button))
 			{
 				if (deleteArmed == slot)
 				{
@@ -404,6 +409,17 @@ namespace SpaceGod::UI
 		{
 			cs::String keyedSlot = (*saveNames)[savesCursor];
 			if (!blocked.empty()) app->ShowToast(blocked);
+			else if (!loading) // US-T606: Save mode's Enter overwrites the slot under the cursor, as its Save button does
+			{
+				if (SaveSlots::IsAutosave(keyedSlot)) app->ShowToast(cs::Cat(UnitySpaceApp::SaveTitle(keyedSlot, saveHeaders[savesCursor]), " is an autosave: pick another slot"));
+				else
+				{
+					auto keyedHdr = saveHeaders[savesCursor];
+					app->RequestSave(keyedSlot, keyedHdr != nullptr ? keyedHdr->Label : cs::String());
+					savesReadAt = -10.0f;
+					deleteArmed.clear();
+				}
+			}
 			else if (saveHeaders[savesCursor] == nullptr) app->ShowToast(cs::Cat(UnitySpaceApp::SaveTitle(keyedSlot, nullptr), " is empty: nothing to load"));
 			else
 			{

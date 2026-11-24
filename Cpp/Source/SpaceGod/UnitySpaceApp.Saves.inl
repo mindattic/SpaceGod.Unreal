@@ -18,6 +18,18 @@ public:
 	/// <summary>The save and load panel (F6).</summary>
 	bool ShowSaves = false;
 
+	/// <summary>What the saves panel offers: Both (the saves key's panel), Save (new save and overwrite) or Load (load and delete).</summary>
+	enum class SavesMode { Both, Save, Load };
+
+	SavesMode SavesShownMode = SavesMode::Both;
+
+	/// <summary>Opens the saves panel in <paramref name="mode"/>.</summary>
+	void OpenSaves(SavesMode mode)
+	{
+		SavesShownMode = mode;
+		ShowSaves = true;
+	}
+
 	/// <summary>Real seconds between autosaves.</summary>
 	static constexpr float AutosaveIntervalS = 300.0f;
 
