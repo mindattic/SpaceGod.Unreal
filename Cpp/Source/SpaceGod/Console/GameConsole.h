@@ -9,6 +9,7 @@
 namespace SpaceGod::Core
 {
 	class ToggleSetting;
+	class ChoiceSetting;
 }
 
 namespace SpaceGod
@@ -18,6 +19,12 @@ namespace SpaceGod
 	public:
 		/// <summary>Developer: the ` key opens the console. On by default.</summary>
 		static const cs::Ref<Core::ToggleSetting>& Enabled();
+
+		/// <summary>Developer: the engine stat overlay shown in the viewport (Off, FPS, Unit, Unit graph).</summary>
+		static const cs::Ref<Core::ChoiceSetting>& StatsOverlay();
+
+		/// <summary>Developer: how much LogSpaceGod writes (Normal is the category's boot default).</summary>
+		static const cs::Ref<Core::ChoiceSetting>& LogVerbosity();
 
 		/// <summary>The engine's console (USpaceGodConsole) is showing, its input line or its scrollback.</summary>
 		static bool IsOpen();
