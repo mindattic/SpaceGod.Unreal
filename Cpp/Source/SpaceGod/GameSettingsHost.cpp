@@ -201,4 +201,14 @@ namespace SpaceGod
 		WriteShippedDefaults(file);
 		return unlocked;
 	}
+
+	bool GameSettingsHost::MovesDigests(const cs::String& key)
+	{
+		auto s = Registry()->Find(key);
+		if (s == nullptr) return true;
+		for (const char* g : { SettingGroups::Graphics, SettingGroups::RenderPipeline, SettingGroups::RenderBudget, SettingGroups::Controls,
+			SettingGroups::Audio, SettingGroups::Interface, SettingGroups::Multiplayer, SettingGroups::Developer })
+			if (s->Group == g) return false;
+		return true;
+	}
 }

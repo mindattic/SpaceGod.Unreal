@@ -28,18 +28,6 @@ namespace
 		return C(name);
 	}
 
-	/// Whether a setting under <paramref name="key"/> can move what the bench digests: anything outside the groups
-	/// that only change how the game looks, sounds or is driven.
-	bool Simulated(const cs::String& key)
-	{
-		auto s = GameSettingsHost::Registry()->Find(key);
-		if (s == nullptr) return true;
-		for (const char* g : { SettingGroups::Graphics, SettingGroups::RenderPipeline, SettingGroups::RenderBudget, SettingGroups::Controls,
-			SettingGroups::Audio, SettingGroups::Interface, SettingGroups::Multiplayer, SettingGroups::Developer })
-			if (s->Group == g) return false;
-		return true;
-	}
-
 	void Report(const TCHAR* verb, const cs::List<cs::String>& keys)
 	{
 		bool simulated = false;
@@ -49,7 +37,7 @@ namespace
 			cs::String text;
 			file.TryGetValue(key, text);
 			UE_LOG(LogSpaceGod, Display, TEXT("sg.Settings: %s %s%s"), verb, *T(key), text.empty() ? TEXT("") : *FString::Printf(TEXT(" = %s"), *T(text)));
-			simulated |= Simulated(key);
+			simulated |= GameSettingsHost::MovesDigests(key);
 		}
 		UE_LOG(LogSpaceGod, Display, TEXT("sg.Settings: %d setting(s) %s in %s"), keys.Count(), verb, *T(GameSettingsHost::ShippedDefaultsPath()));
 		if (simulated)

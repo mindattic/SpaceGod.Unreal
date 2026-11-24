@@ -9,14 +9,80 @@
 #include "Settings/GameSetting.h"
 #include "Settings/SettingsRegistry.h"
 #include "Settings/Tuning.h"
+#include "UI/UiInput.h"
 
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
+
+#include <exception>
+#include <optional>
 
 using namespace SpaceGod::Core;
 
 namespace SpaceGod::UI
 {
+	namespace
+	{
+		/// US-T518: a lock-in or unlock asked for and waiting on the confirm line, and what the last one did.
+		struct LockAsk
+		{
+			bool unlock = false;
+			cs::List<cs::String> targets; // each a group, a key, or empty for every setting
+			cs::String question;
+		};
+		std::optional<LockAsk> asked;
+		cs::String lockNotice;
+
+		const char* BenchReminder = "  Simulation values moved: the bench digests move with them, so re-record Bench/expected-digests.json.";
+
+		bool AnyMovesDigests(const cs::List<cs::Ref<GameSetting>>& settings)
+		{
+			for (const auto& s : settings)
+				if (GameSettingsHost::MovesDigests(s->Key)) return true;
+			return false;
+		}
+
+		/// Asks to lock in what of <paramref name="settings"/> is changed (<paramref name="targets"/> names them to LockIn).
+		void AskLockIn(const cs::List<cs::Ref<GameSetting>>& settings, const cs::List<cs::String>& targets, const cs::String& where)
+		{
+			cs::List<cs::Ref<GameSetting>> changed;
+			for (const auto& s : settings)
+				if (!s->IsDefault()) changed.Add(s);
+			if (changed.Count() == 0) return;
+			lockNotice = "";
+			asked = LockAsk{ false, targets, cs::Cat("Lock in ", changed.Count(), changed.Count() == 1 ? " change" : " changes", " ", where,
+				" as the shipped defaults (", GameSettingsHost::ShippedDefaultsPath(), ")?", AnyMovesDigests(changed) ? BenchReminder : "") };
+		}
+
+		void AskUnlock(const cs::Ref<GameSetting>& setting)
+		{
+			lockNotice = "";
+			asked = LockAsk{ true, { setting->Key }, cs::Cat("Unlock ", setting->Label, ", back to its factory default?",
+				GameSettingsHost::MovesDigests(setting->Key) ? BenchReminder : "") };
+		}
+
+		void AnswerLock(bool yes)
+		{
+			if (!asked.has_value()) return;
+			LockAsk ask = *asked;
+			asked.reset();
+			if (!yes) return;
+			try
+			{
+				cs::List<cs::String> done;
+				for (const auto& t : ask.targets)
+					for (const auto& key : ask.unlock ? GameSettingsHost::Unlock(t) : GameSettingsHost::LockIn(t)) done.Add(key);
+				bool moves = false;
+				for (const auto& key : done) moves |= GameSettingsHost::MovesDigests(key);
+				lockNotice = cs::Cat(done.Count(), done.Count() == 1 ? " setting " : " settings ", ask.unlock ? "unlocked." : "locked in.", moves ? BenchReminder : "");
+			}
+			catch (const std::exception& e)
+			{
+				lockNotice = cs::Cat("Nothing written: ", e.what());
+			}
+		}
+	}
+
 	bool PauseMenu::DeveloperShown()
 	{
 #if UE_BUILD_SHIPPING
@@ -51,6 +117,8 @@ namespace SpaceGod::UI
 		auto groups = DeveloperGroups();
 		ShowGroup(groups.Count() > 0 ? groups[0] : cs::String());
 		navScroll = Vector2::zero();
+		asked.reset();
+		lockNotice = "";
 		page = Page::Developer;
 	}
 
@@ -78,7 +146,7 @@ namespace SpaceGod::UI
 		bool searching = !cs::Strings::IsNullOrWhiteSpace(search);
 
 		const float navW = 220, step = 34;
-		float top = r.y + 70, bottom = r.yMax() - 56;
+		float top = r.y + 70, bottom = r.yMax() - 92;
 		{
 			auto navView = Rect(r.x + 20, top, navW, bottom - top);
 			float navH = groups.Count() * step;
@@ -123,26 +191,72 @@ namespace SpaceGod::UI
 			DrawSetting(shown[i], Rect(0, y, content.width, SettingRowH), searching);
 			const char* mark = !shown[i]->IsDefault() ? "changed" : registry->IsLockedIn(shown[i]->Key) ? "locked in" : nullptr;
 			if (mark != nullptr) GUI::Label(Rect(textW - markW, y + 4, markW, 20), mark, small);
+			if (registry->IsLockedIn(shown[i]->Key) && GUI::Button(Rect(textW - markW - 76, y + 2, 70, 24), "Unlock", button)) // US-T518
+				AskUnlock(shown[i]);
 		}
 		if (shown.Count() == 0)
 			GUI::Label(Rect(4, 4, content.width - 8, 40), searching ? "No setting matches that." : "No system has declared a setting yet.", small);
 		GUI::EndScrollView();
 
-		float by = r.yMax() - 46;
+		float ay = r.yMax() - 82, by = r.yMax() - 46;
 		cs::List<cs::Ref<GameSetting>> resettable;
+		cs::List<cs::String> resettableKeys;
 		for (const auto& s : shown)
-			if (!s->IsDefault()) resettable.Add(s);
+			if (!s->IsDefault())
+			{
+				resettable.Add(s);
+				resettableKeys.Add(s->Key);
+			}
+		bool anyChanged = false;
+		for (const auto& s : registry->All()) anyChanged |= !s->IsDefault();
+		auto lockShown = [&]
+		{
+			if (searching) AskLockIn(shown, resettableKeys, "found by the search");
+			else AskLockIn(shown, { group }, cs::Cat("in ", group));
+		};
+		auto lockAll = [&] { AskLockIn(registry->All(), { cs::String() }, "on every tab, the player's included"); };
+
 		bool enabled = GUI::enabled;
 		GUI::enabled = enabled && resettable.Count() > 0;
-		if (GUI::Button(Rect(px, by, 220, 30), searching ? cs::String("Reset these") : cs::Cat("Reset ", group), button))
+		if (GUI::Button(Rect(px, ay, 220, 30), searching ? cs::String("Reset these") : cs::Cat("Reset ", group), button))
 			for (const auto& s : resettable) s->Reset();
+		if (GUI::Button(Rect(px + 230, ay, 220, 30), searching ? cs::String("Lock in these") : cs::String("Lock in this group"), button)) lockShown(); // US-T518
+		GUI::enabled = enabled && anyChanged;
+		if (GUI::Button(Rect(px + 460, ay, 220, 30), "Lock in all changes", button)) lockAll();
 		GUI::enabled = enabled;
-		GUI::Label(Rect(px + 230, by + 6, r.xMax() - 20 - 110 - 10 - (px + 230), 18),
-			"Up / Down pick  ·  Left / Right change  ·  Enter flips  ·  Del resets  ·  PgUp / PgDn group  ·  Ctrl+F search", small);
+
+		float lineW = r.xMax() - 20 - 110 - 10 - px;
+		if (asked.has_value())
+		{
+			GUI::Label(Rect(px, by - 2, lineW - 190, 36), asked->question, small);
+			if (GUI::Button(Rect(px + lineW - 180, by, 85, 30), "Yes (Y)", button)) AnswerLock(true);
+			if (GUI::Button(Rect(px + lineW - 90, by, 85, 30), "No (N)", button)) AnswerLock(false);
+		}
+		else
+			GUI::Label(Rect(px, by + (lockNotice.empty() ? 6 : -2), lineW, lockNotice.empty() ? 18 : 36), !lockNotice.empty() ? lockNotice
+				: cs::String("Up / Down pick  ·  Left / Right change  ·  Enter flips  ·  Del resets  ·  L locks in, Shift+L all  ·  U unlocks  ·  PgUp / PgDn group  ·  Ctrl+F search"), small);
 		if (GUI::Button(Rect(r.xMax() - 20 - 110, by, 110, 30), "Back", button))
 		{
+			asked.reset();
 			search = "";
 			Back();
 		}
+
+		// US-T518: the lock-in keys, once a frame, never while a field is typed in (Settings' own keys are SettingsKeys).
+		if (Event::current().type != EventType::Repaint || !UiInput::present() || textEditing != nullptr || GUI::GetNameOfFocusedControl() == "SettingsSearch") return;
+		auto pressed = [](KeyCode k) { return UiInput::WasPressedThisFrame(k); };
+		if (asked.has_value())
+		{
+			if (pressed(KeyCode::Y)) AnswerLock(true);
+			else if (pressed(KeyCode::N)) AnswerLock(false);
+			return;
+		}
+		if (pressed(KeyCode::L))
+		{
+			if (UiInput::IsPressed(KeyCode::LeftShift) || UiInput::IsPressed(KeyCode::RightShift)) lockAll();
+			else lockShown();
+		}
+		else if (pressed(KeyCode::U) && settingsPick >= 0 && settingsPick < shown.Count() && registry->IsLockedIn(shown[settingsPick]->Key))
+			AskUnlock(shown[settingsPick]);
 	}
 }

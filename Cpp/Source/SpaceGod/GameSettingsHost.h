@@ -41,6 +41,10 @@ namespace SpaceGod
 		/// back to their factory defaults. Returns the keys unlocked.
 		static cs::List<cs::String> Unlock(const cs::String& groupOrKey);
 
+		/// Whether a setting under <paramref name="key"/> can move what the bench digests when its default moves: anything
+		/// outside the groups that only change how the game looks, sounds or is driven (and a key no setting declares).
+		static bool MovesDigests(const cs::String& key);
+
 	private:
 		static void RegisterRuntimeSources();
 		static cs::List<cs::Ref<Core::GameSetting>> Select(const cs::String& groupOrKey);
