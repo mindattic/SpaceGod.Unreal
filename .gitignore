@@ -13,6 +13,12 @@ DerivedDataCache/
 
 __pycache__/
 
+# Build output left on older checkouts by the removed capture host and vendored MindAttic.Capture (US-T693).
+Capture/**/bin/
+Capture/**/obj/
+Vendor/**/bin/
+Vendor/**/obj/
+
 # Packaged games (tools/package.ps1).
 Builds/
 # Written by the cooker on every package.

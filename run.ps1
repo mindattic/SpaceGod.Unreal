@@ -7,6 +7,8 @@
 .DESCRIPTION
     1. git pull --rebase --autostash (skipped with -NoPull; a failed pull deploys the commit checked out).
     2. Skips the rest when the deployed commit already matches every game source (Cpp, Shared; -Force rebuilds).
+       The capture agent and plugin come from the sibling MindAttic.Media.Capture checkout, which this check does not
+       see: pass -Force after updating it.
     3. Stops any running copy of the game.
     4. tools\package.ps1 -Configuration Shipping -> Builds\Cpp\Windows\SpaceGod.exe.
     5. Copies Builds\Cpp\Windows\* -> C:\Apps\SpaceGod\ and records the commit.
