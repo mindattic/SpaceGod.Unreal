@@ -1,11 +1,12 @@
 #include "AccessibilityOptions.h"
 
+// Before the engine's headers: UnityMath.h (through PlayerOptions.h) declares a member the engine's PI macro would rewrite.
+#include "PlayerOptions.h"
+#include "Settings/GameSetting.h"
+
 #include "Framework/Application/SlateApplication.h"
 #include "Rendering/RenderingCommon.h"
 #include "Rendering/SlateRenderer.h"
-
-#include "PlayerOptions.h"
-#include "Settings/GameSetting.h"
 
 using namespace SpaceGod::Core;
 
@@ -17,6 +18,9 @@ namespace SpaceGod
 		int mode = 0;
 		int strength = 100;
 		bool correct = true;
+		int captions = 0;
+		int captionSize = 1;
+		int captionBackground = 60;
 
 		/// Hands the filter to Slate's renderer, which runs its pass over the back buffer only while a deficiency is chosen.
 		void Apply()
@@ -76,8 +80,55 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ChoiceSetting>& AccessibilityOptions::Captions()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("access.captions", PlayerOptions::Accessibility,
+			"Captions", cs::List<cs::String>{ "Off", "Comms", "Comms and sounds" }, 0,
+			"Shows what is said over comms as captions; with sounds, the interface's alerts (a hail, a contract, credits) too.",
+			"captions subtitles deaf hearing comms sounds alerts text")
+			->Applying([](int i) { captions = i; });
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& AccessibilityOptions::CaptionSize()
+	{
+		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("access.captionSize", PlayerOptions::Accessibility,
+			"Caption size", cs::List<cs::String>{ "Small", "Medium", "Large" }, 1,
+			"How large captions are drawn.",
+			"captions subtitles size text font large")
+			->Applying([](int i) { captionSize = i; });
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& AccessibilityOptions::CaptionBackground()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("access.captionBackground", PlayerOptions::Accessibility,
+			"Caption background", 60, 0, 100, 10,
+			"How dark the box behind captions is (0% draws no box).",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "%"); }),
+			"captions subtitles background box opacity contrast")
+			->Applying([](double v) { captionBackground = cs::ToInt(cs::Math::Round(v)); });
+		return value;
+	}
+
+	AccessibilityOptions::CaptionLevel AccessibilityOptions::CaptionsShown()
+	{
+		return PlayerOptions::ScriptedRun() ? CaptionLevel::Off : static_cast<CaptionLevel>(cs::Math::Max(0, cs::Math::Min(2, captions)));
+	}
+
+	AccessibilityOptions::CaptionScale AccessibilityOptions::CaptionsScale()
+	{
+		return PlayerOptions::ScriptedRun() ? CaptionScale::Medium : static_cast<CaptionScale>(cs::Math::Max(0, cs::Math::Min(2, captionSize)));
+	}
+
+	float AccessibilityOptions::CaptionsBackdrop()
+	{
+		return (PlayerOptions::ScriptedRun() ? 60 : cs::Math::Max(0, cs::Math::Min(100, captionBackground))) / 100.0f;
+	}
+
 	void AccessibilityOptions::Declare()
 	{
 		ColorBlindMode(); ColorBlindStrength(); ColorBlindCorrect();
+		Captions(); CaptionSize(); CaptionBackground();
 	}
 }

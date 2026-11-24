@@ -1,4 +1,5 @@
 #include "Audio/InterfaceSounds.h"
+#include "Audio/Captions.h"
 #include "Audio/GameAudio.h"
 #include "Audio/SynthSound.h"
 #include "PlayerOptions.h"
@@ -208,6 +209,13 @@ namespace SpaceGod::Audio::InterfaceSounds
 
 		void Play(const SoundClip& clip, float volume = 1.0f) { GameAudio::Play2D(clip, AudioBus::Interface, volume); }
 
+		/// An alert: played, and captioned when Captions takes sounds (US-T636).
+		void Alert(const SoundClip& clip, float volume, const char* caption)
+		{
+			Play(clip, volume);
+			Captions::Raise(Captions::CaptionKind::Sound, cs::String(), caption);
+		}
+
 		// ---------------------------------------------------------------- the GUI's buttons and toggles
 
 		double lastHoverAt = 0;
@@ -282,11 +290,12 @@ namespace SpaceGod::Audio::InterfaceSounds
 	void SaveDone()
 	{
 		savedSincePoll = true;
-		Play(StarterSounds::Chime(), 0.6f);
+		Alert(StarterSounds::Chime(), 0.6f, "[Saved chime]");
 	}
 
 	void Poll(UnitySpaceApp* app)
 	{
+		Captions::Poll(app);
 		const bool saved = savedSincePoll;
 		savedSincePoll = false;
 		if (app == nullptr || app->Galaxy == nullptr || app->ActiveSystem == nullptr || !GameAudio::Enabled())
@@ -346,7 +355,7 @@ namespace SpaceGod::Audio::InterfaceSounds
 		const bool hailToast = newToast && app->Toast.rfind("INCOMING HAIL", 0) == 0;
 		if ((hail != nullptr && hail != seen.hail) || hailToast)
 		{
-			Play(Hail(), 0.8f);
+			Alert(Hail(), 0.8f, "[Incoming hail]");
 			specific = true;
 		}
 		seen.hail = hail;
@@ -363,9 +372,9 @@ namespace SpaceGod::Audio::InterfaceSounds
 				else if (state == ContractState::Completed) done++;
 				else if (state == ContractState::Failed || state == ContractState::Abandoned) failed++;
 			}
-			if (done > 0) Play(ContractCompleted(), 0.75f);
-			else if (failed > 0) Play(ContractFailed(), 0.7f);
-			else if (taken > 0) Play(ContractAccepted(), 0.7f);
+			if (done > 0) Alert(ContractCompleted(), 0.75f, "[Contract completed fanfare]");
+			else if (failed > 0) Alert(ContractFailed(), 0.7f, "[Contract failed tone]");
+			else if (taken > 0) Alert(ContractAccepted(), 0.7f, "[Contract accepted chime]");
 			if (done + failed + taken > 0) specific = true;
 			seen.contracts = std::move(contracts);
 		}
@@ -377,7 +386,11 @@ namespace SpaceGod::Audio::InterfaceSounds
 			const double nowS = FPlatformTime::Seconds();
 			if (std::abs(delta) >= 1.0 && nowS - seen.creditsAt >= 0.35)
 			{
-				if (!specific) Play(delta > 0 ? CreditsGained() : CreditsSpent(), 0.55f);
+				if (!specific)
+				{
+					if (delta > 0) Alert(CreditsGained(), 0.55f, "[Credits gained]");
+					else Alert(CreditsSpent(), 0.55f, "[Credits spent]");
+				}
 				seen.creditsAt = nowS;
 				seen.purse = purse;
 				specific = true;
@@ -406,7 +419,7 @@ namespace SpaceGod::Audio::InterfaceSounds
 		// A toast (when nothing above already spoke for it).
 		if (newToast && !app->Toast.empty() && !specific)
 		{
-			Play(Toast(), 0.6f);
+			Alert(Toast(), 0.6f, "[Alert chime]");
 			specific = true;
 		}
 		seen.toast = app->Toast;
@@ -415,7 +428,7 @@ namespace SpaceGod::Audio::InterfaceSounds
 		// A news report the ticker shows.
 		if (events.Count() > 0 && (events.Count() != seen.newsCount || events[events.Count() - 1].Text != seen.newsLast))
 		{
-			if (!specific && ShownInTicker(events[events.Count() - 1].Kind)) Play(News(), 0.45f);
+			if (!specific && ShownInTicker(events[events.Count() - 1].Kind)) Alert(News(), 0.45f, "[News chime]");
 		}
 		seen.newsCount = events.Count();
 		seen.newsLast = events.Count() > 0 ? events[events.Count() - 1].Text : cs::String();
