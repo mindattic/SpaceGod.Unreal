@@ -1009,6 +1009,7 @@ namespace SpaceGod
 			GalaxyRebuilt.Invoke();
 		}
 		ShowToast("Time reset to now");
+		RewindAfterLoad(); // US-T504: a reset is not replayed, so it starts a new timeline as a load does (no keyframes of the old galaxy, no years of session time)
 	}
 
 	void UnitySpaceApp::RefreshCharts()
