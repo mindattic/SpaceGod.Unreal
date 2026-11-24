@@ -63,26 +63,33 @@ namespace SpaceGod::Core
 		/// system lists them.</summary>
 		int Monitor = 0;
 
+		/// <summary>US-T610: the refresh rate exclusive fullscreen switches the screen to, in whole Hz; 0 (Highest) the
+		/// highest the size offers.</summary>
+		int RefreshHz = 0;
+
 		DisplaySettings() = default;
-		DisplaySettings(int width, int height, DisplayMode mode, bool vSync, int monitor = 0)
+		DisplaySettings(int width, int height, DisplayMode mode, bool vSync, int monitor = 0, int refreshHz = 0)
 		{
 			Width = width;
 			Height = height;
 			Mode = mode;
 			VSync = vSync;
 			Monitor = monitor;
+			RefreshHz = refreshHz;
 		}
 
-		DisplaySettings WithSize(int width, int height) const { return DisplaySettings(width, height, Mode, VSync, Monitor); }
-		DisplaySettings WithMode(DisplayMode mode) const { return DisplaySettings(Width, Height, mode, VSync, Monitor); }
-		DisplaySettings WithVSync(bool vSync) const { return DisplaySettings(Width, Height, Mode, vSync, Monitor); }
-		DisplaySettings WithMonitor(int monitor) const { return DisplaySettings(Width, Height, Mode, VSync, monitor); }
+		DisplaySettings WithSize(int width, int height) const { return DisplaySettings(width, height, Mode, VSync, Monitor, RefreshHz); }
+		DisplaySettings WithMode(DisplayMode mode) const { return DisplaySettings(Width, Height, mode, VSync, Monitor, RefreshHz); }
+		DisplaySettings WithVSync(bool vSync) const { return DisplaySettings(Width, Height, Mode, vSync, Monitor, RefreshHz); }
+		DisplaySettings WithMonitor(int monitor) const { return DisplaySettings(Width, Height, Mode, VSync, monitor, RefreshHz); }
+		DisplaySettings WithRefreshHz(int refreshHz) const { return DisplaySettings(Width, Height, Mode, VSync, Monitor, refreshHz); }
 
 		/// <summary>What the menu calls each mode.</summary>
 		static cs::String ModeName(DisplayMode mode);
 
 		/// <summary>How the settings are remembered between runs: "1920x1080;Borderless;vsync" (or "novsync"), with
-		/// ";monitor=N" after it for any monitor but the primary (US-T546).</summary>
+		/// ";monitor=N" after it for any monitor but the primary (US-T546), then ";hz=N" for any refresh rate but
+		/// Highest (US-T610).</summary>
 		cs::String Format() const;
 
 		/// <summary>Reads back what <see cref="Format"/> wrote; false (and nothing applied) for anything else, such as an
@@ -134,7 +141,7 @@ namespace SpaceGod::Core
 		/// that the one closest to it in pixel count (-1 for an empty list): what the menu starts with picked.</summary>
 		static int IndexOfNearest(const cs::List<DisplayResolution>& list, int width, int height);
 
-		bool Equals(const DisplaySettings& other) const { return Width == other.Width && Height == other.Height && Mode == other.Mode && VSync == other.VSync && Monitor == other.Monitor; }
+		bool Equals(const DisplaySettings& other) const { return Width == other.Width && Height == other.Height && Mode == other.Mode && VSync == other.VSync && Monitor == other.Monitor && RefreshHz == other.RefreshHz; }
 		size_t HashCode() const;
 		bool operator==(const DisplaySettings& b) const { return Equals(b); }
 		bool operator!=(const DisplaySettings& b) const { return !Equals(b); }

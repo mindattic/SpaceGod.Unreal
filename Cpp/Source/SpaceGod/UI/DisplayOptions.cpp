@@ -34,7 +34,7 @@ namespace SpaceGod::UI
 		DisplayBackend::MoveToMonitor(settings.Monitor, settings.Width, settings.Height);
 		auto mode = ToUnity(settings.Mode);
 		DisplayBackend::Resolution best;
-		if (settings.Mode == DisplayMode::Exclusive && TryFindMode(settings.Monitor, settings.Width, settings.Height, best))
+		if (settings.Mode == DisplayMode::Exclusive && TryFindMode(settings.Monitor, settings.Width, settings.Height, settings.RefreshHz, best))
 			DisplayBackend::SetResolution(settings.Width, settings.Height, mode, best.refreshRateHz);
 		else
 			DisplayBackend::SetResolution(settings.Width, settings.Height, mode);
@@ -67,16 +67,34 @@ namespace SpaceGod::UI
 
 	cs::List<cs::String> DisplayOptions::Monitors() { return DisplayBackend::Monitors(); }
 
-	bool DisplayOptions::TryFindMode(int monitor, int width, int height, DisplayBackend::Resolution& best)
+	cs::List<int> DisplayOptions::RefreshRates(int monitor, int width, int height)
 	{
-		best = DisplayBackend::Resolution();
-		bool found = false;
+		cs::List<int> rates;
 		for (const auto& r : DisplayBackend::Resolutions(monitor))
-			if (r.width == width && r.height == height && (!found || r.refreshRateHz > best.refreshRateHz))
+		{
+			int hz = Mathf::RoundToInt(static_cast<float>(r.refreshRateHz));
+			if (r.width == width && r.height == height && hz > 0 && !rates.Contains(hz)) rates.Add(hz);
+		}
+		rates.Sort([](int a, int b) { return a > b ? -1 : (a < b ? 1 : 0); });
+		return rates;
+	}
+
+	bool DisplayOptions::TryFindMode(int monitor, int width, int height, int refreshHz, DisplayBackend::Resolution& best)
+	{
+		// The size's best mode at the chosen rate (59.94 and 60 both count as 60), else its best mode at any rate.
+		best = DisplayBackend::Resolution();
+		bool found = false, foundRate = false;
+		for (const auto& r : DisplayBackend::Resolutions(monitor))
+		{
+			if (r.width != width || r.height != height) continue;
+			bool atRate = refreshHz > 0 && Mathf::RoundToInt(static_cast<float>(r.refreshRateHz)) == refreshHz;
+			if (!found || (atRate && !foundRate) || (atRate == foundRate && r.refreshRateHz > best.refreshRateHz))
 			{
 				best = r;
 				found = true;
+				foundRate = atRate;
 			}
+		}
 		return found;
 	}
 

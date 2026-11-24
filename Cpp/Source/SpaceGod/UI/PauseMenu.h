@@ -115,7 +115,7 @@ namespace SpaceGod::UI
 		cs::String textDraft, textRefusedKey, textRefused;
 
 		/// The words that find the Display page in a search, as the registry's settings are found by theirs.
-		static constexpr const char* DisplaySearchWords = "display graphics resolution screen window mode borderless fullscreen exclusive vsync aspect ratio ultrawide";
+		static constexpr const char* DisplaySearchWords = "display graphics resolution screen window mode borderless fullscreen exclusive vsync aspect ratio ultrawide refresh hz";
 
 		bool stylesReady = false;
 		cs::Ref<GUIStyle> panel, title, text, small, button, buttonActive, row, rowSelected, countdown, field, label;

@@ -903,13 +903,13 @@ namespace SpaceGod::UI
 	void PauseMenu::DrawDisplay()
 	{
 		// US-T545: wider and taller for the Display group's own rows under the Apply block (they scroll in a small window).
-		const float w = 680, rowsTop = 446;
-		float h = Mathf::Max(456.0f, Mathf::Min(rowsTop + 4 * SettingRowH + 56, Screen::height - 40.0f));
+		const float w = 680, rowsTop = 504;
+		float h = Mathf::Max(514.0f, Mathf::Min(rowsTop + 4 * SettingRowH + 56, Screen::height - 40.0f));
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
 		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "DISPLAY", title);
 		GUI::Label(Rect(r.x + 20, r.y + 38, w - 40, 18),
-			cs::Cat("Size, mode, VSync and monitor wait for Apply; the rows below take effect at once  ·  now: ", DisplayOptions::Current.ToString()), small);
+			cs::Cat("Size, mode, VSync, monitor and refresh rate wait for Apply; the rows below take effect at once  ·  now: ", DisplayOptions::Current.ToString()), small);
 
 		// Aspect ratio first (U.SPC-T284): it narrows the resolution list below to widescreen, ultrawide and so on.
 		GUI::Label(Rect(r.x + 20, r.y + 64, 120, 20), "Aspect ratio", text);
@@ -970,10 +970,21 @@ namespace SpaceGod::UI
 		}
 		GUI::enabled = enabledBefore;
 
-		if (!notice.empty()) GUI::Label(Rect(x, vy + 124, cw, 40), notice, small);
+		// US-T610: the refresh rate exclusive fullscreen switches to, cycled: Highest, then the size's rates from the top.
+		GUI::Label(Rect(x, vy + 124, cw, 20), "Refresh rate", text);
+		auto rates = DisplayOptions::RefreshRates(pending.Monitor, pending.Width, pending.Height);
+		int rateIndex = rates.IndexOf(pending.RefreshHz);
+		cs::String rateLabel = rateIndex >= 0 ? cs::Cat(rates[rateIndex], " Hz")
+			: rates.Count() > 0 ? cs::Cat("Highest (", rates[0], " Hz)") : cs::String("Highest");
+		GUI::enabled = enabledBefore && pending.Mode == DisplayMode::Exclusive && rates.Count() > 1;
+		if (GUI::Button(Rect(x, vy + 148, cw, 28), rateLabel, button))
+			pending = pending.WithRefreshHz(rateIndex + 1 < rates.Count() ? rates[rateIndex + 1] : 0);
+		GUI::enabled = enabledBefore;
+
+		if (!notice.empty()) GUI::Label(Rect(x, vy + 182, cw, 40), notice, small);
 		// A size the screen does not list itself can be a window or a borderless window, not a mode to switch the screen to.
 		else if (pending.Mode == DisplayMode::Exclusive && !allResolutions.Exists([this](const DisplayResolution& m) { return m.SameSize(pending.Width, pending.Height) && m.RefreshHz > 0; }))
-			GUI::Label(Rect(x, vy + 124, cw, 40), "The screen does not offer this size as a mode: borderless windowed will show it", small);
+			GUI::Label(Rect(x, vy + 182, cw, 40), "The screen does not offer this size as a mode: borderless windowed will show it", small);
 
 		// US-T545: brightness, HDR, its peak and the background frame cap, live like any setting.
 		float listBottom = r.yMax() - 56;

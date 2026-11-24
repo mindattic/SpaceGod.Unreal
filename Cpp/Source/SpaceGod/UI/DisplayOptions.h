@@ -86,7 +86,8 @@ namespace SpaceGod::UI
 		/// keeps that screen and takes only the remembered VSync.
 		static void ApplySaved();
 
-		/// Puts <paramref name="settings"/> on the screen (exclusive fullscreen at the size's best refresh rate).
+		/// Puts <paramref name="settings"/> on the screen (exclusive fullscreen at the chosen refresh rate, or the size's best
+		/// when it is Highest or the size does not offer it).
 		static void Apply(Core::DisplaySettings settings);
 
 		/// Remembers <see cref="Current"/> in the player's profile for the next run (the player kept it).
@@ -100,8 +101,12 @@ namespace SpaceGod::UI
 		/// US-T546: the monitors the Display page offers, the primary one first (empty headless).
 		static cs::List<cs::String> Monitors();
 
+		/// US-T610: the refresh rates, in whole Hz, `monitor` offers `width` x `height` at, highest first (empty when it
+		/// does not list that size as a mode).
+		static cs::List<int> RefreshRates(int monitor, int width, int height);
+
 	private:
-		static bool TryFindMode(int monitor, int width, int height, DisplayBackend::Resolution& best);
+		static bool TryFindMode(int monitor, int width, int height, int refreshHz, DisplayBackend::Resolution& best);
 
 		static Core::DisplaySettings FromScreen();
 
