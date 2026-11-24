@@ -15,6 +15,7 @@ namespace SpaceGod::Voice
 			/// Answered by TtsService (an invalid clip when it could not be spoken).
 			bool Answered = false;
 			Audio::SoundClip Clip;
+			float Volume = 1.0f;
 		};
 
 		/// Game thread only.
@@ -54,6 +55,7 @@ namespace SpaceGod::Voice
 		}
 		TtsRequest request { MoveTemp(line.Text), MoveTemp(line.Voice), line.Priority, line.Radio };
 		QueuedLine& waiting = s.Lines.AddDefaulted_GetRef();
+		waiting.Volume = line.Volume;
 		waiting.Id = TtsService::Request(MoveTemp(request), [](TtsId id, const Audio::SoundClip& clip)
 		{
 			if (QueuedLine* answered = FindLine(id))
@@ -63,6 +65,12 @@ namespace SpaceGod::Voice
 			}
 		});
 		if (!waiting.Id) waiting.Answered = true;
+	}
+
+	void CommsVoice::Prefetch(const SpokenLine& line)
+	{
+		if (!Audio::GameAudio::Enabled() || line.Text.empty()) return;
+		TtsService::Prefetch({ line.Text, line.Voice, line.Priority, line.Radio });
 	}
 
 	void CommsVoice::Tick()
@@ -83,11 +91,12 @@ namespace SpaceGod::Voice
 			if (!front.Answered && now - s.TurnSince < ReadyWithin) return;
 			if (!front.Answered) TtsService::Cancel(front.Id);
 			const Audio::SoundClip clip = front.Answered ? front.Clip : Audio::SoundClip();
+			const float volume = front.Volume;
 			s.Lines.RemoveAt(0);
 			s.TurnSince = 0;
 			if (clip.IsValid())
 			{
-				Audio::GameAudio::Play2D(clip, Audio::AudioBus::Voice);
+				Audio::GameAudio::Play2D(clip, Audio::AudioBus::Voice, volume);
 				s.BusyUntil = now + clip.Seconds() + Gap;
 				return;
 			}

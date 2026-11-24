@@ -66,6 +66,14 @@ private:
 	cs::Ref<Core::Battle> commsHeldBattle;
 	bool commsBetrayalNoted = false;
 	cs::Ref<Core::BattleUnit> commsHailNoted;
+	/// <summary>US-T594: the surrender hail's line, prefetched when noted and read aloud once the panel first shows it.</summary>
+	Core::CommsLine commsHailLine;
+	bool commsHailSpoken = true;
+
+	/// <summary>US-T594: reads <paramref name="lines"/> aloud through Voice::CommsVoice, <paramref name="them"/> (of
+	/// <paramref name="faction"/>) answering the unit held; <paramref name="prefetch"/> only synthesizes them ahead.</summary>
+	void SpeakComms(const cs::List<Core::CommsLine>& lines, const Core::CommsContext& c, const Core::CommsParty& them,
+		const cs::Ref<Core::Faction>& faction, bool prefetch = false);
 
 	bool commsStylesReady = false;
 	cs::Ref<GUIStyle> commsPanel, commsTitle, commsText, commsSmall, commsRowStyle, commsRowPicked, commsButton, commsThem, commsUs, commsHint;

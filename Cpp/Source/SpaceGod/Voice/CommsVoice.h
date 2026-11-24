@@ -18,6 +18,8 @@ namespace SpaceGod::Voice
 		int Priority = 0;
 		/// Whether the radio sound is put on it.
 		bool Radio = true;
+		/// Played at this volume on the Voice bus (US-T594: the player's own lines quieter).
+		float Volume = 1.0f;
 	};
 
 	/// Comms read aloud (US-T589; design in US-T574): lines are synthesized through TtsService as they are queued and
@@ -29,6 +31,8 @@ namespace SpaceGod::Voice
 	public:
 		/// Queues a line; when Capacity lines wait already, the oldest that has not started is dropped.
 		static void Speak(SpokenLine line);
+		/// Synthesizes a line ahead of its Speak into the voice cache (TtsService::Prefetch), so it is ready when its turn comes.
+		static void Prefetch(const SpokenLine& line);
 		/// Game thread, every frame, after TtsService::Tick: starts the next line when the one playing has ended.
 		static void Tick();
 		/// Drops every waiting line (a scene change); the one playing ends on its own.

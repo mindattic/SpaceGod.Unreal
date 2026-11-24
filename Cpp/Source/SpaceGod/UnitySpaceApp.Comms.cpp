@@ -27,6 +27,7 @@
 #include "SimClock.h"
 #include "UI/Hud.h"
 #include "UI/UiMotion.h" // US-T255
+#include "Voice/CommsVoice.h" // US-T594
 #include "World.h"
 
 #include <algorithm>
@@ -38,6 +39,8 @@ namespace SpaceGod
 	namespace
 	{
 		constexpr int CommsLogKept = 40;
+		/// US-T594: the unit held's own lines, heard in the cabin rather than over the radio.
+		constexpr float OwnLineVolume = 0.6f;
 
 		Color StanceColor(CommsStance s)
 		{
@@ -192,6 +195,7 @@ namespace SpaceGod
 		{
 			auto r = Comms::Say(c, commsTarget, verb);
 			for (const auto& l : r.Lines) commsLog.Add(l);
+			SpeakComms(r.Lines, c, commsTarget, commsTarget.Faction());
 			commsTalking = false;
 			return;
 		}
@@ -215,10 +219,39 @@ namespace SpaceGod
 			if (r.Lines.Count() == 1 && !r.Lines[0].FromSpeaker && r.Lines[0].Who != "comms") EncounterStart(c, commsTarget, r.Lines, &r.Lines[0]);
 		}
 		for (const auto& l : r.Lines) commsLog.Add(l);
+		SpeakComms(r.Lines, c, commsTarget, commsTarget.Faction());
 		while (commsLog.Count() > CommsLogKept) commsLog.RemoveAt(0);
 		if (!r.Toast.empty()) ShowToast(r.Toast);
 		if (r.Battle != nullptr) CloseComms(); // a fight has started: the hands go back to the helm
 		commsContacts = Comms::Contacts(c);
+	}
+
+	void UnitySpaceApp::SpeakComms(const cs::List<CommsLine>& lines, const CommsContext& c, const CommsParty& them,
+		const cs::Ref<Faction>& faction, bool prefetch)
+	{
+		// The other party in their cast voice over the radio (their named pilot, a station's traffic control, else their
+		// faction's), the unit held in the player's own, quieter and dry. Characters::Find, not Comms::PilotOf: the view
+		// never meets anyone. "comms" lines are the channel's own notices, not anyone's voice.
+		auto world = World();
+		if (world == nullptr || world->Fleet == nullptr) return;
+		VoiceCasting cast(world->Fleet->Factions());
+		auto pilot = them.Ship != nullptr ? Characters::Of(world)->Find(them.Ship) : nullptr;
+		for (const auto& l : lines)
+		{
+			if (l.Who == "comms" || l.Text.empty()) continue;
+			Voice::SpokenLine s;
+			s.Who = l.Who;
+			s.Text = l.Text;
+			if (l.FromSpeaker)
+			{
+				s.Voice = cast.Player(c.Speaker);
+				s.Radio = false;
+				s.Volume = OwnLineVolume;
+			}
+			else s.Voice = pilot != nullptr ? cast.Of(pilot) : them.IsStation() ? cast.Of(them.Station) : cast.Of(faction);
+			if (prefetch) Voice::CommsVoice::Prefetch(s);
+			else Voice::CommsVoice::Speak(MoveTemp(s));
+		}
 	}
 
 	cs::String UnitySpaceApp::CommsLoreSpeaker(const CommsParty& p)
@@ -391,6 +424,9 @@ namespace SpaceGod
 			auto who = hailing->Ship != nullptr && Characters::Of(World())->Find(hailing->Ship) != nullptr
 				? Characters::Of(World())->Find(hailing->Ship)->Name : hailing->Name();
 			commsLog.Add({ who, offer, false });
+			commsHailLine = { who, offer, false };
+			commsHailSpoken = false;
+			SpeakComms({ commsHailLine }, c, CommsParty::OfShip(hailing->Ship), hailing->Faction, true);
 			// US-T239: the terms stay the game's line; a Prose surrender conversation, when there is one, follows it.
 			cs::List<CommsLine> opening;
 			if (hailing->Ship != nullptr && EncounterStart(c, CommsParty::OfShip(hailing->Ship), opening, nullptr))
@@ -403,6 +439,11 @@ namespace SpaceGod
 			}
 		}
 		if (hailing == nullptr) commsHailNoted = nullptr;
+		else if (!commsHailSpoken && CommsShown())
+		{
+			commsHailSpoken = true;
+			SpeakComms({ commsHailLine }, c, CommsParty::OfShip(hailing->Ship), hailing->Faction);
+		}
 
 		if (!commsOpen)
 		{
