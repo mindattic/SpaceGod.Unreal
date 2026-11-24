@@ -2081,6 +2081,7 @@ namespace SpaceGod::Core
 		switch (ship->Role)
 		{
 			case ShipRole::Patrol:
+				if (ship->Route.Count() == 0) return here;
 				ship->RouteIndex = (ship->RouteIndex + 1) % ship->Route.Count();
 				if (ship->Route[ship->RouteIndex] == here)
 					ship->RouteIndex = (ship->RouteIndex + 1) % ship->Route.Count();
