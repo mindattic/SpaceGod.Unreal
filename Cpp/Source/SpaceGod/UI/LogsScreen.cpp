@@ -3,6 +3,8 @@
 
 #include "Lore/LoreBooks.h"
 #include "Lore/LoreLibrary.h"
+#include "PlayerOptions.h"
+#include "Radio/RadioHeard.h"
 #include "UI/UiStyle.h"
 
 using namespace SpaceGod::Core;
@@ -13,10 +15,21 @@ namespace SpaceGod::UI
 
 	LogsScreen::~LogsScreen() = default;
 
-	bool LogsScreen::Draw(const cs::List<cs::String>& keys, const LoreLibrary& lore, const cs::String& closeHint)
+	bool LogsScreen::Draw(const cs::List<cs::String>& keys, const LoreLibrary& lore, const Radio::RadioHeard& heard, const cs::String& closeHint)
 	{
 		EnsureStyles();
 		UiMotion::Scope motion("logs", 0); // US-T255: the whole screen fades in
+
+		auto screen = Rect(0, 0, static_cast<float>(Screen::width), static_cast<float>(Screen::height));
+		if (radioTab)
+		{
+			GUI::Box(screen, GUIContent::none(), panel);
+			GUI::Label(Rect(Margin, 22, screen.width - 2 * Margin, 30), "RADIO LOG", title);
+			GUI::Label(Rect(Margin, 54, screen.width - 2 * Margin, 18), cs::Cat("What your radio has picked up, newest first  \xC2\xB7  ", closeHint), small);
+			DrawTabs(screen);
+			DrawRadio(Rect(Margin, 86, screen.width - 2 * Margin, screen.height - 64 - 86), heard);
+			return GUI::Button(Rect(screen.width - Margin - 120, screen.height - 50, 120, 32), "Back", button);
+		}
 
 		// Newest find first; a key whose text has since been retired drops out (no book, no item).
 		cs::List<LoreBook> books;
@@ -34,12 +47,12 @@ namespace SpaceGod::UI
 		HandleKeys(books.Count(), pages);
 		openKey = books.Count() == 0 ? cs::String() : books[selected].Key;
 
-		auto screen = Rect(0, 0, static_cast<float>(Screen::width), static_cast<float>(Screen::height));
 		GUI::Box(screen, GUIContent::none(), panel);
 		GUI::Label(Rect(Margin, 22, screen.width - 2 * Margin, 30), "RECOVERED LOGS", title);
 		GUI::Label(Rect(Margin, 54, screen.width - 2 * Margin, 18),
 			cs::Cat("Ship logs and station records you have found  \xC2\xB7  Up / Down for the next log, Page Up / Page Down / Home / End to jump, Left / Right to turn the page  \xC2\xB7  ", closeHint), small);
 
+		DrawTabs(screen);
 		float top = 86, bottom = screen.height - 64;
 		if (books.Count() == 0)
 		{
@@ -141,6 +154,45 @@ namespace SpaceGod::UI
 		GUI::EndScrollView();
 	}
 
+	void LogsScreen::DrawTabs(const Rect& screen)
+	{
+		float x = screen.width - Margin - 2 * 110 - 8;
+		if (GUI::Button(Rect(x, 22, 110, 28), "Books", radioTab ? entry : entrySelected)) radioTab = false;
+		if (GUI::Button(Rect(x + 118, 22, 110, 28), "Radio", radioTab ? entrySelected : entry)) radioTab = true;
+	}
+
+	void LogsScreen::DrawRadio(Rect area, const Radio::RadioHeard& heard)
+	{
+		const auto& lines = heard.Lines();
+		GUI::Label(Rect(area.x, area.y, area.width, HeadingH - 4), cs::Cat("HEARD  (", static_cast<int>(lines.size()), ")"), heading);
+		GUI::DrawTexture(Rect(area.x, area.y + HeadingH - 5, area.width, 1), buttonActiveTexture);
+		auto view = Rect(area.x, area.y + HeadingH, area.width, area.height - HeadingH);
+		if (lines.empty())
+		{
+			GUI::Label(Rect(view.x, view.y, view.width, 60), "Nothing heard yet. Messages reach your radio at the speed of light, from as far as their senders can be heard.", text);
+			return;
+		}
+		float w = view.width - 16;
+		float contentH = 0;
+		for (const auto& line : lines) contentH += radioLine->CalcHeight(GUIContent(line.Text), w) + 6;
+		radioScroll = GUI::BeginScrollView(view, radioScroll, Rect(0, 0, w, contentH));
+		float y = 0;
+		for (auto it = lines.rbegin(); it != lines.rend(); ++it)
+		{
+			float h = radioLine->CalcHeight(GUIContent(it->Text), w);
+			switch (it->Kind)
+			{
+			case Radio::RadioHeard::Tone::Hostile: radioLine->normal.textColor = PlayerOptions::HostileColor(); break;
+			case Radio::RadioHeard::Tone::Wary: radioLine->normal.textColor = PlayerOptions::WaryColor(); break;
+			case Radio::RadioHeard::Tone::Friendly: radioLine->normal.textColor = PlayerOptions::FriendlyColor(); break;
+			default: radioLine->normal.textColor = PlayerOptions::NeutralColor(); break;
+			}
+			GUI::Label(Rect(0, y, w, h), it->Text, radioLine);
+			y += h + 6;
+		}
+		GUI::EndScrollView();
+	}
+
 	void LogsScreen::EnsureStyles()
 	{
 		if (stylesReady) return;
@@ -163,6 +215,8 @@ namespace SpaceGod::UI
 		entry = S::EntryStyle(T::Body, buttonTexture, buttonActiveTexture);
 		entry->wordWrap = true;
 		entrySelected = S::EntrySelectedStyle(entry, buttonActiveTexture);
+		radioLine = S::TextStyle(T::Body);
+		radioLine->wordWrap = true;
 	}
 
 	void LogsScreen::DestroyOwnedTextures()

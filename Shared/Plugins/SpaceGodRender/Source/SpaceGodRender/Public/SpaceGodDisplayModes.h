@@ -32,6 +32,10 @@ namespace SpaceGodDisplay
 	/// or when DXGI cannot answer (a remote desktop).
 	SPACEGODRENDER_API TArray<FSpaceGodDisplayMode> Modes(void* NativeWindow);
 
+	/// Modes of the monitor holding the desktop point (X, Y), or of the primary monitor when none does (US-T546: the
+	/// Display page lists a monitor the game is not on yet).
+	SPACEGODRENDER_API TArray<FSpaceGodDisplayMode> ModesAt(int32 X, int32 Y);
+
 	/// The monitor's current desktop mode (Screen.currentResolution), its rate as Windows reports it (whole Hz).
 	SPACEGODRENDER_API bool CurrentMode(void* NativeWindow, FSpaceGodDisplayMode& Out);
 

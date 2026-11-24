@@ -184,7 +184,7 @@ namespace SpaceGod::UI
 			if (!logsScreen) logsScreen = cs::New<LogsScreen>();
 			auto whole = Rect(0, 0, static_cast<float>(Screen::width), static_cast<float>(Screen::height));
 			if (!app->UiRects.Contains(whole)) app->UiRects.Add(whole); // the world under it takes no clicks
-			if (logsScreen->Draw(app->RecoveredLogKeys(), GameLore(), cs::Cat("Esc or ", ::SpaceGod::Input::KeyBindings::Keys(::SpaceGod::Input::KeyAction::Logs), " to close"))) app->ShowLogs = false; // US-T390
+			if (logsScreen->Draw(app->RecoveredLogKeys(), GameLore(), app->RadioHeardLines(), cs::Cat("Esc or ", ::SpaceGod::Input::KeyBindings::Keys(::SpaceGod::Input::KeyAction::Logs), " to close"))) app->ShowLogs = false; // US-T390
 			DrawToast();
 			return;
 		}
@@ -298,6 +298,7 @@ namespace SpaceGod::UI
 		drawers.Draw(frame); // US-T438: the drawers and their edge tabs, every HUD panel among them (US-T440)
 		PublishColumn();
 		DrawCaptions(); // US-T637: above the bottom edge's drawers just drawn
+		DrawRadioLog(); // US-T674
 		DrawToast();
 	}
 

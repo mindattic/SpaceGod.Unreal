@@ -12,7 +12,9 @@
 #include "Radio/RadioLog.h"
 #include "Radio/RadioMessage.h"
 #include "Radio/RadioReceiver.h"
+#include "Radio/RadioReception.h"
 
+#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -20,12 +22,12 @@ namespace SpaceGod::Radio
 {
 	class RadioHost;
 
-	/// <summary>Told of every message the local listener hears.</summary>
+	/// <summary>Told of every message the local listener hears, with its route (never Ignored).</summary>
 	class IRadioSink
 	{
 	public:
 		virtual ~IRadioSink() = default;
-		virtual void OnRadioArrival(const RadioHost& host, const Core::RadioArrival& arrival) = 0;
+		virtual void OnRadioArrival(const RadioHost& host, const Core::RadioArrival& arrival, const Core::RadioReceptionResult& reception) = 0;
 	};
 
 	class RadioHost
@@ -61,14 +63,22 @@ namespace SpaceGod::Radio
 		void AddSink(IRadioSink* sink);
 		void RemoveSink(IRadioSink* sink);
 
+		/// <summary>Who routes the arrivals (RadioReception::Route); the channels and tuner it points at must outlive it.</summary>
+		void SetListener(const Core::RadioListener& value) { listener = value; }
+		const Core::RadioListener& Listener() const { return listener; }
+		/// <summary>Arrivals routed each way since the start (the digest's counter hook).</summary>
+		uint64_t RoutedCount(Core::RadioRoute route) const { return routed[static_cast<size_t>(route)]; }
+
 		int SystemId() const { return systemId; }
 		const Core::RadioLog* Log() const { return log.get(); }
 		const Core::RadioReceiver& Receiver() const { return receiver; }
-		/// <summary>The latest arrivals, oldest first (their Message pointers are not kept: see RecentEntry).</summary>
+		/// <summary>The latest Subtitled and Spoken arrivals, oldest first (their Message pointers are not kept: see RecentEntry).</summary>
 		struct RecentEntry
 		{
 			Core::RadioMessage Message;
+			/// <summary>As shown: garbled when Noisy.</summary>
 			cs::String Text;
+			Core::RadioReceptionResult Reception;
 			double ArrivalJd = 0;
 			double DistanceKm = 0;
 			double AgeDays = 0;
@@ -90,6 +100,8 @@ namespace SpaceGod::Radio
 		std::vector<IRadioSink*> sinks;
 		std::vector<Core::RadioArrival> arrivals;
 		std::vector<RecentEntry> recent;
+		Core::RadioListener listener;
+		std::array<uint64_t, static_cast<size_t>(Core::RadioRoute::Spoken) + 1> routed{};
 		int systemId = -1;
 		bool started = false;
 		bool rebasePending = false;

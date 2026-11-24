@@ -67,13 +67,13 @@ namespace SpaceGodDisplay
 		}
 	}
 
-	TArray<FSpaceGodDisplayMode> Modes(void* NativeWindow)
+	static TArray<FSpaceGodDisplayMode> ModesOf(HMONITOR Monitor)
 	{
 		TArray<FSpaceGodDisplayMode> Result;
 		TCom<IDXGIFactory1> Factory;
 		if (!CreateFactory(Factory)) return Result;
 		TCom<IDXGIOutput> Output;
-		if (!OutputFor(Factory.P, MonitorOf(NativeWindow), Output)) return Result;
+		if (!OutputFor(Factory.P, Monitor, Output)) return Result;
 
 		// The format Unreal's own list uses (D3D12RHI GetAvailableResolutionsForOutput), no interlaced or stretched extras.
 		const DXGI_FORMAT Format = DXGI_FORMAT_R8G8B8A8_UNORM;
@@ -107,6 +107,10 @@ namespace SpaceGodDisplay
 		return Result;
 	}
 
+	TArray<FSpaceGodDisplayMode> Modes(void* NativeWindow) { return ModesOf(MonitorOf(NativeWindow)); }
+
+	TArray<FSpaceGodDisplayMode> ModesAt(int32 X, int32 Y) { return ModesOf(::MonitorFromPoint(POINT{ X, Y }, MONITOR_DEFAULTTOPRIMARY)); }
+
 	bool CurrentMode(void* NativeWindow, FSpaceGodDisplayMode& Out)
 	{
 		MONITORINFOEXW Info{};
@@ -139,6 +143,7 @@ namespace SpaceGodDisplay
 	}
 #else
 	TArray<FSpaceGodDisplayMode> Modes(void*) { return {}; }
+	TArray<FSpaceGodDisplayMode> ModesAt(int32, int32) { return {}; }
 	bool CurrentMode(void*, FSpaceGodDisplayMode&) { return false; }
 	bool SetFullscreenRefresh(void*, const FSpaceGodDisplayMode&) { return false; }
 #endif

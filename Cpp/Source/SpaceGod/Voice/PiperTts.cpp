@@ -1,6 +1,7 @@
 #include "Voice/PiperTts.h"
 
 #include "SpaceGodLog.h"
+#include "Voice/VoiceCache.h"
 
 #include "Dom/JsonObject.h"
 #include "HAL/FileManager.h"
@@ -8,11 +9,9 @@
 #include "HAL/PlatformTime.h"
 #include "Misc/FileHelper.h"
 #include "Misc/Paths.h"
+#include "Policies/CondensedJsonPrintPolicy.h"
 #include "Serialization/JsonSerializer.h"
 #include "Serialization/JsonWriter.h"
-
-#include <cstring>
-#include <vector>
 
 namespace SpaceGod::Voice
 {
@@ -20,44 +19,6 @@ namespace SpaceGod::Voice
 	{
 		/// A second failure (the one restart used up) turns Piper off for the run.
 		constexpr int MaxFailures = 2;
-
-		std::uint32_t U32(const uint8* p) { std::uint32_t v; std::memcpy(&v, p, 4); return v; }
-		std::uint16_t U16(const uint8* p) { std::uint16_t v; std::memcpy(&v, p, 2); return v; }
-
-		/// A RIFF PCM16 mono WAV as a clip at its own rate; false when it is not one or is not all written yet.
-		bool ReadWav(const TArray<uint8>& bytes, Audio::SoundClip& clip)
-		{
-			const int32 n = bytes.Num();
-			const uint8* b = bytes.GetData();
-			if (n < 12 || std::memcmp(b, "RIFF", 4) != 0 || std::memcmp(b + 8, "WAVE", 4) != 0) return false;
-			int format = 0, channels = 0, bits = 0, rate = 0;
-			int64 pos = 12;
-			while (pos + 8 <= n)
-			{
-				const std::uint32_t size = U32(b + pos + 4);
-				const int64 body = pos + 8;
-				if (std::memcmp(b + pos, "fmt ", 4) == 0)
-				{
-					if (size < 16 || body + 16 > n) return false;
-					format = U16(b + body);
-					channels = U16(b + body + 2);
-					rate = static_cast<int>(U32(b + body + 4));
-					bits = U16(b + body + 14);
-				}
-				else if (std::memcmp(b + pos, "data", 4) == 0)
-				{
-					if (format != 1 || channels != 1 || bits != 16 || rate <= 0 || body + size > n) return false;
-					auto samples = std::make_shared<std::vector<std::int16_t>>(size / 2);
-					if (!samples->empty()) std::memcpy(samples->data(), b + body, samples->size() * 2);
-					clip.Samples = samples;
-					clip.SampleRate = rate;
-					clip.Name = "piper";
-					return true;
-				}
-				pos = body + size + (size & 1);
-			}
-			return false;
-		}
 	}
 
 	PiperTts::~PiperTts()
@@ -242,7 +203,11 @@ namespace SpaceGod::Voice
 			TArray<uint8> bytes;
 			for (int attempt = 0; attempt < 50 && !Aborted; ++attempt)
 			{
-				if (FFileHelper::LoadFileToArray(bytes, *path, FILEREAD_Silent) && ReadWav(bytes, clip)) break;
+				if (FFileHelper::LoadFileToArray(bytes, *path, FILEREAD_Silent) && VoiceCache::ReadWav(bytes, clip))
+				{
+					clip.Name = "piper";
+					break;
+				}
 				FPlatformProcess::Sleep(0.01f);
 			}
 			if (!clip.IsValid()) UE_LOG(LogSpaceGod, Warning, TEXT("[Voice] Piper wrote no readable PCM16 mono WAV at %s."), *path);

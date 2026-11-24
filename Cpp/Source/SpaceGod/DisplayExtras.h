@@ -26,6 +26,9 @@ namespace SpaceGod
 		static const cs::Ref<Core::ToggleSetting>& HdrOutput();
 		static const cs::Ref<Core::RangeSetting>& HdrPeakNits();
 		static const cs::Ref<Core::ChoiceSetting>& BackgroundFrameCap();
+		/// US-T611: a shorter render queue (r.GTSyncType, r.OneFrameThreadLag), and a frame cap while a full-screen menu is up.
+		static const cs::Ref<Core::ToggleSetting>& LowLatency();
+		static const cs::Ref<Core::ChoiceSetting>& MenuFrameCap();
 
 		/// Builds every row in page order (the settings source GameSettingsHost adds).
 		static void Declare();

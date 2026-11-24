@@ -102,6 +102,31 @@ namespace SpaceGod::Core
 		lastSentJd_ = std::numeric_limits<double>::lowest();
 	}
 
+	void RadioLog::DropAfter(double jd)
+	{
+		while (end_ > first_ && ring_[(end_ - 1) % Capacity].SentJd > jd)
+		{
+			end_--;
+			uint32_t slot = ring_[end_ % Capacity].TextSlot;
+			if (slot == RadioMessage::NoText)
+				continue;
+			TextEntry& e = texts_[slot];
+			if (e.Used && e.Owner == end_)
+			{
+				e.Used = false;
+				e.Text.clear();
+			}
+		}
+		while (!buckets_.empty() && buckets_.back().First >= end_)
+			buckets_.pop_back();
+		if (!buckets_.empty() && buckets_.back().Last > end_)
+		{
+			buckets_.back().Last = end_;
+			buckets_.back().LastSentJd = ring_[(end_ - 1) % Capacity].SentJd;
+		}
+		lastSentJd_ = end_ > first_ ? ring_[(end_ - 1) % Capacity].SentJd : std::numeric_limits<double>::lowest();
+	}
+
 	void RadioLog::DropOldest(uint64_t until)
 	{
 		for (; first_ < until; first_++)

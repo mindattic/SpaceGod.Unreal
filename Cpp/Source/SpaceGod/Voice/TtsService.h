@@ -2,6 +2,7 @@
 
 #include "Voice/TtsEngine.h"
 
+#include <climits>
 #include <functional>
 
 namespace SpaceGod::Voice
@@ -12,9 +13,10 @@ namespace SpaceGod::Voice
 	using TtsDone = std::function<void(TtsId id, const Audio::SoundClip& clip)>;
 
 	/// Speech off the game thread (US-T587; design in US-T574): one worker thread at below-normal priority takes the
-	/// highest-priority request from a bounded queue and synthesizes it (Piper when it is available, else nothing);
-	/// results come back through a lock-free queue that Tick drains on the game thread. The game thread never waits on
-	/// the engine, its process, pipe or files. Nothing runs while GameAudio is disabled (a scripted run, no device,
+	/// highest-priority request from a bounded queue and answers it from the voice cache (US-T660: memory on the game
+	/// thread, Saved/VoiceCache on the worker) or else synthesizes it (Piper when it is available, else SAPI) and caches
+	/// it; results come back through a lock-free queue that Tick drains on the game thread. The game thread never waits
+	/// on the engine, its process, pipe or files. Nothing runs while GameAudio is disabled (a scripted run, no device,
 	/// muted). View-local: nothing here touches the simulation, the lockstep frames, saves or the digests.
 	class TtsService
 	{
@@ -23,6 +25,9 @@ namespace SpaceGod::Voice
 		/// GameAudio is disabled or the queue is full of requests of higher priority. A request it evicts (the lowest,
 		/// the oldest of those) is answered with an invalid clip.
 		static TtsId Request(TtsRequest request, TtsDone done);
+		/// Speaks a line ahead of need into the cache, below every Request (PrefetchPriority); nothing when it is cached
+		/// in memory, already queued or being spoken, or GameAudio is disabled.
+		static void Prefetch(TtsRequest request);
 		/// Drops a request: its callback is never called (the line being spoken is still spoken, then discarded).
 		static void Cancel(TtsId id);
 		/// Game thread, every frame: hands the finished lines to their callbacks.
@@ -32,5 +37,6 @@ namespace SpaceGod::Voice
 
 		/// The most requests waiting at once.
 		static constexpr int Capacity = 16;
+		static constexpr int PrefetchPriority = INT_MIN;
 	};
 }

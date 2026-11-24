@@ -10,6 +10,7 @@
 #include "Engine/Engine.h"
 #include "Engine/GameViewportClient.h"
 #include "GameFramework/GameUserSettings.h"
+#include "GenericPlatform/GenericApplication.h"
 #include "GenericPlatform/GenericWindow.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "RenderingThread.h"
@@ -103,6 +104,28 @@ namespace SpaceGod::UI::DisplayBackend
 			r.refreshDenominator = m.RefreshDenominator;
 			return r;
 		}
+
+		/// US-T546: the monitors, the primary one first; empty headless (no game window).
+		TArray<FMonitorInfo> MonitorList()
+		{
+			TArray<FMonitorInfo> list;
+			if (GameWindow() == nullptr) return list;
+			FDisplayMetrics metrics;
+			FDisplayMetrics::RebuildDisplayMetrics(metrics);
+			for (const FMonitorInfo& m : metrics.MonitorInfo)
+				if (m.bIsPrimary) list.Add(m);
+			for (const FMonitorInfo& m : metrics.MonitorInfo)
+				if (!m.bIsPrimary) list.Add(m);
+			return list;
+		}
+
+		FIntPoint Centre(const FPlatformRect& rect) { return FIntPoint((rect.Left + rect.Right) / 2, (rect.Top + rect.Bottom) / 2); }
+
+		/// The monitor asked for when it is not the one the game is on, else null (the game window's own is asked then).
+		const FMonitorInfo* OtherMonitor(const TArray<FMonitorInfo>& list, int monitor)
+		{
+			return list.IsValidIndex(monitor) && monitor != CurrentMonitor() ? &list[monitor] : nullptr;
+		}
 	}
 
 	void SetResolution(int width, int height, FullScreenMode mode, double refreshHz)
@@ -128,10 +151,13 @@ namespace SpaceGod::UI::DisplayBackend
 
 	Resolution RequestedRefresh() { return requested; }
 
-	cs::List<Resolution> Resolutions()
+	cs::List<Resolution> Resolutions(int monitor)
 	{
 		cs::List<Resolution> list;
-		for (const FSpaceGodDisplayMode& m : SpaceGodDisplay::Modes(GameWindow())) list.Add(FromMode(m));
+		const TArray<FMonitorInfo> monitors = MonitorList();
+		const FMonitorInfo* other = OtherMonitor(monitors, monitor);
+		const FIntPoint at = other ? Centre(other->DisplayRect) : FIntPoint::ZeroValue;
+		for (const FSpaceGodDisplayMode& m : other ? SpaceGodDisplay::ModesAt(at.X, at.Y) : SpaceGodDisplay::Modes(GameWindow())) list.Add(FromMode(m));
 		if (list.Count() > 0) return list;
 		// Where DXGI cannot be asked: Unreal's own list, which has no rates (each at 60 Hz, as before US-T56).
 		TArray<FIntPoint> modes;
@@ -149,8 +175,17 @@ namespace SpaceGod::UI::DisplayBackend
 		return list;
 	}
 
-	Resolution CurrentResolution()
+	Resolution CurrentResolution(int monitor)
 	{
+		const TArray<FMonitorInfo> monitors = MonitorList();
+		if (const FMonitorInfo* other = OtherMonitor(monitors, monitor))
+		{
+			Resolution r;
+			r.width = other->DisplayRect.Right - other->DisplayRect.Left;
+			r.height = other->DisplayRect.Bottom - other->DisplayRect.Top;
+			r.refreshRateHz = 60;
+			return r;
+		}
 		FSpaceGodDisplayMode now;
 		if (SpaceGodDisplay::CurrentMode(GameWindow(), now)) return FromMode(now);
 		Resolution r;
@@ -179,6 +214,45 @@ namespace SpaceGod::UI::DisplayBackend
 			case EWindowMode::WindowedFullscreen: return FullScreenMode::FullScreenWindow;
 			default: return FullScreenMode::Windowed;
 		}
+	}
+
+	cs::List<cs::String> Monitors()
+	{
+		cs::List<cs::String> names;
+		for (const FMonitorInfo& m : MonitorList())
+			names.Add(cs::String(TCHAR_TO_UTF8(*m.Name)));
+		return names;
+	}
+
+	int CurrentMonitor()
+	{
+		UGameViewportClient* client = GEngine ? GEngine->GameViewport : nullptr;
+		TSharedPtr<SWindow> window = client ? client->GetWindow() : nullptr;
+		if (!window.IsValid()) return 0;
+		const FVector2D position = window->GetPositionInScreen(), size = window->GetSizeInScreen();
+		const FVector2D centre = position + size * 0.5;
+		const TArray<FMonitorInfo> monitors = MonitorList();
+		for (int i = 0; i < monitors.Num(); i++)
+		{
+			const FPlatformRect& d = monitors[i].DisplayRect;
+			if (centre.X >= d.Left && centre.X < d.Right && centre.Y >= d.Top && centre.Y < d.Bottom) return i;
+		}
+		return 0;
+	}
+
+	void MoveToMonitor(int monitor, int width, int height)
+	{
+		UGameViewportClient* client = GEngine ? GEngine->GameViewport : nullptr;
+		TSharedPtr<SWindow> window = client ? client->GetWindow() : nullptr;
+		const TArray<FMonitorInfo> monitors = MonitorList();
+		if (!window.IsValid() || !monitors.IsValidIndex(monitor) || monitor == CurrentMonitor()) return;
+		// A fullscreen window belongs to its monitor: go windowed, move, and let the caller's SetResolution take the mode.
+		if (CurrentMode() != FullScreenMode::Windowed) SetResolution(width, height, FullScreenMode::Windowed);
+		const FPlatformRect& area = monitors[monitor].WorkArea;
+		const int32 areaW = area.Right - area.Left, areaH = area.Bottom - area.Top;
+		const FVector2D at(area.Left + FMath::Max(0, (areaW - width) / 2), area.Top + FMath::Max(0, (areaH - height) / 2));
+		window->MoveWindowTo(at);
+		UE_LOG(LogSpaceGod, Display, TEXT("Display: moved to monitor %d (%s) at %.0f,%.0f"), monitor, *monitors[monitor].Name, at.X, at.Y);
 	}
 
 	int VSyncCount() { return vSync; }

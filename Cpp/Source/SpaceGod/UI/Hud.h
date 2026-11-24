@@ -56,5 +56,6 @@ namespace SpaceGod::UI
 #include "UI/Hud.Coop.inl" // US-T44: co-op (the C# track's Hud.Coop.cs)
 #include "UI/Hud.Drawer.inl" // US-T200: the bottom drawer (navigation, ships in the area)
 #include "UI/Hud.Hits.inl" // US-T257: hit markers, kill feed, damage arcs
+#include "UI/Hud.Radio.inl" // US-T674: the radio log
 	};
 }
