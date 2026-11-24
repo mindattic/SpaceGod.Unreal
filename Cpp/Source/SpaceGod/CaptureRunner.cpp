@@ -18,7 +18,7 @@ namespace SpaceGod
 {
 	namespace
 	{
-		// MindAttic.Capture's CaptureUnity, as far as the runner reads it (US-T72: Capture/MindAtticCapture.h).
+		// MindAttic.Media.Capture's CaptureUnity, as far as the runner reads it (US-T72: Capture/MindAtticCapture.h).
 		// -capturedir=<dir> (tools/play.ps1 -Mode demo, US-T58) keeps the tour's shots as Unreal screenshots in that
 		// folder, with no capture host: a tooling switch of this repo's, not one of the game's.
 
@@ -127,7 +127,7 @@ namespace SpaceGod
 					co_yield nullptr;
 				}
 				capturing = CaptureEnabled();
-				if (!capturing) Debug::LogError("[Unity.SpaceGod] MindAttic.Capture did not start; the tour will not be captured.");
+				if (!capturing) Debug::LogError("[Unity.SpaceGod] MindAttic.Media.Capture did not start; the tour will not be captured.");
 			}
 		}
 

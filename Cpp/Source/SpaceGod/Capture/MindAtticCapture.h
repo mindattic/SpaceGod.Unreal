@@ -1,8 +1,8 @@
 #pragma once
 
-// MindAttic.Capture for the C++ game (US-T72): what MindAttic.Capture's Unity package (CaptureUnity) is to a Unity
+// MindAttic.Media.Capture for the C++ game (US-T72): what MindAttic.Media.Capture's Unity package (CaptureUnity) is to a Unity
 // player. C++ can't load .NET, so on -capture the game starts the bundled capture host (Capture/SpaceGod.Capture, the
-// vendored MindAttic.Capture library; published by tools/package.ps1 as <package>/Capture/capture.exe), hands it its
+// vendored MindAttic.Media.Capture library; published by tools/package.ps1 as <package>/Capture/capture.exe), hands it its
 // window and its command line, and drives it over a pipe: one JSON request a line on its stdin, one JSON reply or
 // notice a line from its stdout (Capture/README.md). The host builds its options exactly as CaptureUnity does: off
 // unless -capture is literally on the command line; -capture video / screen N / -capture-config path.json; output in

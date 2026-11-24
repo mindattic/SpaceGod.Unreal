@@ -10,7 +10,7 @@ namespace SpaceGod
 	/// Makes any scene playable: if no UnitySpaceApp exists after load, one is
 	/// created. With no flags that is all that happens. <c>-demo</c> runs the scripted tour once and
 	/// quits (CaptureRunner) -- the same flag name used for it in every MindAttic Unity
-	/// project. Pair it with <c>-capture</c> (parsed separately by MindAttic.Capture) to record the
+	/// project. Pair it with <c>-capture</c> (parsed separately by MindAttic.Media.Capture) to record the
 	/// session.
 	///
 	/// A headless run (US-T233; since US-T234 the shared MindAtticShared plugin's <c>--headless</c> or

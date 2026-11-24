@@ -92,7 +92,7 @@ namespace SpaceGod::Core
 				CreditEntry("zlib", "Jean-loup Gailly and Mark Adler: the saves' compression, through Unreal Engine", "zlib licence"),
 				CreditEntry("Space 3D", "wwwtyro (github.com/wwwtyro/space-3d): the method behind each system's own nebulae",
 					"Unlicense (public domain)"),
-				CreditEntry("MindAttic.Capture", "MindAttic: the recorder behind -capture (Vendor/)"),
+				CreditEntry("MindAttic.Media.Capture", "MindAttic: the recorder behind -capture (Vendor/)"),
 				CreditEntry("NAudio", "Mark Heath: audio capture for the recorder", "MIT licence"),
 				CreditEntry("Vortice.Windows", "Amer Koleci: Direct3D 11 and DXGI for the recorder", "MIT licence"),
 				CreditEntry(".NET", "The .NET Foundation and Microsoft: the recorder's runtime, System.Drawing.Common and "

@@ -162,9 +162,9 @@ namespace SpaceGod::MindAtticCapture
 				// CaptureUnity's UnityCaptureLog: the engine's own lines in the game's log.
 				const FString level = msg->GetStringField(TEXT("level"));
 				const FString text = msg->GetStringField(TEXT("message"));
-				if (level == TEXT("Error")) { UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] %s"), *text); }
-				else if (level == TEXT("Warning")) { UE_LOG(LogSpaceGod, Warning, TEXT("[MindAttic.Capture] %s"), *text); }
-				else { UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] %s"), *text); }
+				if (level == TEXT("Error")) { UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] %s"), *text); }
+				else if (level == TEXT("Warning")) { UE_LOG(LogSpaceGod, Warning, TEXT("[MindAttic.Media.Capture] %s"), *text); }
+				else { UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] %s"), *text); }
 			}
 			else if (op == TEXT("ready"))
 			{
@@ -178,7 +178,7 @@ namespace SpaceGod::MindAtticCapture
 				else FrameFeed::Close();
 				FString error;
 				if (msg->TryGetStringField(TEXT("error"), error) && !error.IsEmpty())
-					UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] Capture disabled: %s"), *error);
+					UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] Capture disabled: %s"), *error);
 			}
 			else if (op == TEXT("result"))
 			{
@@ -221,12 +221,12 @@ namespace SpaceGod::MindAtticCapture
 			if (!s.IsReady && s.Proc.IsValid() && !FPlatformProcess::IsProcRunning(s.Proc))
 			{
 				s.IsReady = true;
-				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] The capture host exited before starting; capture is off."));
+				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] The capture host exited before starting; capture is off."));
 			}
 			if (!s.IsReady && FPlatformTime::Seconds() - s.StartedAt > ReadyTimeoutSeconds)
 			{
 				s.IsReady = true;
-				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] The capture host did not answer in %.0f s; capture is off."), ReadyTimeoutSeconds);
+				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] The capture host did not answer in %.0f s; capture is off."), ReadyTimeoutSeconds);
 			}
 		}
 
@@ -240,13 +240,13 @@ namespace SpaceGod::MindAtticCapture
 			if (host.IsEmpty())
 			{
 				s.IsReady = true;
-				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] -capture asked for, but the capture host (Capture/capture.exe) is not in this build; capture is off. tools/package.ps1 publishes it."));
+				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] -capture asked for, but the capture host (Capture/capture.exe) is not in this build; capture is off. tools/package.ps1 publishes it."));
 				return;
 			}
 			if (!FPlatformProcess::CreatePipe(s.StdoutRead, s.StdoutWrite) || !FPlatformProcess::CreatePipe(s.StdinRead, s.StdinWrite, /*bWritePipeLocal*/ true))
 			{
 				s.IsReady = true;
-				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] Could not open the pipes to the capture host; capture is off."));
+				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] Could not open the pipes to the capture host; capture is off."));
 				return;
 			}
 			const FString source = frames.IsEmpty()
@@ -264,10 +264,10 @@ namespace SpaceGod::MindAtticCapture
 			if (!s.Proc.IsValid())
 			{
 				s.IsReady = true;
-				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] Could not start %s; capture is off."), *host);
+				UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] Could not start %s; capture is off."), *host);
 				return;
 			}
-			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] Capture host %s started (pid %u)."), *host, pid);
+			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] Capture host %s started (pid %u)."), *host, pid);
 			FCoreDelegates::OnEnginePreExit.AddStatic(&Shutdown);
 		}
 	}

@@ -121,7 +121,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 				if (!s.Render.WarnedFormat)
 				{
 					s.Render.WarnedFormat = true;
-					UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] The backbuffer is %s; the frame feed reads only 8-bit BGRA/RGBA and 10-bit RGB; no frames."),
+					UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] The backbuffer is %s; the frame feed reads only 8-bit BGRA/RGBA and 10-bit RGB; no frames."),
 						GPixelFormats[format].Name);
 				}
 				return;
@@ -282,7 +282,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 			FPlatformMemory::ESharedMemoryAccess::Read | FPlatformMemory::ESharedMemoryAccess::Write, HeaderBytes + Slots * s.FrameBytes);
 		if (!s.Region)
 		{
-			UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Capture] Could not map the %dx%d frame feed; capture is off."), s.Width, s.Height);
+			UE_LOG(LogSpaceGod, Error, TEXT("[MindAttic.Media.Capture] Could not map the %dx%d frame feed; capture is off."), s.Width, s.Height);
 			return false;
 		}
 		s.Base = static_cast<uint8*>(s.Region->GetAddress());
@@ -296,7 +296,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 		header->HeaderBytes = HeaderBytes;
 		s.TargetWindow = window.Get();
 		outName = s.Name;
-		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] Frame feed %s: %dx%d, %d slots (the host records the game's frames%s)."), *s.Name, s.Width, s.Height,
+		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] Frame feed %s: %dx%d, %d slots (the host records the game's frames%s)."), *s.Name, s.Width, s.Height,
 			Slots, FParse::Param(FCommandLine::Get(), TEXT("RenderOffScreen")) ? TEXT(": -RenderOffScreen has no window") : TEXT(", -capture-source=frames"));
 		return true;
 	}
@@ -311,7 +311,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 		Header()->Fps = fps;
 		s.Handle = FSlateApplication::Get().GetRenderer()->OnBackBufferReadyToPresent().AddStatic(&OnBackBufferReady);
 		s.Active = true;
-		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] Frame feed reading back %d frames/s (async, %d deep)."), fps, Depth);
+		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] Frame feed reading back %d frames/s (async, %d deep)."), fps, Depth);
 	}
 
 	void Tick()
@@ -349,7 +349,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 			const int64 fed = s.Fed.load() - s.FedAtWindow, skipped = s.Skipped.load() - s.SkippedAtWindow;
 			const int64 renderUs = s.RenderMicros.load() - s.RenderMicrosAtWindow, copyUs = s.CopyMicros.load() - s.CopyMicrosAtWindow;
 			const int64 worstUs = s.RenderMicrosMax.exchange(0);
-			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] feed: game %.1f fps (%.2f ms avg, %.1f ms worst); fed %.1f frames/s %dx%d %s; render thread %.2f ms avg per fed frame (copy %.2f ms), %.2f ms worst; %lld skipped (GPU behind)"),
+			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] feed: game %.1f fps (%.2f ms avg, %.1f ms worst); fed %.1f frames/s %dx%d %s; render thread %.2f ms avg per fed frame (copy %.2f ms), %.2f ms worst; %lld skipped (GPU behind)"),
 				fps, avgMs, s.WorstFrame * 1000.0, fed / span, s.Width, s.Height, GPixelFormats[s.Format.load()].Name,
 				fed > 0 ? renderUs / 1000.0 / fed : 0.0, fed > 0 ? copyUs / 1000.0 / fed : 0.0, worstUs / 1000.0, skipped);
 			s.FedAtWindow += fed;
@@ -359,7 +359,7 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 		}
 		else
 		{
-			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] baseline: game %.1f fps (%.2f ms avg, %.1f ms worst); no capture"), fps, avgMs, s.WorstFrame * 1000.0);
+			UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] baseline: game %.1f fps (%.2f ms avg, %.1f ms worst); no capture"), fps, avgMs, s.WorstFrame * 1000.0);
 		}
 		s.StatsFrom = now;
 		s.Frames = 0;
@@ -393,6 +393,6 @@ namespace SpaceGod::MindAtticCapture::FrameFeed
 		s.Region = nullptr;
 		s.Base = nullptr;
 		s.TargetWindow = nullptr;
-		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Capture] Frame feed closed after %lld frames (%lld skipped)."), s.Fed.load(), s.Skipped.load());
+		UE_LOG(LogSpaceGod, Display, TEXT("[MindAttic.Media.Capture] Frame feed closed after %lld frames (%lld skipped)."), s.Fed.load(), s.Skipped.load());
 	}
 }

@@ -1,7 +1,7 @@
-# Capture: the game's MindAttic.Capture host (US-T72)
+# Capture: the game's MindAttic.Media.Capture host (US-T72)
 
-How this copy records itself through MindAttic.Capture, as [docs/CAPTURE.md](../docs/CAPTURE.md) says all three
-SpaceGod copies do. In Unity, MindAttic.Capture's package runs inside the player. C++ can't load .NET, so here the same
+How this copy records itself through MindAttic.Media.Capture, as [docs/CAPTURE.md](../docs/CAPTURE.md) says all three
+SpaceGod copies do. In Unity, MindAttic.Media.Capture's package runs inside the player. C++ can't load .NET, so here the same
 library runs beside the game in a small host process the game starts and drives.
 
 ```
@@ -27,8 +27,9 @@ library runs beside the game in a small host process the game starts and drives.
   US-T76, it was `SpaceGod.Unreal.Cpp\`, which the archived SpaceGod.Unreal.Cpp repo still writes) (or `Videos\MindAttic\Capture\...` without `R:`).
 - **Prerequisites.** The .NET 10 runtime (the SDK that builds it installs it), and ffmpeg on PATH for video and
   replays. ffmpeg is not bundled.
-- **Name.** The exe is `capture.exe` with product name `MindAttic.Capture.Agent`, the names MindAttic.Capture trusts for
-  its detached `capture finalize` / `capture recover`. The host implements those two commands too, so the game never
+- **Name.** The exe is `capture.exe` with product name `MindAttic.Capture.Agent`, the names MindAttic.Media.Capture trusts for
+  its detached `capture finalize` / `capture recover` (it trusts the installed agent's newer `MindAttic.Media.Capture.Agent`
+  too, US-T687). The host implements those two commands too, so the game never
   waits for an export.
 
 ## Frames: capture with no window (US-T163)
@@ -53,7 +54,7 @@ window for Windows Graphics Capture. Then (or with `-capture-source=frames`) the
   BGRA from headerBytes. The host keeps a frame only if its slot's seq reads the same before and after the copy.
 - **Cost.** No game-thread or GPU wait: a readback is copied out on the render thread once its fence has passed; when
   all four are still on the GPU the frame is skipped (counted), not waited for. `-CaptureStats` logs, every 5 s,
-  `[MindAttic.Capture] feed: game N fps (...); fed N frames/s ...; render thread X ms avg per fed frame ...`, and on its
+  `[MindAttic.Media.Capture] feed: game N fps (...); fed N frames/s ...; render thread X ms avg per fed frame ...`, and on its
   own (without `-capture`) a `baseline:` line to compare against.
 - **Launch.** `tools/play.ps1 -Mode dogfight -Offscreen -Seconds 30`, or by hand:
   `UnrealEditor.exe Cpp/SpaceGod.uproject /Engine/Maps/Entry -game -RenderOffScreen -ResX=1600 -ResY=900 -nosound -capture video hq -dogfight`
@@ -73,7 +74,7 @@ One JSON object a line. Game to host (stdin):
 | `quit` | | stop and export |
 
 Host to game (stdout): `ready` (`any`, `enabled`, `folder`, `session`, `fps`, `source` (`window` or `frames`), or `error`), `result` (`id`, `ok`, `files`,
-`error`), `log` (`level`, `message`; written to the game's log as `[MindAttic.Capture] ...`), `stopped`.
+`error`), `log` (`level`, `message`; written to the game's log as `[MindAttic.Media.Capture] ...`), `stopped`.
 
 Game side: `Cpp/Source/SpaceGod/Capture/MindAtticCapture.h` (CaptureUnity's surface) and `CaptureEvents.h` (the
 event catalogue).
