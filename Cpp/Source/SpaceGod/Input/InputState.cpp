@@ -248,8 +248,9 @@ namespace SpaceGod::Input
 			return;
 		}
 
-		// The left stick: thrust and strafe at the controls, the camera's swim in command (W/S and A/D).
-		Vector2 move = Gamepad::Stick(pad.leftStick);
+		// The left stick (the right with Swap sticks, US-T629): thrust and strafe at the controls, the camera's swim in
+		// command (W/S and A/D).
+		Vector2 move = Gamepad::MoveStick();
 		Move.x = Mathf::Clamp(Move.x + move.x, -1.0f, 1.0f);
 		Move.z = Mathf::Clamp(Move.z + move.y, -1.0f, 1.0f);
 		// A capital's telegraph: a step ahead or astern each time the stick is pushed past half way (W and S once a press).
@@ -264,10 +265,11 @@ namespace SpaceGod::Input
 
 		// US-T437: the pad's buttons (fire, second trigger, bumpers, boost, flip, drift, lock / focus, flight assist, embody,
 		// pause, help) are the actions' bindings now, read with the keys in Poll (Y is both lock and focus by default, and
-		// Arbitrate keeps the owner's meaning, as T and F share theirs). What stays here is fixed: the sticks and the d-pad.
-
-		padDpad = pad[PadButton::DPadLeft].wasPressedThisFrame ? 0 : pad[PadButton::DPadUp].wasPressedThisFrame ? 1
-			: pad[PadButton::DPadRight].wasPressedThisFrame ? 2 : pad[PadButton::DPadDown].wasPressedThisFrame ? 3 : -1;
+		// Arbitrate keeps the owner's meaning, as T and F share theirs). What stays here is the sticks and the d-pad's steps,
+		// which are KeyAction PadStepLeft..PadStepDown (US-T629, the d-pad by default).
+		using A = KeyAction;
+		auto stepped = [](KeyAction a) { return KeyBindings::Pressed(a, InputDevice::current()); };
+		padDpad = stepped(A::PadStepLeft) ? 0 : stepped(A::PadStepUp) ? 1 : stepped(A::PadStepRight) ? 2 : stepped(A::PadStepDown) ? 3 : -1;
 	}
 
 	void InputState::ReleaseLook()

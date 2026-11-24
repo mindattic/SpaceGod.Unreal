@@ -14,9 +14,9 @@
 // US-T437: the pad's buttons, triggers and stick directions are bindings of the actions (Input/KeyBindings.h), beside
 // the keys and the mouse: each pad default of before (fire RT, second trigger LT, roll LB/RB, boost A, drift B, flip X,
 // lock/focus Y, flight assist RS, embody LS, pause Menu, help View) is that action's default binding now, rebound under
-// Settings > Controls > Key bindings like any other. The sticks' movement and aim, the d-pad's reactor/time/ship steps
-// and B's back-out in menus stay fixed. The dead zone, the aim sensitivity, an inverted aim and the vibration strength
-// (US-T557, the player controller's force feedback scale) are Controls settings. The
+// Settings > Controls > Key bindings like any other, and so are the d-pad's reactor/time/ship steps (US-T629). B's
+// back-out in menus stays fixed. The dead zone, the aim sensitivity, an inverted aim, the vibration strength (US-T557,
+// the player controller's force feedback scale), swapped sticks and an inverted move (US-T629) are Controls settings. The
 // Help screen shows the pad's buttons when the pad was used last (LastUsed).
 //
 // No Unreal headers here: only UnrealInputDevice.cpp touches the engine.
@@ -68,6 +68,10 @@ namespace SpaceGod::Input
 		static const cs::Ref<Core::RangeSetting>& AimSensitivity();
 		/// <summary>Controls: pushing the right stick forward looks (and pitches) down instead of up.</summary>
 		static const cs::Ref<Core::ToggleSetting>& InvertAim();
+		/// <summary>Controls (US-T629): the right stick moves and the left aims.</summary>
+		static const cs::Ref<Core::ToggleSetting>& SwapSticks();
+		/// <summary>Controls (US-T629): pushing the move stick forward moves back (and back forward).</summary>
+		static const cs::Ref<Core::ToggleSetting>& InvertMove();
 		/// <summary>Controls (US-T557): the scale on any force feedback the pad plays, 0 (off) to 1.</summary>
 		static const cs::Ref<Core::RangeSetting>& VibrationStrength();
 		/// <summary>The force feedback scale in effect: the setting, or 1 in a scripted run.</summary>
@@ -77,7 +81,10 @@ namespace SpaceGod::Input
 
 		/// <summary>A raw stick through the dead zone (radial, rescaled), the result's length 0..1.</summary>
 		static Vector2 Stick(Vector2 raw);
-		/// <summary>The right stick as a mouse delta this frame (the counts the mouse look is tuned for): a rate, squared for
+		/// <summary>The move stick through the dead zone: the left (the right with <see cref="SwapSticks"/>), its y flipped
+		/// with <see cref="InvertMove"/>; a scripted run keeps the left, unflipped.</summary>
+		static Vector2 MoveStick();
+		/// <summary>The aim stick (the right, or the left with <see cref="SwapSticks"/>) as a mouse delta this frame (the counts the mouse look is tuned for): a rate, squared for
 		/// fine aim near the centre, so holding the stick over swings the look on as a mouse moved on would.</summary>
 		static Vector2 AimDelta(float dt);
 

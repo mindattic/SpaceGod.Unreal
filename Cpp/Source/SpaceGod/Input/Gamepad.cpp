@@ -77,6 +77,22 @@ namespace SpaceGod::Input
 		return value;
 	}
 
+	const cs::Ref<ToggleSetting>& Gamepad::SwapSticks()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("controls.pad.swapSticks", SettingGroups::Controls,
+			"Swap gamepad sticks", false, "The right stick moves and the left stick aims.",
+			"gamepad controller stick swap southpaw left right move aim");
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& Gamepad::InvertMove()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("controls.pad.invertMove", SettingGroups::Controls,
+			"Invert gamepad move", false, "Pushing the move stick forward moves back, and pulling it back moves forward.",
+			"gamepad controller stick y thrust move invert");
+		return value;
+	}
+
 	const cs::Ref<RangeSetting>& Gamepad::VibrationStrength()
 	{
 		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.pad.vibration", SettingGroups::Controls,
@@ -92,6 +108,8 @@ namespace SpaceGod::Input
 		DeadZone();
 		AimSensitivity();
 		InvertAim();
+		SwapSticks();
+		InvertMove();
 		VibrationStrength();
 	}
 
@@ -108,9 +126,23 @@ namespace SpaceGod::Input
 		return raw * (scaled / m);
 	}
 
+	namespace
+	{
+		bool Swapped() { return !PlayerOptions::ScriptedRun() && Gamepad::SwapSticks()->Value; }
+	}
+
+	Vector2 Gamepad::MoveStick()
+	{
+		const GamepadDevice& pad = GamepadDevice::current();
+		Vector2 s = Stick(Swapped() ? pad.rightStick : pad.leftStick);
+		if (!PlayerOptions::ScriptedRun() && InvertMove()->Value) s.y = -s.y;
+		return s;
+	}
+
 	Vector2 Gamepad::AimDelta(float dt)
 	{
-		Vector2 s = Stick(GamepadDevice::current().rightStick);
+		const GamepadDevice& pad = GamepadDevice::current();
+		Vector2 s = Stick(Swapped() ? pad.leftStick : pad.rightStick);
 		float m = s.magnitude();
 		if (m <= 0) return Vector2::zero();
 		// Squared response: a light touch for fine aim, full deflection for a fast swing.

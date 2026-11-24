@@ -283,6 +283,12 @@ namespace SpaceGod::Input
 				{ KeyAction::Number8, "number8", "Numbers: 8", Both, EdgeKind, { Key::Digit8 }, "Number 8 (as number 1)." },
 				{ KeyAction::Number9, "number9", "Numbers: 9", Both, EdgeKind, { Key::Digit9 }, "Number 9 (as number 1)." },
 				{ KeyAction::Number0, "number0", "Numbers: 0", Both, EdgeKind, { Key::Digit0 }, "Number 0: the captain's order on 0; with Shift the ability bar's next page." },
+				// US-T629: the d-pad's four steps. At the controls they share the reactor (left weapons, up shields, right engines,
+				// down an even share); in command up and down step time, right and left the ships.
+				{ KeyAction::PadStepLeft, "padStepLeft", "Pad steps: left", Both, EdgeKind, { Pad(PadButton::DPadLeft) }, "At the controls power to weapons; in command the ship before." },
+				{ KeyAction::PadStepUp, "padStepUp", "Pad steps: up", Both, EdgeKind, { Pad(PadButton::DPadUp) }, "At the controls power to shields; in command time faster." },
+				{ KeyAction::PadStepRight, "padStepRight", "Pad steps: right", Both, EdgeKind, { Pad(PadButton::DPadRight) }, "At the controls power to engines; in command the next ship." },
+				{ KeyAction::PadStepDown, "padStepDown", "Pad steps: down", Both, EdgeKind, { Pad(PadButton::DPadDown) }, "At the controls an even share of power; in command time slower." },
 			};
 			return actions;
 		}

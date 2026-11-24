@@ -25,7 +25,7 @@
 // jets' (InputState::GiveWalkerKeys), anywhere else the pause's, so the page does not call it a clash.
 //
 // Fixed: Esc (it backs out of everything, menus included), the left and right mouse buttons' fire, select
-// and look (they bind only with a modifier held), the sticks' movement and aim, the d-pad's steps, and the keys inside
+// and look (they bind only with a modifier held), the sticks' movement and aim (Controls can swap them), and the keys inside
 // panels and menus (arrows, Enter, PgUp/PgDn in a list). While a menu has the pad (Gamepad::MenuMode) no pad binding
 // fires but the pause menu's.
 //
@@ -66,6 +66,8 @@ namespace SpaceGod::Input
 		Console /* US-T620 */,
 		// Numbers (US-T628): the number row; Alt picks a fire group with one, Alt+Shift its fire mode
 		Number1, Number2, Number3, Number4, Number5, Number6, Number7, Number8, Number9, Number0,
+		// Pad steps (US-T629): the d-pad's reactor shares at the controls, time and ship steps in command
+		PadStepLeft, PadStepUp, PadStepRight, PadStepDown,
 		Count,
 	};
 
