@@ -38,8 +38,9 @@ namespace SpaceGod
 
 	const cs::List<cs::String>& PlayerOptions::PlayerGroups()
 	{
-		// US-T249: Key bindings right under Controls (the nav indents it there).
-		static const cs::List<cs::String> value{ Gameplay, SettingGroups::Graphics, SettingGroups::Audio, SettingGroups::Controls, Input::KeyBindings::Group, Accessibility };
+		// US-T249: Key bindings right under Controls (the nav indents it there). US-T570: Graphics and Sound lead.
+		static const cs::List<cs::String> value{ SettingGroups::Graphics, SettingGroups::Audio, Gameplay, SettingGroups::Multiplayer, SettingGroups::Controls,
+			Input::KeyBindings::Group, SettingGroups::Interface, Accessibility };
 		return value;
 	}
 

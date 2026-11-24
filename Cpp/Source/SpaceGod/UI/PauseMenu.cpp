@@ -21,6 +21,12 @@ using namespace SpaceGod::Core;
 
 namespace SpaceGod::UI
 {
+	namespace
+	{
+		/// US-T570: a group as the player reads it (Audio is "Sound").
+		cs::String GroupTitle(const cs::String& g) { return g == SettingGroups::Audio ? cs::String("Sound") : g; }
+	}
+
 	void PauseMenu::Open()
 	{
 		if (IsOpen) return;
@@ -322,10 +328,9 @@ namespace SpaceGod::UI
 		const float navW = 190;
 		float top = r.y + 70, bottom = r.yMax() - 56;
 		{
-			// US-T252: Gameplay, Graphics, Display, Audio, Controls, Accessibility; then "Advanced (simulation)", folded until
+			// US-T570: Display, then the player's groups (Graphics, Sound, Gameplay, ...); then "Advanced (simulation)", folded until
 			// opened, over the design groups. Scrolls when it runs past the panel (a small window, or a large UI scale).
 			const float step = 34, indent = 12;
-			bool displayShown = false;
 			int rowsNeeded = playerGroups.Count() + 1 + (advancedGroups.Count() > 0 ? 1 : 0) + (advancedOpen ? advancedGroups.Count() : 0);
 			auto navView = Rect(r.x + 20, top, navW, bottom - top);
 			float navH = rowsNeeded * step;
@@ -333,21 +338,15 @@ namespace SpaceGod::UI
 			float bw = overflow ? navW - 18 : navW;
 			navScroll = GUI::BeginScrollView(navView, navScroll, Rect(0, 0, bw, Mathf::Max(navH, 1.0f)));
 			float ny = 0;
-			auto displayButton = [&]
-			{
-				if (GUI::Button(Rect(0, ny, bw, 30), "Display", button)) OpenDisplay();
-				ny += step;
-				displayShown = true;
-			};
+			if (GUI::Button(Rect(0, ny, bw, 30), "Display", button)) OpenDisplay();
+			ny += step;
 			for (const auto& g : playerGroups)
 			{
 				// US-T249: Key bindings sits under Controls, indented as a page of it.
 				float gx = g == Input::KeyBindings::Group ? indent : 0.0f;
 				NavGroup(g, Rect(gx, ny, bw - gx, 30), searching);
 				ny += step;
-				if (g == SettingGroups::Graphics) displayButton();
 			}
-			if (!displayShown) displayButton();
 			if (advancedGroups.Count() > 0)
 			{
 				bool shownInside = !searching && advancedGroups.Contains(group);
@@ -378,7 +377,7 @@ namespace SpaceGod::UI
 		auto shown = searching ? registry->Search(search) : !group.empty() ? registry->InGroup(group) : cs::List<cs::Ref<GameSetting>>();
 		bool displayFound = searching && MatchesAll(DisplaySearchWords, search);
 		int rows = shown.Count() + (displayFound ? 1 : 0);
-		cs::String heading = searching ? cs::Cat(rows, " found for \"", cs::Strings::Trim(search), "\"") : !group.empty() ? group : cs::String("Nothing to set");
+		cs::String heading = searching ? cs::Cat(rows, " found for \"", cs::Strings::Trim(search), "\"") : !group.empty() ? GroupTitle(group) : cs::String("Nothing to set");
 		GUI::Label(Rect(px, top, pw, 22), heading, text);
 		float listTop = top + 28;
 		const float headerH = 26;
@@ -487,7 +486,7 @@ namespace SpaceGod::UI
 			if (!s->IsDefault()) resettable.Add(s);
 		bool enabled = GUI::enabled;
 		GUI::enabled = enabled && resettable.Count() > 0;
-		cs::String resetLabel = searching ? cs::String("Reset these") : cs::Cat("Reset ", group);
+		cs::String resetLabel = searching ? cs::String("Reset these") : cs::Cat("Reset ", GroupTitle(group));
 		if (GUI::Button(Rect(px, by, 220, 30), resetLabel, button))
 			for (const auto& s : resettable) s->Reset();
 		GUI::enabled = enabled;
@@ -504,7 +503,7 @@ namespace SpaceGod::UI
 
 	void PauseMenu::NavGroup(const cs::String& g, Rect r, bool searching)
 	{
-		if (GUI::Button(r, g, !searching && g == group ? buttonActive : button)) ShowGroup(g);
+		if (GUI::Button(r, GroupTitle(g), !searching && g == group ? buttonActive : button)) ShowGroup(g);
 	}
 
 	void PauseMenu::ShowGroup(const cs::String& g)
@@ -638,7 +637,7 @@ namespace SpaceGod::UI
 		}
 		const float controlW = 250, resetW = 60;
 		float textW = r.width - controlW - resetW - 24;
-		GUI::Label(Rect(r.x + 4, r.y + 4, textW, 20), showGroup ? cs::Cat(setting->Group, "  ·  ", setting->Label) : setting->Label, label);
+		GUI::Label(Rect(r.x + 4, r.y + 4, textW, 20), showGroup ? cs::Cat(GroupTitle(setting->Group), "  ·  ", setting->Label) : setting->Label, label);
 		GUI::Label(Rect(r.x + 4, r.y + 24, textW, SettingRowH - 26), setting->Description, small);
 
 		float cx = r.x + textW + 12, cy = r.y + 10;
