@@ -396,7 +396,7 @@ namespace SpaceGod::Core
 		Battle::TurnToward(u, face, h.TurnDegS, dt);
 		auto want = DfCapped(cmd.WantVel, h.TopSpeed * boost);
 		// Never out of the fight altogether: past most of the escape radius it burns back in.
-		if (u->Pos.Length() > Battle::EscapeKm * 0.8) want = DfUnit(-u->Pos, u->Forward) * h.TopSpeed;
+		if (u->Pos.Length() > Battle::EscapeKm() * 0.8) want = DfUnit(-u->Pos, u->Forward) * h.TopSpeed;
 		auto f = u->Forward;
 		auto a = (want - u->Vel) / RespondS;
 		// Newtonian: the push along the nose is the main drive's or the retros', the push across it the thrusters'.

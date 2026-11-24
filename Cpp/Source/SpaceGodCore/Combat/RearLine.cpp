@@ -120,7 +120,7 @@ namespace SpaceGod::Core
 			}
 
 		// Never so far back that it leaves the fight.
-		if (u->Pos.Length() > Battle::EscapeKm * 0.7) desired = desired + -u->Pos.Normalized() * speed;
+		if (u->Pos.Length() > Battle::EscapeKm() * 0.7) desired = desired + -u->Pos.Normalized() * speed;
 
 		face = t->Pos - u->Pos;
 	}

@@ -477,7 +477,7 @@ namespace SpaceGod::Core
 			// damage to its drive or hull while it charges cancels the jump (US-T98, EscapeJumps).
 			if (u->Kind == UnitKind::Ship && u->Latched == nullptr && !c->Disabled() && !c->Interior->UnderBoarding() && !u->Surrendering && !u->Captured)
 			{
-				if (u->Pos.Length() > EscapeKm || EscapeJumps::Step(self, u, dt)) u->Fled = true;
+				if (u->Pos.Length() > EscapeKm() || EscapeJumps::Step(self, u, dt)) u->Fled = true;
 			}
 			else if (EscapeJumps::Spooling(u)) EscapeJumps::Abort(self, u);
 		}
@@ -674,8 +674,8 @@ namespace SpaceGod::Core
 			score -= Choreography::TargetBias(u, o);
 			if (flagship != nullptr && flagship != u && flagship->Target == o) score -= 6;
 			if (focus != nullptr && focus == o) score -= FleetCoordination::Focus()->Value;
-			if (called != nullptr && called == o) score -= FireCallWeightKm;
-			if (crippling != nullptr && crippling == o) score -= CrippleCallWeightKm;
+			if (called != nullptr && called == o) score -= FireCallWeightKm();
+			if (crippling != nullptr && crippling == o) score -= CrippleCallWeightKm();
 			score *= 0.85 + rng.NextDouble() * 0.3;
 			// Stickiness (U.SPC-T560): the current mark keeps the gun unless a rival is clearly better, so heading settles.
 			if (o == u->Target) score *= TargetStickiness;
@@ -765,7 +765,7 @@ namespace SpaceGod::Core
 			// US-T342: station just behind the caller, on its far side from the enemy, matching its way.
 			auto behind = fallBack->Pos - HostileCentroid(fallBack);
 			if (behind.LengthSquared() < 1e-6) behind = -fallBack->Forward;
-			auto post = fallBack->Pos + behind.Normalized() * FallBackStandKm;
+			auto post = fallBack->Pos + behind.Normalized() * FallBackStandKm();
 			desired = (post - u->Pos) * 0.05 + fallBack->Vel;
 		}
 		else if (u->Target != nullptr && AlphaStrike::Flies(u) && !Broadsides::HoldsFormation(u))
@@ -872,7 +872,7 @@ namespace SpaceGod::Core
 
 		// The player first, if near enough to be worth the chase.
 		for (const auto& o : Units)
-			if (o->PlayerControlled() && !IgnoredByAi(u, o) && Hostile(u, o) && (o->Pos - u->Pos).Length() < Difficulty::PirateHuntKm(u->Faction->IsPirate, HuntPlayerKm)) // US-T253
+			if (o->PlayerControlled() && !IgnoredByAi(u, o) && Hostile(u, o) && (o->Pos - u->Pos).Length() < Difficulty::PirateHuntKm(u->Faction->IsPirate, HuntPlayerKm())) // US-T253
 			{
 				u->Target = o;
 				break;
@@ -933,7 +933,7 @@ namespace SpaceGod::Core
 			if (flown)
 			{
 				auto steer = trick.Goal;
-				if (u->Pos.Length() > EscapeKm * 0.8) steer = steer.Normalized() + (-u->Pos).Normalized() * 1.5;
+				if (u->Pos.Length() > EscapeKm() * 0.8) steer = steer.Normalized() + (-u->Pos).Normalized() * 1.5;
 				FlyCrewed(u, cls, tune, hull, engines, steer, trick.Throttle, trick.Boost, dt, trick.Coast, trick.Roll);
 				return;
 			}
@@ -955,7 +955,7 @@ namespace SpaceGod::Core
 			case DogfightManeuver::Extend:
 				goal = u->Forward + (t != nullptr ? (u->Pos - t->Pos).Normalized() * 0.4 : DVec3::Zero);
 				boost = true;
-				if (t != nullptr && (t->Pos - u->Pos).Length() > ExtendKm) u->ManeuverLeft = 0;
+				if (t != nullptr && (t->Pos - u->Pos).Length() > ExtendKm()) u->ManeuverLeft = 0;
 				break;
 			default:
 			{
@@ -978,7 +978,7 @@ namespace SpaceGod::Core
 				}
 				// On its tail, hold station rather than overrun it.
 				if (d < 1.2) speed = cs::Math::Max(speed * 0.6, cs::Math::Min(speed, t->Vel.Length() + 0.05));
-				if (d < MergeKm)
+				if (d < MergeKm())
 				{
 					u->Maneuver = DogfightManeuver::Extend;
 					u->ManeuverLeft = 2 + rng.NextDouble();
@@ -987,7 +987,7 @@ namespace SpaceGod::Core
 			}
 		}
 		// Never out of the fight altogether: past most of the escape radius, it turns back in.
-		if (u->Pos.Length() > EscapeKm * 0.8) goal = goal.Normalized() + (-u->Pos).Normalized() * 1.5;
+		if (u->Pos.Length() > EscapeKm() * 0.8) goal = goal.Normalized() + (-u->Pos).Normalized() * 1.5;
 		FlyCrewed(u, cls, tune, hull, engines, goal, top > 0 ? speed / top : 0, boost, dt, false, roll);
 	}
 
@@ -1030,7 +1030,7 @@ namespace SpaceGod::Core
 			if (!Hostile(u, o) || o->Combat->Disabled() || o->Stunned > 0 || !o->Combat->Armed() || o->Surrendering || o->Captured) continue;
 			auto to = o->Pos - u->Pos;
 			double d = to.Length();
-			if (d < 1e-6 || d > TailKm) continue;
+			if (d < 1e-6 || d > TailKm()) continue;
 			auto dir = to / d;
 			if (DVec3::Dot(u->Forward, dir) < -0.3 && DVec3::Dot(o->Forward, -dir) > 0.94) return o;
 		}
@@ -2059,7 +2059,7 @@ namespace SpaceGod::Core
 			if (!m->Armed()) continue;
 			bool tripped = false;
 			for (const auto& o : Units)
-				if (o->Side != m->Side && o->Present() && (o->Pos - m->Pos).Length() <= MineTriggerKm + Gunnery::HitRadius(o))
+				if (o->Side != m->Side && o->Present() && (o->Pos - m->Pos).Length() <= MineTriggerKm() + Gunnery::HitRadius(o))
 				{
 					tripped = true;
 					break;
@@ -3535,7 +3535,7 @@ namespace SpaceGod::Core
 		double d = anchorKm.Length();
 		auto out = d > 1e-9 ? anchorKm / d : DVec3::UnitX;
 		// Out of the world: the whole battle space above its surface.
-		double surface = body->RadiusKm + SurfaceClearanceKm;
+		double surface = body->RadiusKm + SurfaceClearanceKm();
 		if (d < surface)
 		{
 			anchorKm = out * surface;
@@ -3548,8 +3548,8 @@ namespace SpaceGod::Core
 			double h = DVec3::Dot(anchorKm, pole);
 			auto inPlane = anchorKm - pole * h;
 			double rho = inPlane.Length();
-			double edge = body->RingOuterKm + SurfaceClearanceKm;
-			if (cs::Math::Abs(h) < SurfaceClearanceKm && rho < edge)
+			double edge = body->RingOuterKm + SurfaceClearanceKm();
+			if (cs::Math::Abs(h) < SurfaceClearanceKm() && rho < edge)
 			{
 				auto across = rho > 1e-9 ? inPlane / rho : DVec3::Cross(pole, DVec3::UnitZ).LengthSquared() > 1e-12 ? DVec3::Cross(pole, DVec3::UnitZ).Normalized() : DVec3::UnitX;
 				anchorKm = across * edge + pole * h;

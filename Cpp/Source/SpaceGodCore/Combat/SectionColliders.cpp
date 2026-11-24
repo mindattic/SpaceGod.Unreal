@@ -393,7 +393,7 @@ namespace SpaceGod::Core
 			{
 				if (b->Over || b->Site != nullptr) continue;
 				DVec3 anchor = world->Ephemeris->HelioAt(b->Body, jd) + b->Anchor - helioKm;
-				if (anchor.Length() > reachKm + Battle::EscapeKm) continue;
+				if (anchor.Length() > reachKm + Battle::EscapeKm()) continue;
 				for (const auto& u : b->Units)
 				{
 					if (u->Kind != UnitKind::Platform || !u->Present()) continue;

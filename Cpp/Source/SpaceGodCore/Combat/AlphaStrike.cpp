@@ -181,7 +181,7 @@ namespace SpaceGod::Core
 		double boost = 1 + (cs::Math::Max(1.0, u->Combat->Spec->BoostSpeedMultiplier) - 1) * Burn()->Value;
 		double top = speed * boost;
 		// Out far enough (or at the edge of the fight): clear of the enemy's reach.
-		bool clear = Gap(u) >= EgressKm()->Value || u->Pos.Length() > Battle::EscapeKm * 0.7;
+		bool clear = Gap(u) >= EgressKm()->Value || u->Pos.Length() > Battle::EscapeKm() * 0.7;
 		// Reloaded out there: come round for the next run.
 		if (u->Strike == StrikePhase::Egress && clear && Loaded(u)) u->Strike = StrikePhase::RunIn;
 		if (u->Strike == StrikePhase::RunIn)
@@ -192,7 +192,7 @@ namespace SpaceGod::Core
 		}
 		// Burning out: away from the mark, bending back in rather than leaving the fight altogether.
 		auto away = -dir;
-		if (u->Pos.Length() > Battle::EscapeKm * 0.6) away = (away + (-u->Pos).Normalized() * 1.2).Normalized();
+		if (u->Pos.Length() > Battle::EscapeKm() * 0.6) away = (away + (-u->Pos).Normalized() * 1.2).Normalized();
 		if (clear)
 		{
 			// Waiting on its reload out of reach: hold off, circling.

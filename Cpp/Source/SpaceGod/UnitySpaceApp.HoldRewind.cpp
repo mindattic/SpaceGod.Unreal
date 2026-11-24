@@ -2947,7 +2947,7 @@ namespace SpaceGod
 				}
 				if (wall - t.PhaseWall < 0.6) return true;
 				auto out = t.SeatUnit->Pos.LengthSquared() > 1e-9 ? t.SeatUnit->Pos.Normalized() : DVec3::UnitX;
-				SeedPilot(t.Fight->Anchor + out * (Battle::EscapeKm * 2.0), DVec3::Zero, out);
+				SeedPilot(t.Fight->Anchor + out * (Battle::EscapeKm() * 2.0), DVec3::Zero, out);
 				t.PhaseWall = wall;
 				t.Phase = 27;
 				return true;

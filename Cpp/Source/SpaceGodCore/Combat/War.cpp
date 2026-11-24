@@ -989,7 +989,7 @@ namespace SpaceGod::Core
 		// edge would be counted as escaped on the very next step. A fight it starts is fought where it is.
 		if (offsetFromBodyKm.Length() > ScaleModel::NeighbourhoodKm((*Catalog())[body])) return nullptr;
 		auto b = BattleAt(body);
-		if (b != nullptr && (offsetFromBodyKm - b->Anchor).Length() > Battle::EscapeKm * 0.8) return nullptr;
+		if (b != nullptr && (offsetFromBodyKm - b->Anchor).Length() > Battle::EscapeKm() * 0.8) return nullptr;
 		// Already left this one: not back in until it is over.
 		if (b != nullptr && b->UnitOf(ship) != nullptr) return nullptr;
 		if (!b) b = TryStartBattle(body, ship->Faction, jd, cs::Nullable<DVec3>(offsetFromBodyKm), true);
@@ -1021,7 +1021,7 @@ namespace SpaceGod::Core
 		{
 			auto tu = existing->UnitOf(target);
 			if (tu == nullptr || target->Battle != existing || existing->UnitOf(ship) != nullptr) return nullptr;
-			if ((offsetFromBodyKm - existing->Anchor).Length() > Battle::EscapeKm * 0.8) return nullptr;
+			if ((offsetFromBodyKm - existing->Anchor).Length() > Battle::EscapeKm() * 0.8) return nullptr;
 			auto joined = existing->AddShip(ship, 1 - tu->Side, offsetFromBodyKm - existing->Anchor, forward);
 			joined->SetPlayerControlled(true);
 			return existing;

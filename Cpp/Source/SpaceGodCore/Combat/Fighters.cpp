@@ -1036,7 +1036,7 @@ namespace SpaceGod::Core
 		auto to = goal - u->Pos;
 		double dist = to.Length();
 		// Stay inside the battle -- except homing on its carrier, wherever that has drifted to.
-		if (!homing && u->Pos.Length() > Battle::EscapeKm * 0.8) to = -u->Pos;
+		if (!homing && u->Pos.Length() > Battle::EscapeKm() * 0.8) to = -u->Pos;
 		double toLength = to.Length();
 		auto desiredDir = toLength > 1e-6 ? to / toLength : u->Forward;
 		Battle::TurnToward(u, desiredDir, spec->TurnRateDegS, dt);

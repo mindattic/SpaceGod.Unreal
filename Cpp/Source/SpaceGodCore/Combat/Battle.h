@@ -824,7 +824,7 @@ namespace SpaceGod::Core
 		/// <summary>Carriers launch their squadrons through this (see FighterAI).</summary>
 		cs::Action<cs::Ref<Battle>, cs::Ref<BattleUnit>> Launch;
 
-		static constexpr double EscapeKm = 55;
+		static double EscapeKm();
 		static constexpr double MaxStep = 1.0;
 
 		/// <summary>How long a hailing hull waits before the battle decides terms itself if nobody has.</summary>
@@ -963,10 +963,10 @@ namespace SpaceGod::Core
 
 		/// <summary>How close the merge is, km (inside it the attacker extends), how far it extends before coming
 		/// round, and how near a hostile behind must be to count as on its tail.</summary>
-		static constexpr double MergeKm = 0.3; static constexpr double ExtendKm = 1.6; static constexpr double TailKm = 2.5;
+		static double MergeKm(); static double ExtendKm(); static double TailKm();
 
 		/// <summary>How far off a dogfighter goes for the player in preference to whatever else it was after, km.</summary>
-		static constexpr double HuntPlayerKm = 8;
+		static double HuntPlayerKm();
 
 	public:
 		/// <summary>The small craft that dogfight: the light fighters and interceptors. A heavy fighter (the gunship) brawls
@@ -1168,7 +1168,7 @@ namespace SpaceGod::Core
 		static constexpr double MineArmSeconds = 1.5; static constexpr double MineLifeSeconds = 240;
 
 		/// <summary>How near a mine a hostile hull must come to set it off, km beyond the hull's own size.</summary>
-		static constexpr double MineTriggerKm = 0.12;
+		static double MineTriggerKm();
 
 	private:
 		/// <summary>Lays a mine astern when the mount's owner wants one: the player when asked, a crew when something
@@ -1424,7 +1424,7 @@ namespace SpaceGod::Core
 		/// <summary>US-T332: how long a call for fire stands, battle seconds, and how much it weighs in a ship's choice of target
 		/// (as km nearer; a command ship's own focus is <see cref="FleetCoordination.Focus"/>).</summary>
 		static constexpr double FireCallSeconds = 30;
-		static constexpr double FireCallWeightKm = 40;
+		static double FireCallWeightKm();
 
 		/// <summary>
 		/// US-T332: the helm calls its side's fire onto <paramref name="target"/> (the hull locked): every ship of its side
@@ -1479,7 +1479,7 @@ namespace SpaceGod::Core
 		static constexpr double FallBackHullFraction = 0.5;
 
 		/// <summary>US-T342: how far behind the caller (away from the enemy) the hulls falling back take station, km.</summary>
-		static constexpr double FallBackStandKm = 3;
+		static double FallBackStandKm();
 
 		/// <summary>
 		/// US-T342: the helm calls its side's badly damaged ships (below <see cref="FallBackHullFraction"/> of their hull, still
@@ -1545,7 +1545,7 @@ namespace SpaceGod::Core
 		/// <summary>US-T352: how long a call to cripple a hull stands, battle seconds.</summary>
 		static constexpr double CrippleCallSeconds = 30;
 		/// <summary>US-T352: how much nearer, km, the called hull scores in a gunner's choice of target (as a call for fire's).</summary>
-		static constexpr double CrippleCallWeightKm = 40;
+		static double CrippleCallWeightKm();
 		/// <summary>US-T352: the weight a called hull's drives get in a gunner's choice of system (a weapon's is 3).</summary>
 		static constexpr double CrippleDriveWeight = 30;
 
@@ -1584,7 +1584,7 @@ namespace SpaceGod::Core
 		bool WithdrawStanding = false;
 		/// <summary>US-T360: how far, km, the most and the least damaged of a withdrawing group spread along its way out (the
 		/// healthiest hanging back toward the enemy, the worst hurt leading).</summary>
-		static constexpr double WithdrawCoverKm = 8;
+		static double WithdrawCoverKm();
 		/// <summary>US-T360: the group's pace, as a share of its slowest ship's top speed, so none is left behind.</summary>
 		static constexpr double WithdrawPace = 0.9;
 
@@ -1823,7 +1823,7 @@ namespace SpaceGod::Core
 
 		/// <summary>US-T213: how far above a body's surface (true km) a battle's anchor must sit at the least: the whole
 		/// battle space (<see cref="EscapeKm"/> about the anchor) and a margin, so no unit fights inside the world.</summary>
-		static constexpr double SurfaceClearanceKm = EscapeKm + 25;
+		static double SurfaceClearanceKm() { return EscapeKm() + 25; }
 
 		/// <summary>
 		/// US-T213: <paramref name="anchorKm"/> (an offset from <paramref name="body"/>'s centre) pushed out, if it must be,

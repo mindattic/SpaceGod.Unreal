@@ -21,6 +21,7 @@
 #include "Streaming.h"
 #include "Combat/AlphaStrike.h"
 #include "Combat/ArmourAngling.h"
+#include "Combat/BattleTuning.h"
 #include "Combat/BoardingShuttles.h"
 #include "Combat/BreacherBays.h"
 #include "Combat/Broadsides.h"
@@ -77,6 +78,9 @@ namespace SpaceGod::Core
 		// ---- Core/Combat/
 		AlphaStrike::RunClassConstructor(); found++;
 		ArmourAngling::RunClassConstructor(); found++;
+		BattleTuning::EscapeKm(); BattleTuning::HuntPlayerKm(); BattleTuning::MineTriggerKm(); BattleTuning::FireCallWeightKm();
+		BattleTuning::FallBackStandKm(); BattleTuning::CrippleCallWeightKm(); BattleTuning::WithdrawCoverKm(); BattleTuning::MergeKm();
+		BattleTuning::ExtendKm(); BattleTuning::TailKm(); found++; // US-T540 (not a C# source)
 		BoardingShuttles::TeamSize(); BoardingShuttles::LatchSeconds(); BoardingShuttles::RangeKm(); BoardingShuttles::GateSeizeDays(); found++;
 		BreacherBays::TeamSize(); BreacherBays::ReadySeconds(); BreacherBays::CycleSeconds(); BreacherBays::RoundSpeedKmS(); BreacherBays::SteerKmS2();
 		BreacherBays::RangeKm(); BreacherBays::ImpactDamage(); found++;

@@ -683,7 +683,7 @@ namespace SpaceGod::Core
 		if (away.LengthSquared() < 1e-6) away = middle.LengthSquared() > 0 ? middle : DVec3::UnitX;
 		auto way = away.Normalized();
 		// The worse hurt than the group's middle lead toward the exit; the healthier hang back, between them and the enemy.
-		double lead = ((1 - u->Combat->HullFraction()) - harm) * WithdrawCoverKm;
+		double lead = ((1 - u->Combat->HullFraction()) - harm) * WithdrawCoverKm();
 		auto slot = middle + way * lead;
 		desired = way * (slowest * WithdrawPace) + (slot - u->Pos) * 0.05;
 		return true;
