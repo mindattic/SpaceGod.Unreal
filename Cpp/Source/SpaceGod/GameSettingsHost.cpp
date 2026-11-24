@@ -1,4 +1,5 @@
 #include "GameSettingsHost.h"
+#include "AccessibilityOptions.h" // US-T634
 #include "ActiveProfile.h"
 #include "Audio/GameAudio.h" // US-T240
 #include "DisplayExtras.h" // US-T544
@@ -47,6 +48,7 @@ namespace SpaceGod
 		SettingsRegistry::AddDeclarationSource([] { GraphicsSettings::Declare(); });
 		SettingsRegistry::AddDeclarationSource([] { DisplayExtras::Declare(); }); // US-T544: the Display page's brightness, HDR and background cap
 		SettingsRegistry::AddDeclarationSource([] { PlayerOptions::Declare(); }); // US-T252: Settings > Gameplay and Accessibility
+		SettingsRegistry::AddDeclarationSource([] { AccessibilityOptions::Declare(); }); // US-T634: the colour-blind filter
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::AutoReorientSetting(); });
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::TutorialHintsSetting(); }); // US-T254: the first-time hints
 		SettingsRegistry::AddDeclarationSource([]
