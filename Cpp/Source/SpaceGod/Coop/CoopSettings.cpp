@@ -7,6 +7,7 @@
 
 #include "Settings/GameSetting.h"
 #include "Settings/SettingsRegistry.h"
+#include "Settings/Tuning.h"
 
 #include <exception>
 #include <map>
@@ -71,7 +72,10 @@ namespace SpaceGod::Coop::CoopSettings
 
 	int Applied() { return applied; }
 
-	bool IsShared(const cs::Ref<GameSetting>& s) { return s != nullptr && SharedGroups().count(s->Group) > 0; }
+	bool IsShared(const cs::Ref<GameSetting>& s)
+	{
+		return s != nullptr && (SharedGroups().count(s->Group) > 0 || (Tuning::IsTuningGroup(s->Group) && Tuning::IsSimulationScope(s->Key)));
+	}
 
 	cs::String ValueOf(const cs::Ref<GameSetting>& s)
 	{
