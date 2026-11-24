@@ -19,6 +19,9 @@ namespace SpaceGod
 		/// <summary>Developer: the ` key opens the console. On by default.</summary>
 		static const cs::Ref<Core::ToggleSetting>& Enabled();
 
+		/// <summary>The engine's console (USpaceGodConsole) is showing, its input line or its scrollback.</summary>
+		static bool IsOpen();
+
 		/// <summary>Builds the console's settings (the declaration source GameSettingsHost registers).</summary>
 		static void Declare();
 	};
