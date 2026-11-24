@@ -16,6 +16,8 @@
 #include "Combat/War.h"
 #include "Economy/Economy.h"
 #include "Economy/Escorts.h"
+#include "Settings/DevFlags.h"
+#include "Settings/GameSetting.h"
 
 namespace SpaceGod::Core
 {
@@ -124,13 +126,13 @@ namespace SpaceGod::Core
 		auto drive = CruiseDrives::Of(ship);
 		if (drive == nullptr) return Refusal(ship);
 		double cool = FtlRules::CoolUntil(ship) - jd;
-		if (cool > 0)
+		if (cool > 0 && !DevFlags::InstantFtlSpool()->Value)
 			return "The FTL drive is cooling from its last jump: " + cs::Fmt(cool * 24, "0.0") + " h more";
 		double ly = km / Astro::LightYearKm;
 		// Flown as even jumps of no more than the drive reaches (US-T86), each charge paid for again.
 		int jumps = drive->JumpsFor(ly);
 		double need = jumps * FtlRules::PropellantFor(drive, ship, ly / jumps);
-		if (need > ship->Propellant() + 1e-9)
+		if (need > ship->Propellant() + 1e-9 && !DevFlags::UnlimitedFtlFuel()->Value)
 			return "Not enough reaction mass to jump " + cs::Fmt(ly, "0.00") + " ly" +
 				(jumps > 1 ? cs::Cat(" in ", jumps, " jumps") : cs::String()) + ": it takes " +
 				cs::Fmt(need, "N0") + " t, the tanks hold " + cs::Fmt(ship->Propellant(), "N0") + " t";
@@ -192,7 +194,7 @@ namespace SpaceGod::Core
 		Drive = CruiseDrives::Of(ship);
 		Stage = FtlStage::Spooling;
 		SpoolStartJd = jd;
-		ChargedJd = jd + Drive->SpoolDays();
+		ChargedJd = DevFlags::InstantFtlSpool()->Value ? jd : jd + Drive->SpoolDays();
 		return true;
 	}
 
@@ -287,8 +289,12 @@ namespace SpaceGod::Core
 		}
 		wing = ships.Count() - 1;
 		DeepSpace::NewsList news = galaxy->Traffic != nullptr ? cs::New<cs::List<cs::Ref<SystemReport>>>(galaxy->Traffic->News->Bundle(here, jd)) : nullptr;
+		cs::List<double> tanks;
+		for (const auto& s : ships) tanks.Add(s->Propellant());
 		auto c = galaxy->DeepSpace->Launch(ships, here, fromKm, to, Drive, jd, news, true);
 		c->Piloted = true;
+		if (DevFlags::UnlimitedFtlFuel()->Value)
+			for (int i = 0; i < ships.Count(); i++) ships[i]->SetPropellant(tanks[i]);
 		// FTL carries momentum (U.SPC-T418): the hull comes out moving as it went in.
 		c->CarriedVelocityKmS = velocityKmS;
 		for (const auto& h : hired)

@@ -8,6 +8,7 @@
 #include "Systems/VoidStations.h"
 #include "Systems/DeepSpace.h"
 #include "Systems/Exploration.h" // US-T260
+#include "Settings/DevFlags.h"
 #include "Settings/GameSetting.h"
 #include "Ships.h"
 
@@ -121,6 +122,16 @@ namespace SpaceGod::Core
 	void Galaxy::LookForStars(double jd)
 	{
 		if (undiscovered.Count() == 0) return;
+		// The Developer screen's reveal (US-T530): every star goes on the charts at once, quietly (no news, no first discovery).
+		if (DevFlags::RevealEveryStar()->Value)
+		{
+			for (const auto& star : undiscovered)
+				if (Find(star.Name) == nullptr && !ChartedStar(star.Name)) NearbyStars.Add(star);
+			undiscovered.Clear();
+			undiscoveredNames.Clear();
+			ChartVersion++;
+			return;
+		}
 		if (!cs::Double::IsNaN(lookedJd) && jd - lookedJd < CoarseStepDays && jd >= lookedJd) return;
 		lookedJd = jd;
 		for (const auto& lookout : StarDiscovery::Lookouts().ToArray())

@@ -23,6 +23,7 @@
 #include "Systems/Polities.h"
 #include "Systems/VoidRaiders.h"
 #include "Systems/VoidWatcher.h"
+#include "Settings/DevFlags.h"
 #include "Settings/GameSetting.h"
 
 namespace SpaceGod::Core
@@ -81,11 +82,13 @@ namespace SpaceGod::Core
 			ly = End.DistanceLy(from);
 		}
 		double cool = 0;
+		bool freeFuel = Piloted && DevFlags::UnlimitedFtlFuel()->Value;
 		for (const auto& s : Ships)
 		{
 			cool = cs::Math::Max(cool, FtlRules::CoolUntil(s) - jd);
-			s->SetPropellant(s->Propellant() - FtlRules::PropellantFor(Drive, s, ly));
+			if (!freeFuel) s->SetPropellant(s->Propellant() - FtlRules::PropellantFor(Drive, s, ly));
 		}
+		if (Piloted && DevFlags::InstantFtlSpool()->Value) charged = true;
 		ChargeJd = charged ? jd : jd + cs::Math::Max(0.0, cool);
 		Profile = charged ? CruiseProfile(ly, Drive->LyPerDay(), Drive->RampDays, 0)
 			: CruiseProfile(ly, Drive->LyPerDay(), Drive->RampDays, Drive->SpoolDays() + cs::Math::Max(0.0, cool));

@@ -16,6 +16,8 @@
 #include "Economy/Settlement.h"
 #include "Fleet.h"
 #include "Infrastructure/Infrastructure.h"
+#include "Settings/DevFlags.h"
+#include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "World.h"
 
@@ -892,6 +894,20 @@ namespace SpaceGod::Core
 
 	void Holdings::Update(double jd)
 	{
+		// The Developer screen's infinite credits (US-T530): the account and the pilot's purse never run below a billion,
+		// the account's top-up booked as a deposit so the books still agree.
+		if (DevFlags::InfiniteCredits()->Value)
+		{
+			const double floor = 1e9;
+			if (House->Treasury < floor)
+			{
+				double top = floor - House->Treasury;
+				House->Treasury = floor;
+				Book(jd, "Developer credits", top, /*earned:*/ false);
+			}
+			auto pilot = world->PilotedShip;
+			if (pilot != nullptr && pilot->Faction != nullptr && pilot->Faction->Treasury < floor) pilot->Faction->Treasury = floor;
+		}
 		if (cs::Double::IsNaN(nextTickJd)) return;
 		for (int guard = 0; guard < 4000 && nextTickJd <= jd; guard++)
 		{
