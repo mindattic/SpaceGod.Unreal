@@ -19,6 +19,7 @@
 #include "Combat/FlightDecks.h"
 #include "Embodiment/HelmAbilities.h" // US-T370
 #include "Embodiment/MountedTurret.h"
+#include "InterfaceOptions.h" // US-T560
 #include "PlayerOptions.h" // US-T252
 
 #include <cmath>
@@ -746,8 +747,9 @@ namespace SpaceGod::UI
 		}
 
 		// The hit marker: four ticks round the reticle.
+		bool markers = InterfaceOptions::ShowsHitMarkers();
 		float markAge = now - hitMarkAt;
-		if (markAge < HitMarkSeconds)
+		if (markers && markAge < HitMarkSeconds)
 		{
 			float fade = 1.0f - markAge / HitMarkSeconds;
 			bool weak = hitMark == HitMark::WeakPoint;
@@ -763,7 +765,7 @@ namespace SpaceGod::UI
 
 		// The kill marker: a larger cross and a ring opening out.
 		float killAge = now - killMarkAt;
-		if (killAge < KillMarkSeconds)
+		if (markers && killAge < KillMarkSeconds)
 		{
 			float t = killAge / KillMarkSeconds;
 			auto tint = WithAlpha(KillMarkColor, 1.0f - t);

@@ -5,6 +5,7 @@
 
 #include "UnitySpaceApp.h"
 #include "ActiveProfile.h"
+#include "InterfaceOptions.h" // US-T560
 #include "PlayerOptions.h" // US-T252
 #include "UI/GalaxyMapScreen.h"
 #include "UI/SystemMapScreen.h" // US-T258
@@ -1156,7 +1157,7 @@ namespace SpaceGod::UI
 		if (noseOn) DrawBoresight(nose, Color(1, 1, 1, 0.8f));
 		Vector2 aim;
 		if (app->PilotControlMode != PilotControl::Helm && DirectionToGui(app->PilotAimDirection(), aim) && (!noseOn || (aim - nose).sqrMagnitude() > 4))
-			DrawCrosshair(aim, CrosshairColor);
+			DrawCrosshair(aim, InterfaceOptions::CrosshairColor());
 		return noseOn;
 	}
 

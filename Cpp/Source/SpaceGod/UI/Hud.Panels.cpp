@@ -4,6 +4,7 @@
 
 #include "UI/Hud.h"
 
+#include "InterfaceOptions.h" // US-T560
 #include "UnitySpaceApp.h"
 #include "UI/Icons.h"
 
@@ -213,11 +214,17 @@ namespace SpaceGod::UI
 		auto old = GUI::color;
 		GUI::color = color;
 		const auto& w = Icons::White();
-		GUI::DrawTexture(Rect(p.x - 16, p.y - 1, 9, 2), w);
-		GUI::DrawTexture(Rect(p.x + 7, p.y - 1, 9, 2), w);
-		GUI::DrawTexture(Rect(p.x - 1, p.y - 16, 2, 9), w);
-		GUI::DrawTexture(Rect(p.x - 1, p.y + 7, 2, 9), w);
+		auto style = InterfaceOptions::CrosshairStyle();
+		if (style == InterfaceOptions::Crosshair::Ticks || style == InterfaceOptions::Crosshair::TicksAndDot)
+		{
+			GUI::DrawTexture(Rect(p.x - 16, p.y - 1, 9, 2), w);
+			GUI::DrawTexture(Rect(p.x + 7, p.y - 1, 9, 2), w);
+			GUI::DrawTexture(Rect(p.x - 1, p.y - 16, 2, 9), w);
+			GUI::DrawTexture(Rect(p.x - 1, p.y + 7, 2, 9), w);
+		}
+		if (style == InterfaceOptions::Crosshair::Dot || style == InterfaceOptions::Crosshair::TicksAndDot) GUI::DrawTexture(Rect(p.x - 2, p.y - 2, 4, 4), w);
 		GUI::color = old;
+		if (style == InterfaceOptions::Crosshair::Ring) DrawRing(p, 11, color);
 	}
 
 	void Hud::DrawBoresight(Vector2 p, Color color)

@@ -2,6 +2,7 @@
 
 #include "UI/Hud.h"
 
+#include "InterfaceOptions.h"
 #include "UnitySpaceApp.h"
 #include "UI/Icons.h"
 
@@ -182,7 +183,8 @@ namespace SpaceGod::UI
 		auto selectedShip = app->Selected.IsShip() ? app->Selected.Ship : nullptr;
 
 		// In a fight: every hostile, and the hull locked whatever it is (the selection keeps its own pointer).
-		if (battle != nullptr && me != nullptr)
+		bool arrows = InterfaceOptions::ShowsOffscreenIndicators(); // US-T560
+		if (arrows && battle != nullptr && me != nullptr)
 		{
 			auto locked = me->PlayerLockTarget;
 			for (const auto& o : battle->Units)
@@ -206,7 +208,7 @@ namespace SpaceGod::UI
 			}
 		}
 		// Out of a fight at the helm: the hunters running the ship down.
-		else if (app->IsPiloting() && app->World()->Pursuit != nullptr && app->World()->Pursuit->Active())
+		else if (arrows && battle == nullptr && app->IsPiloting() && app->World()->Pursuit != nullptr && app->World()->Pursuit->Active())
 		{
 			auto at = app->PilotOffsetKm();
 			for (const auto& g : app->World()->Pursuit->Groups)
