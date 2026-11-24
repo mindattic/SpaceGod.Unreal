@@ -241,14 +241,31 @@ namespace SpaceGod::Core
 					if (s->Kind() == SubsystemKind::ShieldGenerator && !s->Destroyed()) s->Shield = s->MaxShield;
 				break;
 			case RepairItemKind::Munitions:
+			{
+				int totalMissing = 0;
+				int loaded = 0;
 				for (const auto& s : c->Subsystems)
 				{
 					const auto& w = s->Def->Weapon;
 					if (w == nullptr || w->Ammo <= 0 || s->Ammo >= w->Ammo) continue;
 					int missing = w->Ammo - s->Ammo;
-					s->Ammo += whole ? missing : static_cast<int>(cs::Math::Floor(missing * share + 1e-9));
+					int add = whole ? missing : static_cast<int>(cs::Math::Floor(missing * share + 1e-9));
+					totalMissing += missing;
+					loaded += add;
 				}
+				if (loaded <= 0) return item.InStock < 1 - 1e-9 ? RepairOutcome::NoStock : RepairOutcome::CantAfford;
+				for (const auto& s : c->Subsystems)
+				{
+					const auto& w = s->Def->Weapon;
+					if (w == nullptr || w->Ammo <= 0 || s->Ammo >= w->Ammo) continue;
+					int missing = w->Ammo - s->Ammo;
+					int add = whole ? missing : static_cast<int>(cs::Math::Floor(missing * share + 1e-9));
+					s->Ammo += add;
+				}
+				whole = loaded >= totalMissing;
+				share = static_cast<double>(loaded) / totalMissing;
 				break;
+			}
 			default:
 				return RepairOutcome::NothingToDo;
 		}
