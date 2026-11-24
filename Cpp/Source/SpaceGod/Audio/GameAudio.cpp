@@ -59,7 +59,7 @@ namespace SpaceGod::Audio
 		}
 
 		/// Live volumes of the four buses (Master is the listener's, audio.masterVolume): set by the settings' Applying.
-		std::array<float, AudioBusCount> busVolumes{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
+		std::array<float, AudioBusCount> busVolumes{ 1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f };
 
 		/// A run that is driven or photographed (the smoke, shots, audits, the race, co-op smoke, -demo, -capture),
 		/// headless or offscreen plays nothing unless -GameAudio asks for sound.
@@ -156,7 +156,7 @@ namespace SpaceGod::Audio
 				for (USoundSubmix* mix : s.submixes) if (mix) manager->RegisterSoundSubmix(mix);
 			}
 			s.ticker = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateStatic(&Tick));
-			Debug::Log("[Unity.SpaceGod] Audio: buses Master, Music, Effects, Interface, Ambience ready.");
+			Debug::Log("[Unity.SpaceGod] Audio: buses Master, Music, Effects, Interface, Ambience, Voice ready.");
 		}
 
 		USoundAttenuation* Attenuation(float minDistance, float maxDistance)
@@ -328,7 +328,7 @@ namespace SpaceGod::Audio
 
 	int GameAudio::Playing() { return S().voices.Num(); }
 
-	void GameAudio::Declare() { MusicVolume(); EffectsVolume(); InterfaceVolume(); AmbienceVolume(); }
+	void GameAudio::Declare() { MusicVolume(); EffectsVolume(); InterfaceVolume(); AmbienceVolume(); VoiceVolume(); }
 
 	const cs::Ref<RangeSetting>& GameAudio::MusicVolume()
 	{
@@ -356,6 +356,13 @@ namespace SpaceGod::Audio
 		static const cs::Ref<RangeSetting> value = BusSetting("audio.ambienceVolume", "Ambience volume",
 			"How loud the background hum of space, stations and ships is, under the master volume.", "sound ambient background loudness",
 			AudioBus::Ambience);
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& GameAudio::VoiceVolume()
+	{
+		static const cs::Ref<RangeSetting> value = BusSetting("audio.voiceVolume", "Voice volume",
+			"How loud the voices on comms are, under the master volume.", "sound speech dialogue comms loudness", AudioBus::Voice);
 		return value;
 	}
 }

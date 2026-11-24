@@ -13,9 +13,10 @@ namespace SpaceGod::Audio
 		Effects,
 		Interface,
 		Ambience,
+		Voice,
 	};
 
-	inline constexpr int AudioBusCount = 5;
+	inline constexpr int AudioBusCount = 6;
 
 	inline const char* BusName(AudioBus bus)
 	{
@@ -25,6 +26,7 @@ namespace SpaceGod::Audio
 		case AudioBus::Effects: return "Effects";
 		case AudioBus::Interface: return "Interface";
 		case AudioBus::Ambience: return "Ambience";
+		case AudioBus::Voice: return "Voice";
 		default: return "Master";
 		}
 	}

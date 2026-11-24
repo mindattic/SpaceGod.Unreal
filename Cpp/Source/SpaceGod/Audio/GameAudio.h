@@ -14,7 +14,7 @@ namespace SpaceGod::Audio
 
 	/// The game's audio layer (US-T240): plays one-shots (2D, or 3D at a camera-relative scene point) and loops through
 	/// Unreal's audio engine, each on a bus with its own sound class, submix and volume (Settings > Audio: Music,
-	/// Effects, Interface, Ambience under the master volume, which stays audio.masterVolume and the listener's).
+	/// Effects, Interface, Ambience, Voice under the master volume, which stays audio.masterVolume and the listener's).
 	///
 	/// Everything here is local to this machine: nothing enters the Core or the co-op lockstep frames, so each peer
 	/// plays its own sounds and the bench digests are untouched. It is silent and does nothing at all, safely, when
@@ -59,6 +59,7 @@ namespace SpaceGod::Audio
 		static const cs::Ref<Core::RangeSetting>& EffectsVolume();
 		static const cs::Ref<Core::RangeSetting>& InterfaceVolume();
 		static const cs::Ref<Core::RangeSetting>& AmbienceVolume();
+		static const cs::Ref<Core::RangeSetting>& VoiceVolume();
 
 		/// How many one-shots and loops are playing (the audit, the log).
 		static int Playing();
