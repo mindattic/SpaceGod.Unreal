@@ -36,6 +36,8 @@ Capture/**/bin/
 Capture/**/obj/
 Vendor/**/bin/
 Vendor/**/obj/
+# US-T586: Piper (piper.exe, its DLLs, espeak-ng-data) and its .onnx voices; tools/fetch-piper.ps1 fetches them.
+Vendor/Piper/
 
 # US-T171/US-T236: the Prose conduit (docs/PROSE.md). The universe file is rebuilt from Core and a seed by the mapper
 # (tools/universe-export.ps1); the consumer kit's pending texts, Outbox journal and scratch are local. Committed: the

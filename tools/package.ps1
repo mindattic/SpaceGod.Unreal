@@ -28,6 +28,8 @@ Steps:
  5. Data/Lore (the applied Prose texts, docs/PROSE.md) into <archive>/Lore/, where the game reads them (US-T236).
  6. Data/Vehicles/Vehicles.json (engine ports and hardpoint placements, docs/Vehicles.md) into <archive>/Vehicles/,
     where the game reads it (US-T452).
+ 7. Vendor/Piper (tools/fetch-piper.ps1) into <archive>/Piper/ when it is present (US-T586); otherwise the game
+    speaks through Windows SAPI.
 
 Exe name. UE names a game exe after its target, and a target name is a C# class name, so it cannot contain dots:
 UAT writes <archive>/<Target>.exe, a small bootstrap launcher, plus the real game in
@@ -103,6 +105,21 @@ if (Test-Path -LiteralPath $vehiclesFile) {
   $vehiclesOut = Join-Path $archive 'Vehicles'
   New-Item -ItemType Directory -Force $vehiclesOut | Out-Null
   Copy-Item -LiteralPath $vehiclesFile -Destination $vehiclesOut -Force
+}
+
+# 7. Piper and its voice (US-T586; Vendor/README.md): Vendor/Piper's piper/ and voices/ into <archive>/Piper/, beside
+#    the package's Engine/ folder. Fetched by tools/fetch-piper.ps1; without it the game speaks through Windows SAPI.
+$piperRoot = Join-Path $repo 'Vendor\Piper'
+if (Test-Path -LiteralPath (Join-Path $piperRoot 'piper\piper.exe')) {
+  $piperOut = Join-Path $archive 'Piper'
+  New-Item -ItemType Directory -Force $piperOut | Out-Null
+  foreach ($part in 'piper', 'voices') {
+    $source = Join-Path $piperRoot $part
+    if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $piperOut -Recurse -Force }
+  }
+  Write-Host "Staged Piper into $piperOut"
+} else {
+  Write-Host "No Piper in $piperRoot (run tools/fetch-piper.ps1): the package speaks through Windows SAPI only."
 }
 }
 
