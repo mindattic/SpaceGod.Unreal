@@ -48,6 +48,7 @@ namespace SpaceGod::Radio
 		log->Retire(jd);
 		if (rebasePending)
 		{
+			if (wentBack) log->DropAfter(jd);
 			DoRebase();
 			if (wentBack) receiver.DropAfter(jd);
 		}
