@@ -1,4 +1,5 @@
 #include "UnityCompat/GuiHost.h"
+#include "Console/GameConsole.h" // US-T622
 #include "UnityCompat/GuiPadNav.h" // US-T250
 
 #include "UnityCompat/UnityRuntime.h"
@@ -189,6 +190,7 @@ namespace SpaceGod::UnityCompat
 			FVector2f deltaSince = FVector2f::ZeroVector, deltaFrame = FVector2f::ZeroVector;
 			float wheelSince = 0, wheelFrame = 0;
 			uint64 latchedFrame = ~0ull;
+			bool consoleOpen = false; // US-T622
 
 			/// Pixels per Slate absolute unit / the overlay's absolute top-left (from the last paint).
 			FVector2f overlayAbsTopLeft = FVector2f::ZeroVector;
@@ -233,6 +235,19 @@ namespace SpaceGod::UnityCompat
 			if (input.queue.size() > 256) input.queue.erase(input.queue.begin());
 		}
 
+		/// The developer console is open, so the GUI reads no keys; the ones held as it opened are released.
+		bool ConsoleOpen()
+		{
+			bool open = GameConsole::IsOpen();
+			if (open && !input.consoleOpen)
+			{
+				input.held.clear();
+				input.pressedSince.clear();
+			}
+			input.consoleOpen = open;
+			return open;
+		}
+
 		class FGuiInputProcessor final : public IInputProcessor
 		{
 		public:
@@ -240,6 +255,7 @@ namespace SpaceGod::UnityCompat
 
 			bool HandleKeyDownEvent(FSlateApplication&, const FKeyEvent& k) override
 			{
+				if (ConsoleOpen()) return false;
 				KeyCode code = ToKeyCode(k.GetKey());
 				if (code != KeyCode::None)
 				{
@@ -259,6 +275,7 @@ namespace SpaceGod::UnityCompat
 
 			bool HandleKeyUpEvent(FSlateApplication&, const FKeyEvent& k) override
 			{
+				if (ConsoleOpen()) return false;
 				KeyCode code = ToKeyCode(k.GetKey());
 				input.held.erase(static_cast<int>(code));
 				Event e;
@@ -359,6 +376,7 @@ namespace SpaceGod::UnityCompat
 		{
 			if (input.latchedFrame == GFrameCounter) return;
 			input.latchedFrame = GFrameCounter;
+			ConsoleOpen();
 			input.pressedFrame = std::move(input.pressedSince);
 			input.pressedSince.clear();
 			for (int b = 0; b < 5; b++)

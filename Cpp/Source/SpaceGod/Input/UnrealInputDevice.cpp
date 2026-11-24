@@ -1,5 +1,6 @@
 #include "Input/UnrealInputDevice.h"
 #include "Input/Gamepad.h" // US-T250
+#include "Console/GameConsole.h" // US-T622
 #include "UnrealSpace.h"
 
 #include "GameFramework/PlayerController.h"
@@ -176,6 +177,15 @@ namespace SpaceGod::Input
 			return;
 		}
 		device.present = true;
+		if (GameConsole::IsOpen())
+		{
+			device.Clear();
+			float cx = 0, cy = 0;
+			if (pc->GetMousePosition(cx, cy)) device.position = UnrealSpace::MouseToUnity(cx, cy, Screen::height);
+			GamepadDevice::current().present = true;
+			GamepadDevice::current().Clear();
+			return;
+		}
 
 		const TArray<FKey>& map = Map();
 		for (int i = static_cast<int>(Key::None) + 1; i < static_cast<int>(Key::Count); i++)
