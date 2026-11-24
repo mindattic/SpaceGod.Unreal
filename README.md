@@ -89,7 +89,34 @@ SpaceGod.exe -capture -capture-config my.json   # your own rules instead of the 
 Output goes to `R:\MindAttic\Capture\SpaceGod\`. The game raises its gameplay events (battles, arrivals,
 gate jumps, trades, hails, saves, co-op joins...) so the shipped rules save replays of victories, defeats and a lost
 ship, and screenshots of arrivals and discoveries. While capturing, **Alt+F9** takes a screenshot, **Alt+F10** starts or
-stops a recording and **Alt+F11** saves the last 30 s. How the C++ game drives MindAttic.Media.Capture: [Capture/README.md](Capture/README.md).
+stops a recording and **Alt+F11** saves the last 30 s.
+
+### How the plugin works
+
+Recording is the **MindAttic.Media.Capture.Unreal** plugin (`MindAtticMediaCapture`), which lives in the sibling
+MindAttic.Media.Capture checkout (`unreal/`). `Cpp/SpaceGod.uproject` enables it and lists
+`../../MindAttic.Media.Capture/unreal` in `AdditionalPluginDirectories`; `SpaceGod.Build.cs` depends on the
+`MindAtticMediaCapture` module. C++ can't load .NET, so the plugin starts the capture agent (`capture.exe host`) beside
+the game and drives it over stdin/stdout; the agent runs the same CaptureEngine Unity uses and exports the session when
+the game quits (the detached export means the game never waits on it).
+
+- **Off unless asked.** Nothing starts unless `-capture` is on the command line.
+- **Where the agent is.** `tools/package.ps1` publishes it from the sibling checkout to `<package>/Capture/capture.exe`
+  (the .NET 10 SDK builds it). An editor or uncooked run uses the installed agent
+  (`%LOCALAPPDATA%\MindAttic\Capturein\capture.exe`); `MINDATTIC_CAPTURE_HOST` overrides both. The .NET 10 runtime
+  must be installed to run it.
+- **ffmpeg** on PATH for video and replays (not bundled). Screenshots alone don't need it.
+- **Project settings.** `Cpp/Config/DefaultGame.ini`, section `[/Script/MindAtticMediaCapture.MindAtticCaptureSettings]`
+  (editor: Project Settings > Plugins > Media Capture): `AppName` (the folder under `R:\MindAttic\Capture`, here
+  `SpaceGod`) and `DefaultsFile=Content/Capture/SpaceGod.capture.json`, the shipped rules. `Capture` is staged as
+  non-UFS so a packaged game finds the file.
+- **No window.** Under `-RenderOffScreen` (or `-capture-source=frames`) the plugin reads the GPU frames back and feeds
+  them to the agent, so video, screenshots, markers and events work without a window; `-capture-source=window` forces
+  window capture. `-CaptureStats` logs feed cost every 5 s. `-nullrhi` renders nothing and can never give images.
+  Example: `tools/play.ps1 -Mode dogfight -Offscreen -Seconds 30`.
+- **Game side.** `Cpp/Source/SpaceGod/CaptureEvents.h` is the event catalogue the game raises through the plugin's
+  `MindAtticCapture.h`; `CaptureRunner` and `CaptureBackend` wire it in. From Blueprints the same calls are on
+  `UMindAtticCaptureLibrary` (Raise, Marker, screenshots, recording, replay, preview sets).
 
 ## Controls
 

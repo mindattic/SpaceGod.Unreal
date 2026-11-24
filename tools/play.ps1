@@ -20,7 +20,7 @@ param(
   [switch]$CaptureHost,
   # US-T163: headless capture. -Offscreen runs -Mode solo or dogfight with -RenderOffScreen (the GPU renders, no window
   # opens on anyone's screen, no sound plays) under "-capture $Capture"; MindAttic.Media.Capture records the game's own frames
-  # (read back from the GPU into the capture host, Capture/README.md) into the usual session folder. -Seconds stops the
+  # (read back from the GPU into the capture host, README.md "Recording") into the usual session folder. -Seconds stops the
   # game after that long (the host then exports the session); -ExecCmds runs a scenario (e.g. "sg.Tour auto");
   # -CaptureStats logs the game's frame rate and the frame feed's cost every 5 s ([MindAttic.Media.Capture] feed: ...).
   # US-T233, US-T234: this goes through the shared headless launcher, ..\Unreal.Shared\tools\Start-Headless.ps1, so it

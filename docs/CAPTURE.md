@@ -1,6 +1,6 @@
 # Capture: recording SpaceGod through MindAttic.Media.Capture (US-T72)
 
-> Mirrored from SpaceGod.Unity.CSharp `docs/CAPTURE.md` at `e29d871` (the reference copy, where it changes first). This copy's own side: [Capture/README.md](../Capture/README.md).
+> Mirrored from SpaceGod.Unity.CSharp `docs/CAPTURE.md` at `e29d871` (the reference copy, where it changes first). This copy's own side: [README.md](../README.md), "Recording".
 
 
 The one spec all three copies follow: SpaceGod.Unity.CSharp (the reference, written here first),
@@ -24,7 +24,7 @@ digests stay identical, and the co-op smoke stays 15/15.
 | `-demo` with `-capture` | The scripted tour (CaptureRunner/SceneTour) plays and quits as before; with `-capture` on, each tour stop's screenshot goes through MindAttic.Media.Capture (`ScreenshotAsync(<stop name>)`) into the session folder. Without `-capture` the tour still plays, with no screenshots. |
 | `-capture` and saves | Autosave is off while `-capture` (or `-demo`) is on, as before (UnitySpaceApp.Saves `InitSaves`). Manual saves still work and raise `game-saved`. |
 | `-capturedir=<dir>` | Unreal copies only, kept for tools/play.ps1: where their tour PNGs also go. Not a MindAttic.Media.Capture flag. |
-| `-RenderOffScreen` with `-capture` | This copy only (US-T163): no window opens, the GPU still renders; the game reads its frames back and feeds them to the capture host, so video, screenshots, markers and events work as with a window (`tools/play.ps1 -Offscreen`; [Capture/README.md](../Capture/README.md), "Frames"). `-capture-source=frames` does the same with a window; `-capture-source=window` forces window capture. `-nullrhi` renders nothing, so it has no images. |
+| `-RenderOffScreen` with `-capture` | This copy only (US-T163): no window opens, the GPU still renders; the game reads its frames back and feeds them to the capture host, so video, screenshots, markers and events work as with a window (`tools/play.ps1 -Offscreen`; [README.md](../README.md), "Recording"). `-capture-source=frames` does the same with a window; `-capture-source=window` forces window capture. `-nullrhi` renders nothing, so it has no images. |
 
 Anything after `-capture` that is not a capture word is left for the game, as MindAttic.Media.Capture does.
 
@@ -183,7 +183,7 @@ other peers.
   `-capture`. With no `-capture` on the command line it does nothing extra: no ffmpeg and no files.
   - Unity: `ProjectSetup.Build` passes `extraScriptingDefines = { "MINDATTIC_CAPTURE" }` to both players.
   - Unreal C#: the vendored capture assemblies are referenced in every configuration the published game uses.
-  - Unreal C++: the capture backend is compiled in all configurations.
+  - Unreal C++: the MindAttic.Media.Capture.Unreal plugin is compiled in all configurations.
 - **Prerequisite: ffmpeg** on PATH or beside the exe. It is needed for video and replays; screenshots alone don't use
   it. It is not bundled with any copy, because the common Windows builds are GPL.
 - **Missing ffmpeg:** video is skipped and one error is logged. Without `capture.exe` installed, the session export
