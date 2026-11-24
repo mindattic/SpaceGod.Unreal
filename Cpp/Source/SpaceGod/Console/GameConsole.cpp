@@ -4,10 +4,6 @@
 
 #include "Settings/GameSetting.h"
 
-#include "Engine/Console.h"
-#include "Engine/Engine.h"
-#include "Engine/GameViewportClient.h"
-
 using namespace SpaceGod::Core;
 
 namespace SpaceGod
@@ -17,12 +13,6 @@ namespace SpaceGod
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("dev.console", SettingGroups::Developer, "Console", true,
 			"The ` key opens the developer console: type sg.Help for its commands.", "developer console command backtick tilde");
 		return value;
-	}
-
-	bool GameConsole::IsOpen()
-	{
-		const UGameViewportClient* viewport = GEngine ? GEngine->GameViewport.Get() : nullptr;
-		return viewport && viewport->ViewportConsole && viewport->ViewportConsole->ConsoleState != NAME_None;
 	}
 
 	void GameConsole::Declare()
