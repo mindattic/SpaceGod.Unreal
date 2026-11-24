@@ -1,6 +1,7 @@
 #include "GameSettingsHost.h"
 #include "ActiveProfile.h"
 #include "Audio/GameAudio.h" // US-T240
+#include "DisplayExtras.h" // US-T544
 #include "EngineSettings.h"
 #include "GraphicsSettings.h"
 #include "PlayerOptions.h" // US-T252
@@ -43,6 +44,7 @@ namespace SpaceGod
 		// US-T251: the rest of Settings > Graphics (the preset, scalability knobs, anti-aliasing (render.msaa before),
 		// resolution scale, upscaler and field of view), right under the frame-rate cap.
 		SettingsRegistry::AddDeclarationSource([] { GraphicsSettings::Declare(); });
+		SettingsRegistry::AddDeclarationSource([] { DisplayExtras::Declare(); }); // US-T544: the Display page's brightness, HDR and background cap
 		SettingsRegistry::AddDeclarationSource([] { PlayerOptions::Declare(); }); // US-T252: Settings > Gameplay and Accessibility
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::AutoReorientSetting(); });
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::TutorialHintsSetting(); }); // US-T254: the first-time hints
