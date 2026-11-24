@@ -34,11 +34,53 @@ namespace SpaceGod::Coop::CoopSettings
 			return groups;
 		}
 
+		/// A text setting's value as one space-free word for the "set <key> <value>" entry and the snapshot's lines:
+		/// '%', white space and line breaks as %XX, and the empty text as a lone "%".
+		cs::String EscapeText(const cs::String& text)
+		{
+			if (text.empty()) return "%";
+			static const char* hex = "0123456789ABCDEF";
+			cs::String out;
+			for (char c : text)
+			{
+				if (c == '%' || c == ' ' || c == '\t' || c == '\n' || c == '\r')
+				{
+					out += '%';
+					out += hex[(static_cast<unsigned char>(c) >> 4) & 0xF];
+					out += hex[static_cast<unsigned char>(c) & 0xF];
+				}
+				else out += c;
+			}
+			return out;
+		}
+
+		cs::String UnescapeText(const cs::String& word)
+		{
+			if (word == "%") return cs::String();
+			auto digit = [](char c) { return c >= '0' && c <= '9' ? c - '0' : c >= 'A' && c <= 'F' ? c - 'A' + 10 : c >= 'a' && c <= 'f' ? c - 'a' + 10 : -1; };
+			cs::String out;
+			for (size_t i = 0; i < word.size(); i++)
+			{
+				int hi = 0, lo = 0;
+				if (word[i] == '%' && i + 2 < word.size() && (hi = digit(word[i + 1])) >= 0 && (lo = digit(word[i + 2])) >= 0)
+				{
+					out += static_cast<char>(hi * 16 + lo);
+					i += 2;
+				}
+				else out += word[i];
+			}
+			return out;
+		}
+
 		void Set(const cs::Ref<GameSetting>& s, const cs::String& value)
 		{
 			if (auto t = cs::As<ToggleSetting>(s)) t->Set(value == "1");
 			else if (auto r = cs::As<RangeSetting>(s)) r->Set(Wire::ParseD(value));
 			else if (auto c = cs::As<ChoiceSetting>(s)) c->Set(Wire::ParseI(value));
+			else if (auto x = cs::As<TextSetting>(s))
+			{
+				if (!x->Set(UnescapeText(value))) throw cs::ArgumentException("not a valid value");
+			}
 		}
 
 		void Changed(const cs::Ref<GameSetting>& s)
@@ -82,6 +124,7 @@ namespace SpaceGod::Coop::CoopSettings
 		if (auto t = cs::As<ToggleSetting>(s)) return t->Value ? "1" : "0";
 		if (auto r = cs::As<RangeSetting>(s)) return Wire::D(r->Value);
 		if (auto c = cs::As<ChoiceSetting>(s)) return Wire::I(c->Index);
+		if (auto x = cs::As<TextSetting>(s)) return EscapeText(x->Value);
 		return cs::String();
 	}
 
