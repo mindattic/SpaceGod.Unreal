@@ -3,6 +3,7 @@
 #include "UnitySpaceApp.h"
 
 #include "Information/News.h"
+#include "PlayerOptions.h"
 #include "SimClock.h"
 #include "Systems/Galaxy.h"
 #include "Systems/InterstellarTraffic.h"
@@ -34,6 +35,17 @@ namespace SpaceGod
 			radio.Tick(-1, DVec3(), Clock->Jd);
 			return;
 		}
+		if (radioSystemIndex >= 0 && !PlayerOptions::ScriptedRun())
+		{
+			// US-T682: the world's events in this system go out as chatter (read-only, view-local).
+			radioChatterOut.clear();
+			radioChatter.Pump(ActiveSystem, radioSystemIndex, Clock->Jd, radioChatterOut);
+			for (const auto& m : radioChatterOut)
+			{
+				if (m.Text.empty()) radio.Emit(m.Message);
+				else radio.EmitText(m.Message, m.Text);
+			}
+		}
 		radio.Tick(radioSystemIndex, CommsHere().HelioKm, Clock->Jd);
 	}
 
@@ -42,6 +54,8 @@ namespace SpaceGod
 		radio.Reset();
 		radioHeard.Clear();
 		radioRelay.Clear();
+		radioChatter.Clear();
+		radioChatterOut.clear();
 		radioSystem = nullptr;
 		radioSystemIndex = -1;
 	}

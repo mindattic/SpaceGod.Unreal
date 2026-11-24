@@ -24,6 +24,9 @@ private:
 
 	SpaceGod::Radio::RadioHost radio;
 	Core::RadioRelay radioRelay;
+	/// <summary>US-T682: the world's events in the listener's system as chatter (Core::ChatterEvents), and its reused buffer.</summary>
+	Core::ChatterEvents radioChatter;
+	std::vector<Core::ChatterEvents::Chatter> radioChatterOut;
 	/// <summary>The newswire whose Received RadioTick subscribed to (a load or rewind brings another), and the token.</summary>
 	cs::Ref<Core::Newswire> radioNews;
 	int radioNewsToken = 0;
