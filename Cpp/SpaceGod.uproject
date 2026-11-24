@@ -39,10 +39,15 @@
 		{
 			"Name": "MindAtticShared",
 			"Enabled": true
+		},
+		{
+			"Name": "MindAtticMediaCapture",
+			"Enabled": true
 		}
 	],
 	"AdditionalPluginDirectories": [
 		"../Shared/Plugins",
-		"../../Unreal.Shared/Plugins"
+		"../../Unreal.Shared/Plugins",
+		"../../MindAttic.Media.Capture/unreal"
 	]
 }

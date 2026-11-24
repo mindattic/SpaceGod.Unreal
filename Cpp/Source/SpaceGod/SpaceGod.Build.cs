@@ -42,6 +42,9 @@ public class SpaceGod : ModuleRules
 		PrivateDependencyModuleNames.Add("AudioMixer");
 		// US-T598: the SAPI 5 speech fallback (Voice/SapiTts.cpp) when Piper is missing.
 		if (Target.Platform == UnrealTargetPlatform.Win64) PublicSystemLibraries.Add("sapi.lib");
+		// US-T692: -capture, the game's capture events, tour screenshots and hotkeys go through the
+		// MindAttic.Media.Capture.Unreal plugin (MindAttic.Media.Capture/unreal, docs/CAPTURE.md).
+		PrivateDependencyModuleNames.Add("MindAtticMediaCapture");
 		// US-T245: the build number and short commit hash the main menu shows in its corner (BuildInfo.cpp).
 		StampBuild();
 	}

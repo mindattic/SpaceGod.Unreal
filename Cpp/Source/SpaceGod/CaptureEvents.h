@@ -1,11 +1,11 @@
 #pragma once
 
 // CaptureEvents: the C++ port of SpaceGod.Unity.CSharp's Runtime/CaptureEvents.cs (US-T72, docs/CAPTURE.md there).
-// The game's events for MindAttic.Media.Capture (Capture/MindAtticCapture.h): each one is raised for the capture.json rules
-// and written to the log as one `[capture] event name k=v ...` line (also to the session's .game.log, since a Shipping
-// game writes no log). Only an observer: nothing here changes the game, and all of it is a no-op unless capture is
-// running (only -capture on the command line starts it). Polled events compare state once a frame, after the frame
-// (Tick, from the actor after the app's Update: Unity's LateUpdate).
+// The game's events for MindAttic.Media.Capture (the MindAttic.Media.Capture.Unreal plugin's MindAtticCapture.h): each one
+// is raised for the capture.json rules and written to the log as one `[capture] event name k=v ...` line (also to the
+// session's .game.log, since a Shipping game writes no log). Only an observer: nothing here changes the game, and all of
+// it is a no-op unless capture is running (only -capture on the command line starts it). Polled events compare state once
+// a frame, after the frame (Tick, from the actor after the app's Update: Unity's LateUpdate).
 
 #include "Cs/Cs.h"
 

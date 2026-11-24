@@ -14,7 +14,6 @@
 #include "UnityCompat/GuiHost.h"
 #include "UnityCompat/UnityScene.h"
 #include "CaptureRunner.h"
-#include "Capture/MindAtticCapture.h"
 #include "CaptureEvents.h"
 #include "Views/AsteroidBelt.h"
 #include "Coop/CoopPeer.h"
@@ -129,8 +128,6 @@ void AUnitySpaceAppActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void AUnitySpaceAppActor::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	// US-T72: MindAttic.Capture lives for the whole run, as CaptureUnity's runner does (every scene, the menu's too).
-	MindAtticCapture::Tick();
 	if ((!App && !bSceneHost) || bExternallyStepped) return;
 	// US-T44: a co-op client replays the host's frames: its link actor (ASpaceCoopLink) steps the app, one Step per frame.
 	if (GetNetMode() == NM_Client) return;

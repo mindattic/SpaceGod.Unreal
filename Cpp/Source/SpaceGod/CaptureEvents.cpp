@@ -1,9 +1,10 @@
 // Port of SpaceGod.Unity.CSharp Runtime/CaptureEvents.cs (US-T72). The defaults section (ApplyDefaults) is the capture
-// host's here: the game hands it the shipped SpaceGod.capture.json (Capture/MindAtticCapture.cpp, --defaults).
+// host's here: the MindAttic.Media.Capture.Unreal plugin hands it the shipped SpaceGod.capture.json (DefaultGame.ini's
+// MindAtticCaptureSettings DefaultsFile, --defaults).
 
 #include "CaptureEvents.h"
 
-#include "Capture/MindAtticCapture.h"
+#include "MindAtticCapture.h"
 #include "Input/InputState.h"
 #include "UnitySpaceApp.h"
 #include "UnityCompat/UnityRuntime.h"
@@ -50,7 +51,7 @@ namespace SpaceGod::CaptureEvents
 		void Command(const char* command)
 		{
 			Debug::Log(cs::Cat("[capture] hotkey ", command));
-			MindAtticCapture::Command(FString(UTF8_TO_TCHAR(command)));
+			MindAttic::Media::Capture::Command(FString(UTF8_TO_TCHAR(command)));
 		}
 
 		// ---------------------------------------------------------------- subscriptions
@@ -106,12 +107,12 @@ namespace SpaceGod::CaptureEvents
 		}
 	}
 
-	bool Running() { return MindAtticCapture::Enabled(); }
+	bool Running() { return MindAttic::Media::Capture::Enabled(); }
 
 	void Raise(const char* name, std::initializer_list<Field> fields)
 	{
 		if (!Running()) return;
-		MindAtticCapture::Data data;
+		MindAttic::Media::Capture::Data data;
 		cs::String line = cs::Cat("[capture] event ", name);
 		for (const Field& f : fields)
 		{
@@ -120,8 +121,8 @@ namespace SpaceGod::CaptureEvents
 			line += cs::Cat(" ", f.Key, "=", Format(f));
 		}
 		Debug::Log(line);
-		MindAtticCapture::Note(ToF(line));
-		MindAtticCapture::Raise(FString(UTF8_TO_TCHAR(name)), data);
+		MindAttic::Media::Capture::Note(ToF(line));
+		MindAttic::Media::Capture::Raise(FString(UTF8_TO_TCHAR(name)), data);
 	}
 
 	// ---------------------------------------------------------------- direct events

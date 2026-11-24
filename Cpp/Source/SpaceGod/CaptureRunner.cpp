@@ -1,9 +1,8 @@
 #include "CaptureRunner.h"
 
-#include "Bootstrap.h"
 #include "UnitySpaceApp.h"
 #include "Camera/SpaceCamera.h"
-#include "Capture/MindAtticCapture.h"
+#include "MindAtticCapture.h"
 
 #include "Misc/CommandLine.h"
 #include "Misc/DateTime.h"
@@ -18,9 +17,12 @@ namespace SpaceGod
 {
 	namespace
 	{
-		// MindAttic.Media.Capture's CaptureUnity, as far as the runner reads it (US-T72: Capture/MindAtticCapture.h).
-		// -capturedir=<dir> (tools/play.ps1 -Mode demo, US-T58) keeps the tour's shots as Unreal screenshots in that
-		// folder, with no capture host: a tooling switch of this repo's, not one of the game's.
+		namespace Capture = MindAttic::Media::Capture;
+
+		// MindAttic.Media.Capture's CaptureUnity, as far as the runner reads it (US-T72: the MindAttic.Media.Capture.Unreal
+		// plugin). -capturedir=<dir> (tools/play.ps1 -Mode demo, US-T58) keeps the tour's shots as Unreal screenshots in
+		// that folder, with no capture host: a tooling switch of this repo's, not one of the game's. It asks for the shots
+		// by itself, since -capture beside it would start the plugin's host too.
 
 		bool LegacyShots()
 		{
@@ -34,13 +36,13 @@ namespace SpaceGod
 
 		/// `CaptureUnity.Args != null && CaptureUnity.Args.Any`: -capture was asked for (the host says whether as a mode,
 		/// so a run that asked waits for it, as Unity's runner waits for the engine).
-		bool CaptureRequested() { return LegacyShots() ? Bootstrap::HasCommandLineFlag("-capture") : MindAtticCapture::Requested(); }
+		bool CaptureRequested() { return LegacyShots() || Capture::Requested(); }
 
 		/// `CaptureUnity.Engine.Enabled`.
-		bool CaptureEnabled() { return LegacyShots() || (MindAtticCapture::Ready() && MindAtticCapture::Any() && MindAtticCapture::Enabled()); }
+		bool CaptureEnabled() { return LegacyShots() || (Capture::Ready() && Capture::Any() && Capture::Enabled()); }
 
 		/// The host has answered (or there is none to wait for).
-		bool CaptureSettled() { return LegacyShots() || MindAtticCapture::Ready(); }
+		bool CaptureSettled() { return LegacyShots() || Capture::Ready(); }
 
 		/// `CaptureUnity.Engine.SessionFolder`; for the -capturedir= shots, that folder.
 		const cs::String& CaptureSessionFolder()
@@ -48,7 +50,7 @@ namespace SpaceGod
 			if (!LegacyShots())
 			{
 				static cs::String session;
-				session = cs::String(TCHAR_TO_UTF8(*MindAtticCapture::SessionFolder()));
+				session = cs::String(TCHAR_TO_UTF8(*Capture::SessionFolder()));
 				return session;
 			}
 			static const cs::String folder = []
@@ -118,7 +120,7 @@ namespace SpaceGod
 				co_yield nullptr;
 			}
 			// -capture with no mode after it (Args.Any false): not capturing, and nothing to complain about.
-			if (CaptureSettled() && !LegacyShots() && !MindAtticCapture::Any()) capturing = false;
+			if (CaptureSettled() && !LegacyShots() && !Capture::Any()) capturing = false;
 			else
 			{
 				while (!CaptureEnabled() && wait < 15.0f)
@@ -179,11 +181,11 @@ namespace SpaceGod
 			co_return;
 		}
 		// var shot = CaptureUnity.Engine.ScreenshotAsync(name);
-		const int32 shot = MindAtticCapture::Screenshot(FString(UTF8_TO_TCHAR(name.c_str())));
+		const int32 shot = Capture::Screenshot(FString(UTF8_TO_TCHAR(name.c_str())));
 		// while (!shot.IsCompleted) yield return null;
 		bool ok = false;
 		FString detail;
-		while (!MindAtticCapture::ScreenshotResult(shot, ok, detail)) co_yield nullptr;
+		while (!Capture::ScreenshotResult(shot, ok, detail)) co_yield nullptr;
 		if (ok) Debug::Log(cs::Cat("[Unity.SpaceGod] Captured ", cs::String(TCHAR_TO_UTF8(*detail))));
 		else Debug::LogError(cs::Cat("[Unity.SpaceGod] Screenshot ", name, " failed: ", cs::String(TCHAR_TO_UTF8(*detail))));
 	}

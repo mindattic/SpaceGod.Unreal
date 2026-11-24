@@ -104,7 +104,7 @@ namespace SpaceGod
 		// scripted/automated testing. The plugin keeps the window away and logs MINDATTIC_HEADLESS_READY; with no
 		// window there is no real mouse/keyboard for UnitySpaceAppActor::Tick to feed, so the app takes scripted input
 		// like every other driven run here, left for a test or CI harness to write (the ScriptedDevice pattern,
-		// console ExecCmds, or the frames FrameFeed.h hands back under -RenderOffScreen).
+		// console ExecCmds, or the frames the capture plugin's frame feed hands back under -RenderOffScreen).
 		if (FMindAtticHeadless::IsActive())
 		{
 			app->bScriptedInput = true;

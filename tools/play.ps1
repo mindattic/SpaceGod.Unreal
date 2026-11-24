@@ -75,7 +75,8 @@ if ($Offscreen) {
   #   UnrealEditor.exe Cpp/SpaceGod.uproject /Engine/Maps/Entry -game -RenderOffScreen -ResX=1600 -ResY=900 -nosound
   #     -capture video hq [-dogfight] [-ExecCmds="sg.Tour auto quit"]
   # Under -RenderOffScreen Unreal opens no window, so the game feeds the capture host its read-back frames instead of
-  # the host recording a window (Cpp/Source/SpaceGod/Capture/FrameFeed.h). -nullrhi would render nothing at all.
+  # the host recording a window (the MindAttic.Media.Capture.Unreal plugin's frame feed). -nullrhi would render nothing
+  # at all.
   if ($Mode -notin 'solo', 'dogfight') { throw '-Offscreen runs -Mode solo or dogfight (-ExecCmds for a scenario, e.g. "sg.Tour auto quit").' }
   # US-T234: launched through the shared headless launcher (Unreal.Shared/tools/Start-Headless.ps1, cloned next to this
   # repo), which runs UnrealEditor.exe <project> /Engine/Maps/Entry -game -Multiprocess --headless -RenderOffScreen
@@ -152,13 +153,13 @@ if ($Mode -eq 'fidelity') {
 
 if ($Mode -eq 'demo') {
   # -Mode demo (either track: US-T40 C#, US-T58 C++): Unity.SpaceGod's -demo SceneTour (CaptureRunner) end to end in a
-  # window, -capture saving every stop as <Track>/Saved/Screenshots/Tour/<stop>.png (or -CaptureDir); the game quits
-  # when the tour ends.
+  # window, -capturedir saving every stop as <Track>/Saved/Screenshots/Tour/<stop>.png (or -CaptureDir); the game quits
+  # when the tour ends. No -capture: that would start the MindAttic.Media.Capture plugin's host as well.
   $editor = Join-Path $engine 'Engine\Binaries\Win64\UnrealEditor.exe'
   if (-not $CaptureDir) { $CaptureDir = Join-Path $project.DirectoryName 'Saved\Screenshots\Tour' }
   $t0 = Get-Date
   $p = Start-Process -FilePath $editor -PassThru -Wait -ArgumentList @("`"$($project.FullName)`"", '/Engine/Maps/Entry', '-game',
-    '-windowed', '-ResX=1600', '-ResY=900', '-nosound', '-unattended', '-log', '-demo', '-capture', "`"-capturedir=$CaptureDir`"")
+    '-windowed', '-ResX=1600', '-ResY=900', '-nosound', '-unattended', '-log', '-demo', "`"-capturedir=$CaptureDir`"")
   $shots = @(Get-ChildItem -LiteralPath $CaptureDir -Filter '*.png' -ErrorAction SilentlyContinue | Where-Object LastWriteTime -ge $t0)
   $shots | ForEach-Object FullName
   "demo ($Track): $($shots.Count) tour stops captured"
