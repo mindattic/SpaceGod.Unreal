@@ -15,6 +15,7 @@
 #include "Combat/Choreography.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Crews.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/DriftingRounds.h"
@@ -1043,7 +1044,7 @@ namespace SpaceGod::Core
 		{
 			auto w = s->Def->Weapon;
 			if (s->Destroyed() || w == nullptr || w->Missile || w->AntiSmall || w->Supporting()) continue;
-			speed = cs::Math::Max(speed, w->MuzzleSpeedKmS);
+			speed = cs::Math::Max(speed, CombatTuning::MuzzleSpeedKmS(w));
 		}
 		return speed;
 	}
@@ -1229,7 +1230,7 @@ namespace SpaceGod::Core
 			// the lance reaches out from there, so it never hangs back where only the lance bears.
 			if (w == nullptr || s->Destroyed() || w->AntiSmall || w->Lance) continue;
 			if (w->Missile && s->Ammo <= 0) continue;
-			best = cs::Math::Max(best, w->Missile ? w->RangeKm * 0.5 : w->RangeKm * 0.7);
+			best = cs::Math::Max(best, w->Missile ? CombatTuning::RangeKm(w) * 0.5 : CombatTuning::RangeKm(w) * 0.7);
 		}
 		return best > 0 ? best : 12;
 	}
@@ -1270,7 +1271,7 @@ namespace SpaceGod::Core
 		{
 			// A fleet out of supply reloads slower: short of rounds, of spares for its mounts, of power to spare (U.SPC-T93).
 			// A spinal mount recharges only as fast as the hull's spinal power plants feed it (U.SPC-T490).
-			if (s->Def->Weapon != nullptr && !s->Destroyed()) s->Cooldown -= dt * c->Readiness * weaponPower * SpinalMounts::ChargeRate(c, s);
+			if (s->Def->Weapon != nullptr && !s->Destroyed()) s->Cooldown -= dt * c->Readiness * weaponPower * SpinalMounts::ChargeRate(c, s) * CombatTuning::RateOfFire()->Value;
 			// A rotary gun left idle winds down (US-T101).
 			if (s->Spin > 0) Arsenal::SpinDown(s, s->Def->Weapon, dt);
 		}
@@ -1325,7 +1326,7 @@ namespace SpaceGod::Core
 			}
 			else if (w->AntiSmall)
 			{
-				auto missile = NearestMissile(u->Side, origin, w->RangeKm);
+				auto missile = NearestMissile(u->Side, origin, CombatTuning::RangeKm(w));
 				if (missile != nullptr)
 				{
 					s->Aim = (missile->Pos - origin).Normalized();
@@ -1456,7 +1457,7 @@ namespace SpaceGod::Core
 			if (Arsenal::IsRocket(w))
 			{
 				if (s->Ammo <= 0) continue;
-				auto lead = Gunnery::LeadPoint(origin, u->Vel, aimPoint, target->Vel, w->MissileSpeedKmS);
+				auto lead = Gunnery::LeadPoint(origin, u->Vel, aimPoint, target->Vel, CombatTuning::MissileSpeedKmS(w));
 				auto line = lead - origin;
 				FireRockets(u, s, origin, line.LengthSquared() > 1e-12 ? line.Normalized() : u->Forward, w);
 				continue;
@@ -1485,11 +1486,11 @@ namespace SpaceGod::Core
 					m->Shooter = u; // US-T257: presentation only
 					m->Mount = s;
 					m->Pos = origin;
-					m->Vel = (u->Forward + spread + s->Aim).Normalized() * (w->MissileSpeedKmS * 0.3) + u->Vel;
+					m->Vel = (u->Forward + spread + s->Aim).Normalized() * (CombatTuning::MissileSpeedKmS(w) * 0.3) + u->Vel;
 					m->Target = target;
 					m->TargetSub = sub;
 					m->Damage = ScreenWeapons::Warhead(s->Kind(), w);
-					m->Speed = w->MissileSpeedKmS;
+					m->Speed = CombatTuning::MissileSpeedKmS(w);
 					m->Hp = ScreenWeapons::RoundHp(s->Kind());
 					m->Life = 90;
 					m->Side = u->Side;
@@ -1526,7 +1527,7 @@ namespace SpaceGod::Core
 			double size = cs::Math::Max(0.15, cs::Math::Min(1.0, target->LengthKm / 0.4));
 			if (target->Kind == UnitKind::Fighter) size *= w->AntiSmall ? 1.4 : 0.35;
 			// A tachyon lance's shot lands the instant it is fired, so it is as sure at the end of its reach as close in (U.SPC-T487).
-			double falloff = w->Lance ? 1 : 1 - 0.4 * dist / w->RangeKm * (1 - picture);
+			double falloff = w->Lance ? 1 : 1 - 0.4 * dist / CombatTuning::RangeKm(w) * (1 - picture);
 			double chance = w->Accuracy * accuracyScale * size * falloff * (volley > 1 ? 1 + Broadsides::CrewVolleyAccuracyBonus : 1);
 			// US-T180: a small craft crossing the gunner's line fast is hard to track; one sat on its tail is not.
 			chance *= Choreography::Evasion(u, target, origin);
@@ -1540,7 +1541,7 @@ namespace SpaceGod::Core
 				: SpinalMounts::IsSlug(s->Kind()) ? (hit ? FxKind::Railgun : FxKind::RailgunMiss)
 				: hit ? FxKind::Beam : FxKind::BeamMiss;
 
-			if (w->MuzzleSpeedKmS > 0)
+			if (CombatTuning::MuzzleSpeedKmS(w) > 0)
 			{
 				// A dumb kinetic round, not a hitscan: it takes real time to cross the range, so
 				// fire it off and let FireKineticRound/StepRounds decide what it actually hits.
@@ -1563,7 +1564,7 @@ namespace SpaceGod::Core
 				double ry = rng.NextDouble() - 0.5;
 				double rz = rng.NextDouble() - 0.5;
 				auto miss = aimPoint + DVec3(rx, ry, rz) * (target->LengthKm * 2 + 0.3);
-				Emit(kind, origin, origin + (miss - origin).Normalized() * cs::Math::Min(w->RangeKm, dist * 1.3), 0, u->Side, nullptr, -1);
+				Emit(kind, origin, origin + (miss - origin).Normalized() * cs::Math::Min(CombatTuning::RangeKm(w), dist * 1.3), 0, u->Side, nullptr, -1);
 			}
 		}
 		// The volley is away: flip and burn back out (U.SPC-T475).
@@ -1572,7 +1573,7 @@ namespace SpaceGod::Core
 
 	void Battle::FireKineticRound(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& mount, DVec3 origin, DVec3 aimPoint, const cs::Ref<BattleUnit>& target, const cs::Ref<Subsystem>& targetSub, const cs::Ref<WeaponSpec>& w, bool hit, double dist, FxKind kind, double damageScale)
 	{
-		double speed = w->MuzzleSpeedKmS;
+		double speed = CombatTuning::MuzzleSpeedKmS(w);
 		double leadTime = cs::Math::Min(dist / speed, 20.0);
 		auto lead = aimPoint + target->Vel * leadTime;
 		DVec3 impact;
@@ -1589,7 +1590,7 @@ namespace SpaceGod::Core
 		auto vel = travelKm > 1e-9 ? dir / travelKm * speed : u->Forward * speed;
 		double arriveIn = travelKm / speed;
 
-		Emit(kind, origin, hit ? impact : origin + (impact - origin).Normalized() * cs::Math::Min(w->RangeKm, dist * 1.3), 0, u->Side, nullptr, -1);
+		Emit(kind, origin, hit ? impact : origin + (impact - origin).Normalized() * cs::Math::Min(CombatTuning::RangeKm(w), dist * 1.3), 0, u->Side, nullptr, -1);
 		auto r = cs::New<KineticRound>();
 		r->Pos = origin;
 		r->Vel = vel;
@@ -1653,11 +1654,11 @@ namespace SpaceGod::Core
 		auto aim = u->PlayerAim.LengthSquared() > 1e-12 ? u->PlayerAim.Normalized() : u->Forward;
 		auto sight = Gunnery::Gimbal(aim, u->Forward, SpinalMounts::IsSlug(s->Kind()) || w->Lance || s->Def->Spinal ? Gunnery::RailgunGimbalDeg : Gunnery::GimbalDeg);
 		cs::Ref<BattleUnit> unusedHit;
-		double converge = FirstHostileAlong(u->Side, u->Pos, sight, w->RangeKm, unusedHit);
-		if (converge < 0) converge = w->RangeKm;
+		double converge = FirstHostileAlong(u->Side, u->Pos, sight, CombatTuning::RangeKm(w), unusedHit);
+		if (converge < 0) converge = CombatTuning::RangeKm(w);
 		auto toConverge = u->Pos + sight * converge - origin;
 		auto dir = toConverge.LengthSquared() > 1e-12 ? toConverge.Normalized() : sight;
-		double scatter = w->MuzzleSpeedKmS > 0 && !SpinalMounts::IsSlug(s->Kind()) ? Gunnery::AutocannonScatterDeg : Gunnery::BeamScatterDeg;
+		double scatter = CombatTuning::MuzzleSpeedKmS(w) > 0 && !SpinalMounts::IsSlug(s->Kind()) ? Gunnery::AutocannonScatterDeg : Gunnery::BeamScatterDeg;
 		// A rotary gun hoses its rounds wider (US-T101).
 		if (Arsenal::IsRotary(w)) scatter *= Arsenal::RotaryScatter;
 		dir = Gunnery::Scatter(dir, scatter * Astro::Deg2Rad, rng);
@@ -1684,7 +1685,7 @@ namespace SpaceGod::Core
 		// A manned rotary gun fires as fast as its barrels have spun up (US-T101).
 		s->Cooldown = Arsenal::IsRotary(w) ? Arsenal::FireRotary(s, w) : w->Cooldown;
 		bool slug = SpinalMounts::IsSlug(s->Kind());
-		double scatter = (w->MuzzleSpeedKmS > 0 && !slug ? Gunnery::AutocannonScatterDeg : Gunnery::BeamScatterDeg) / cs::Math::Max(accuracyScale, 0.1);
+		double scatter = (CombatTuning::MuzzleSpeedKmS(w) > 0 && !slug ? Gunnery::AutocannonScatterDeg : Gunnery::BeamScatterDeg) / cs::Math::Max(accuracyScale, 0.1);
 		if (Arsenal::IsRotary(w)) scatter *= Arsenal::RotaryScatter;
 		auto origin = u->PointOf(s->Def);
 		auto dir = Gunnery::Scatter(s->Aim, scatter * Astro::Deg2Rad, rng);
@@ -1698,7 +1699,7 @@ namespace SpaceGod::Core
 		// has just changed course is not where he thinks.
 		// A coordinated gunner reads the course off the shared picture, and lags it less (U.SPC-T477).
 		auto seen = aimPoint - (target->Vel - target->SeenVel) * (Gunnery::TrackingLagS * (1 - 0.5 * skill) * (1 - FleetCoordination::SharedPicture(u)));
-		auto point = w->MuzzleSpeedKmS > 0 ? Gunnery::LeadPoint(origin, u->Vel, seen, target->SeenVel, w->MuzzleSpeedKmS) : seen;
+		auto point = CombatTuning::MuzzleSpeedKmS(w) > 0 ? Gunnery::LeadPoint(origin, u->Vel, seen, target->SeenVel, CombatTuning::MuzzleSpeedKmS(w)) : seen;
 		auto to = point - origin;
 		auto dir = to.LengthSquared() > 1e-12 ? to.Normalized() : u->Forward;
 		return Gunnery::Scatter(dir, Gunnery::MaxScatterDeg * (1 - skill) * Astro::Deg2Rad, rng);
@@ -1706,18 +1707,18 @@ namespace SpaceGod::Core
 
 	void Battle::ResolveShot(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& s, DVec3 origin, DVec3 dir, const cs::Ref<WeaponSpec>& w, double damageScale)
 	{
-		bool beam = w->MuzzleSpeedKmS <= 0;
+		bool beam = CombatTuning::MuzzleSpeedKmS(w) <= 0;
 		double damage = w->Damage * damageScale;
 		if (!beam)
 		{
 			bool slug = SpinalMounts::IsSlug(s->Kind());
 			bool rotary = Arsenal::IsRotary(w);
-			Emit(slug ? FxKind::Railgun : rotary ? FxKind::Vulcan : FxKind::Guns, origin, origin + dir * w->RangeKm, 0, u->Side, nullptr, -1);
+			Emit(slug ? FxKind::Railgun : rotary ? FxKind::Vulcan : FxKind::Guns, origin, origin + dir * CombatTuning::RangeKm(w), 0, u->Side, nullptr, -1);
 			auto r = cs::New<KineticRound>();
 			r->Pos = origin;
-			r->Vel = u->Vel + dir * w->MuzzleSpeedKmS;
+			r->Vel = u->Vel + dir * CombatTuning::MuzzleSpeedKmS(w);
 			r->Damage = damage;
-			r->Life = w->RangeKm / w->MuzzleSpeedKmS;
+			r->Life = CombatTuning::RangeKm(w) / CombatTuning::MuzzleSpeedKmS(w);
 			r->Side = u->Side;
 			r->Railgun = slug;
 			r->Tracer = rotary;
@@ -1729,10 +1730,10 @@ namespace SpaceGod::Core
 			return;
 		}
 		cs::Ref<BattleUnit> hit;
-		double t = FirstHostileAlong(u->Side, origin, dir, w->RangeKm, hit);
+		double t = FirstHostileAlong(u->Side, origin, dir, CombatTuning::RangeKm(w), hit);
 		if (hit == nullptr)
 		{
-			Emit(EnergyWeapons::FxOf(s->Kind(), false).value_or(w->AntiSmall ? FxKind::PointDefense : w->Lance ? FxKind::TachyonLanceMiss : FxKind::BeamMiss), origin, origin + dir * w->RangeKm, 0, u->Side, nullptr, -1);
+			Emit(EnergyWeapons::FxOf(s->Kind(), false).value_or(w->AntiSmall ? FxKind::PointDefense : w->Lance ? FxKind::TachyonLanceMiss : FxKind::BeamMiss), origin, origin + dir * CombatTuning::RangeKm(w), 0, u->Side, nullptr, -1);
 			return;
 		}
 		auto at = origin + dir * t;
@@ -1813,7 +1814,7 @@ namespace SpaceGod::Core
 		if (!u->BearsAlong(s->Def, look)) return false;
 		if (u->PlayerVolleyRelease)
 		{
-			auto target = VolleyTarget(u, look, w->RangeKm);
+			auto target = VolleyTarget(u, look, CombatTuning::RangeKm(w));
 			if (target == nullptr) return false;
 			double built = cs::Math::Min(1.0, u->VolleyCharge / VolleyBuildSeconds);
 			auto sub = PickSubsystem(target);
@@ -1838,7 +1839,7 @@ namespace SpaceGod::Core
 		// stands down for this press, same as a volley held on nothing.
 		auto target = u->PlayerLockTarget;
 		if (target == nullptr || !Hostile(u, target) || target->Surrendering || target->Captured) return true;
-		if ((target->Pos - origin).Length() - target->Radius() > w->RangeKm || !u->Bears(s->Def, target->Pos))
+		if ((target->Pos - origin).Length() - target->Radius() > CombatTuning::RangeKm(w) || !u->Bears(s->Def, target->Pos))
 		{
 			s->Aim = (target->Pos - origin).Normalized();
 			return true;
@@ -1898,7 +1899,7 @@ namespace SpaceGod::Core
 	{
 		auto t = u->PlayerLockTarget;
 		if (t == nullptr || !Hostile(u, t) || t->Surrendering || t->Captured) return nullptr;
-		if ((t->Pos - origin).Length() - t->Radius() > w->RangeKm) return nullptr;
+		if ((t->Pos - origin).Length() - t->Radius() > CombatTuning::RangeKm(w)) return nullptr;
 		if (w->AntiSmall && t->Kind != UnitKind::Fighter) return nullptr;
 		return u->Bears(s->Def, t->Pos) ? t : nullptr;
 	}
@@ -2016,7 +2017,7 @@ namespace SpaceGod::Core
 			if (!Hostile(u, o) || o->Stunned > 0 || o->Surrendering || o->Captured) continue;
 			auto to = o->Pos - origin;
 			double d = to.Length();
-			if (d < 1e-6 || d - o->Radius() > w->RangeKm) continue;
+			if (d < 1e-6 || d - o->Radius() > CombatTuning::RangeKm(w)) continue;
 			double cos = DVec3::Dot(aim, to / d);
 			if (cos > bestCos)
 			{
@@ -2155,7 +2156,7 @@ namespace SpaceGod::Core
 	{
 		auto t = u->PlayerLockTarget;
 		if (t == nullptr || !t->Present() || !Hostile(u, t) || t->Surrendering || t->Captured) return nullptr;
-		return (t->Pos - origin).Length() - t->Radius() <= w->RangeKm ? t : nullptr;
+		return (t->Pos - origin).Length() - t->Radius() <= CombatTuning::RangeKm(w) ? t : nullptr;
 	}
 
 	cs::Ref<BattleUnit> Battle::ChooseWeaponTarget(const cs::Ref<BattleUnit>& u, DVec3 origin, const cs::Ref<WeaponSpec>& w)
@@ -2164,14 +2165,14 @@ namespace SpaceGod::Core
 		{
 			// No missile in reach: point defence turns on fighters, then anything close.
 			cs::Ref<BattleUnit> near = nullptr;
-			double best = w->RangeKm;
+			double best = CombatTuning::RangeKm(w);
 			for (const auto& o : Units)
 			{
 				if (!Hostile(u, o) || o->Captured || o->Surrendering || HoldsFireOn(u, o)) continue;
 				// An interceptor is wasted on a hull: it goes only after small craft (U.SPC-T489).
 				if (w->Missile && !WeakPoints::IsSmallCraft(o)) continue;
 				double d = (o->Pos - origin).Length() - o->Radius();
-				if ((d < best && (near == nullptr || near->Kind != UnitKind::Fighter || o->Kind == UnitKind::Fighter)) || (o->Kind == UnitKind::Fighter && near != nullptr && near->Kind != UnitKind::Fighter && d < w->RangeKm))
+				if ((d < best && (near == nullptr || near->Kind != UnitKind::Fighter || o->Kind == UnitKind::Fighter)) || (o->Kind == UnitKind::Fighter && near != nullptr && near->Kind != UnitKind::Fighter && d < CombatTuning::RangeKm(w)))
 				{
 					best = d;
 					near = o;
@@ -2185,10 +2186,10 @@ namespace SpaceGod::Core
 		bool emp = w->EmpSeconds > 0;
 		// A dogfight missile's seeker takes a fighter as readily as a hull (U.SPC-T424).
 		bool seeksSmall = emp || w->SeeksSmallCraft;
-		if (t != nullptr && Hostile(u, t) && !t->Surrendering && !t->Captured && !HoldsFireOn(u, t) && (t->Pos - origin).Length() - t->Radius() <= w->RangeKm && !(t->Kind == UnitKind::Fighter && w->Missile && !seeksSmall) && !(emp && t->Stunned > 0))
+		if (t != nullptr && Hostile(u, t) && !t->Surrendering && !t->Captured && !HoldsFireOn(u, t) && (t->Pos - origin).Length() - t->Radius() <= CombatTuning::RangeKm(w) && !(t->Kind == UnitKind::Fighter && w->Missile && !seeksSmall) && !(emp && t->Stunned > 0))
 			return t;
 		cs::Ref<BattleUnit> any = nullptr;
-		double nearest = w->RangeKm;
+		double nearest = CombatTuning::RangeKm(w);
 		for (const auto& o : Units)
 		{
 			// An EMP round is for a small craft too, but wasted on one already drifting dead (U.SPC-T271).
@@ -2216,7 +2217,7 @@ namespace SpaceGod::Core
 		for (const auto& m : Missiles)
 		{
 			if (m->Side == u->Side || !ScreenWeapons::IsThreat(m)) continue;
-			if ((m->Pos - origin).Length() > w->RangeKm) continue;
+			if ((m->Pos - origin).Length() > CombatTuning::RangeKm(w)) continue;
 			if (interceptor && Hunted(m, u->Side)) continue;
 			double threat = ScreenWeapons::Threat(m);
 			if (threat > bestThreat)
@@ -2262,11 +2263,11 @@ namespace SpaceGod::Core
 			m->Shooter = u; // US-T257: presentation only
 			m->Mount = s;
 			m->Pos = origin;
-			m->Vel = s->Aim * (w->MissileSpeedKmS * 0.4) + u->Vel;
+			m->Vel = s->Aim * (CombatTuning::MissileSpeedKmS(w) * 0.4) + u->Vel;
 			m->Target = craft;
 			m->Prey = round;
 			m->Damage = w->Damage;
-			m->Speed = w->MissileSpeedKmS;
+			m->Speed = CombatTuning::MissileSpeedKmS(w);
 			m->Hp = ScreenWeapons::InterceptorHp;
 			m->Life = ScreenWeapons::InterceptorLifeSeconds;
 			m->Side = u->Side;
@@ -2472,7 +2473,7 @@ namespace SpaceGod::Core
 		if (target->PlayerControlled() && DevFlags::Invulnerable()->Value) return;
 		bool lethal = FxBy != nullptr && FxBy->PlayerControlled() && DevFlags::OneHitKills()->Value;
 		// US-T253: the difficulty scales what reaches a hull a player holds (Normal: as it was).
-		damage = Difficulty::Incoming(target->PlayerControlled(), damage);
+		damage = Difficulty::Incoming(target->PlayerControlled(), damage) * CombatTuning::WeaponDamage()->Value;
 		auto c = target->Combat;
 		// What the shot is (US-T189): how hard it hits the field, the hull and the plate.
 		bool profiled = family != WeaponFamily::None && !WeaponSystems::ProfileOf(family).Neutral();
@@ -2487,14 +2488,15 @@ namespace SpaceGod::Core
 			generator->LastHitSeconds = Seconds;
 			if (generator->Shield > 0)
 			{
-				double soaked;
-				if (profiled) damage = WeaponSystems::ThroughShield(family, damage, generator->Shield, soaked);
+				// US-T539: a stronger field holds off more of the shot for each point of it the shot drains.
+				double strength = CombatTuning::ShieldStrength()->Value, field = generator->Shield * strength, soaked;
+				if (profiled) damage = WeaponSystems::ThroughShield(family, damage, field, soaked);
 				else
 				{
-					soaked = cs::Math::Min(generator->Shield, damage);
+					soaked = cs::Math::Min(field, damage);
 					damage -= soaked;
 				}
-				generator->Shield -= soaked;
+				generator->Shield = soaked >= field ? 0 : generator->Shield - soaked / strength;
 				// Sub names the emitter whose field took it, so the bubble it raises is that patch's (U.SPC-T40).
 				Emit(FxKind::ShieldHit, shieldPoint, target->Pos, target->LengthKm, target->Side, target, generator->Index);
 				WeaponSystems::Cue(family, WeaponCueEvent::ShieldImpact, shieldPoint, soaked, target->Side, Id);
@@ -2521,7 +2523,7 @@ namespace SpaceGod::Core
 				damage *= through;
 			}
 		}
-		damage = cs::Math::Max(damage * 0.15, damage - armour);
+		damage = cs::Math::Max(damage * 0.15, damage - armour) / CombatTuning::HullStrength()->Value;
 		Emit(FxKind::Impact, at, at, damage, target->Side, target, sub ? sub->Index : -1);
 		Fx[Fx.Count() - 1].WeakPoint = sub != nullptr && exposed > 1; // US-T257: the HUD's weak-point hit marker
 		WeaponSystems::Cue(family, WeaponCueEvent::Impact, at, damage, target->Side, Id);
@@ -2753,7 +2755,7 @@ namespace SpaceGod::Core
 	void Battle::FireRockets(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& s, DVec3 origin, DVec3 dir, const cs::Ref<WeaponSpec>& w)
 	{
 		s->Aim = dir;
-		double speed = cs::Math::Max(w->MissileSpeedKmS, 1e-3);
+		double speed = cs::Math::Max(CombatTuning::MissileSpeedKmS(w), 1e-3);
 		bool small = WeakPoints::IsSmallCraft(u);
 		for (int k = 0; k < w->Salvo && s->Ammo > 0; k++)
 		{
@@ -2768,7 +2770,7 @@ namespace SpaceGod::Core
 			m->Damage = w->Damage;
 			m->Speed = speed;
 			m->Hp = Arsenal::RocketHp;
-			m->Life = w->RangeKm / speed;
+			m->Life = CombatTuning::RangeKm(w) / speed;
 			m->Side = u->Side;
 			m->Kind = MissileKind::Rocket;
 			m->SmallCraft = small;
@@ -2850,7 +2852,7 @@ namespace SpaceGod::Core
 	{
 		if (s->Ammo <= 0 || u->Combat->MarinesAvailable() < WeaponSpec::PodMarines * 2) return;
 		cs::Ref<BattleUnit> target = nullptr;
-		double best = s->Def->Weapon->RangeKm;
+		double best = CombatTuning::RangeKm(s->Def->Weapon);
 		for (const auto& o : Units)
 		{
 			if (!Hostile(u, o) || o->Captured || o->Kind == UnitKind::Fighter) continue;
@@ -2892,7 +2894,7 @@ namespace SpaceGod::Core
 			m->Target = target;
 			m->TargetSub = PickSubsystem(target, u);
 			m->Damage = s->Def->Weapon->Damage;
-			m->Speed = s->Def->Weapon->MissileSpeedKmS;
+			m->Speed = CombatTuning::MissileSpeedKmS(s->Def->Weapon);
 			m->Hp = 40;
 			m->Life = 60;
 			m->Side = u->Side;

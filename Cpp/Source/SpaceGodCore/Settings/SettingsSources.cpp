@@ -25,6 +25,7 @@
 #include "Combat/BreacherBays.h"
 #include "Combat/Broadsides.h"
 #include "Combat/BulkFreighters.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Corvettes.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/ElectronicWarfare.h"
@@ -81,6 +82,8 @@ namespace SpaceGod::Core
 		BreacherBays::RangeKm(); BreacherBays::ImpactDamage(); found++;
 		Broadsides::RunClassConstructor(); found++;
 		BulkFreighters::LaneTollShare(); found++;
+		CombatTuning::WeaponDamage(); CombatTuning::WeaponRange(); CombatTuning::RateOfFire(); CombatTuning::ProjectileSpeed();
+		CombatTuning::ShieldStrength(); CombatTuning::ShieldRegen(); CombatTuning::HullStrength(); found++; // US-T539 (not a C# source)
 		Corvettes::PerNavy(); found++;
 		Countermeasures::Effectiveness(); found++;                         // Combat/Dogfighting.cs
 		WeakPoints::Damage(); WeakPoints::AiGoesForThem(); found++;          // Combat/Dogfighting.cs

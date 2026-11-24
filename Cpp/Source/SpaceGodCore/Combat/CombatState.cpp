@@ -5,6 +5,7 @@
 #include "Combat/Boarding.h"
 #include "Combat/CarrierWings.h"
 #include "Combat/CombatSpecs.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/EnergyWeapons.h"
 #include "Combat/ModularHull.h"
 #include "Combat/ShieldEmitters.h"
@@ -168,7 +169,7 @@ namespace SpaceGod::Core
 	{
 		double ratings = GeneratorRatings();
 		if (ratings <= 0) return;
-		double delay = ShieldEmitters::RegenDelay()->Value, rate = Spec->ShieldRegen * ShieldEmitters::RegenRate()->Value;
+		double delay = ShieldEmitters::RegenDelay()->Value, rate = Spec->ShieldRegen * ShieldEmitters::RegenRate()->Value * CombatTuning::ShieldRegen()->Value;
 		if (rate <= 0) return;
 		for (const auto& s : Subsystems)
 		{
