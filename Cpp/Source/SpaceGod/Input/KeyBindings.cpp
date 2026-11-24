@@ -272,6 +272,17 @@ namespace SpaceGod::Input
 				{ KeyAction::CheatMenu, "devMenu", "Game: dev menu", Both, EdgeKind, { InputBinding(Key::F1, S) }, "The dev menu." },
 				{ KeyAction::SpawnMenu, "spawnMenu", "Game: dev spawn menu", Both, EdgeKind, { InputBinding(Key::F2, S) }, "The dev menu on its Spawn tab." },
 				{ KeyAction::Console, "console", "Game: developer console", Both, EdgeKind, { Key::Backquote }, "The developer console, while Developer > Console is on." }, // US-T620
+				// US-T628: the number row. Alt with one picks that fire group, Alt+Shift toggles its fire mode, Shift an ability slot.
+				{ KeyAction::Number1, "number1", "Numbers: 1", Both, EdgeKind, { Key::Digit1 }, "Number 1: a captain's order, hail reply or lane choice; with Shift an ability slot, Alt a fire group, Alt+Shift its fire mode." },
+				{ KeyAction::Number2, "number2", "Numbers: 2", Both, EdgeKind, { Key::Digit2 }, "Number 2 (as number 1)." },
+				{ KeyAction::Number3, "number3", "Numbers: 3", Both, EdgeKind, { Key::Digit3 }, "Number 3 (as number 1)." },
+				{ KeyAction::Number4, "number4", "Numbers: 4", Both, EdgeKind, { Key::Digit4 }, "Number 4 (as number 1)." },
+				{ KeyAction::Number5, "number5", "Numbers: 5", Both, EdgeKind, { Key::Digit5 }, "Number 5 (as number 1)." },
+				{ KeyAction::Number6, "number6", "Numbers: 6", Both, EdgeKind, { Key::Digit6 }, "Number 6 (as number 1)." },
+				{ KeyAction::Number7, "number7", "Numbers: 7", Both, EdgeKind, { Key::Digit7 }, "Number 7 (as number 1)." },
+				{ KeyAction::Number8, "number8", "Numbers: 8", Both, EdgeKind, { Key::Digit8 }, "Number 8 (as number 1)." },
+				{ KeyAction::Number9, "number9", "Numbers: 9", Both, EdgeKind, { Key::Digit9 }, "Number 9 (as number 1)." },
+				{ KeyAction::Number0, "number0", "Numbers: 0", Both, EdgeKind, { Key::Digit0 }, "Number 0: the captain's order on 0; with Shift the ability bar's next page." },
 			};
 			return actions;
 		}

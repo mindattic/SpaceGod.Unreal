@@ -24,7 +24,7 @@
 // US-T83: the mech's jump jets share Space with the pause by default: while a walker (a mech) is held the press is the
 // jets' (InputState::GiveWalkerKeys), anywhere else the pause's, so the page does not call it a clash.
 //
-// Fixed: Esc (it backs out of everything, menus included), the number keys, the left and right mouse buttons' fire, select
+// Fixed: Esc (it backs out of everything, menus included), the left and right mouse buttons' fire, select
 // and look (they bind only with a modifier held), the sticks' movement and aim, the d-pad's steps, and the keys inside
 // panels and menus (arrows, Enter, PgUp/PgDn in a list). While a menu has the pad (Gamepad::MenuMode) no pad binding
 // fires but the pause menu's.
@@ -64,6 +64,8 @@ namespace SpaceGod::Input
 		PauseMenu /* US-T437 */, Help, Comms, Drawer, GalaxyMap, SystemMap, Market, DockPort, Cargo, Outfit, Bounties, Contracts, Fleet, Trade, Hail,
 		Logs, Discoveries, Encyclopedia, Society /* US-T293 */, Notices /* US-T345 */, BattlePlot /* US-T367 */, SpawnPilot, SpawnPractice, QuickSave, QuickLoad, Rewind /* US-T99 */, HoldRewind /* US-T409 */, Saves, CheatMenu, SpawnMenu,
 		Console /* US-T620 */,
+		// Numbers (US-T628): the number row; Alt picks a fire group with one, Alt+Shift its fire mode
+		Number1, Number2, Number3, Number4, Number5, Number6, Number7, Number8, Number9, Number0,
 		Count,
 	};
 

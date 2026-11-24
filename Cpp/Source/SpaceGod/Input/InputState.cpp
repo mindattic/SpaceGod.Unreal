@@ -215,7 +215,8 @@ namespace SpaceGod::Input
 		Rewind = hit(A::Rewind); // US-T99
 		HoldRewind = down(A::HoldRewind); // US-T409: held, not pressed
 
-		const Key digits[] = { Key::Digit0, Key::Digit1, Key::Digit2, Key::Digit3, Key::Digit4, Key::Digit5, Key::Digit6, Key::Digit7, Key::Digit8, Key::Digit9 };
+		// US-T628: the number row is KeyAction Number0..Number9 (the digit keys by default).
+		const KeyAction numbers[] = { A::Number0, A::Number1, A::Number2, A::Number3, A::Number4, A::Number5, A::Number6, A::Number7, A::Number8, A::Number9 };
 		// U.SPC-T277/US-T284: Alt+digit is a weapon group fired, Alt+Shift+digit toggles its fire mode, each exclusive of
 		// the plain digit's own meaning (captain's orders, hails, lane choice and the rest), same as Shift+digit already
 		// is for an ability slot (UnitySpaceApp.Embodiment.cpp). Not Ctrl+digit: Ctrl alone is already Slow (held) and
@@ -225,7 +226,7 @@ namespace SpaceGod::Input
 		bool shiftHeld = kb[Key::LeftShift].isPressed || kb[Key::RightShift].isPressed;
 		for (int i = 0; i < 10; i++)
 		{
-			if (!kb[digits[i]].wasPressedThisFrame) continue;
+			if (!hit(numbers[i])) continue;
 			if (altHeld && shiftHeld) GroupModeKey = i;
 			else if (altHeld) FireGroupKey = i;
 			else NumberKey = i;
