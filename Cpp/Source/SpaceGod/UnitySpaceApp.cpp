@@ -3,6 +3,7 @@
 
 #include "UnitySpaceApp.h"
 #include "CaptureEvents.h" // US-T72
+#include "Misc/App.h" // US-T555: FApp::HasFocus
 
 #include "Camera/SpaceCamera.h"
 #include "Camera/StarTravel.h"
@@ -491,6 +492,9 @@ namespace SpaceGod
 		if (RewindFrameStart(dt)) Input.Handover(); // US-T99: the frame for the rewind log; while a seek replays, the logged frame has it
 		// The galaxy map turns with its own drag: the camera behind it does not look about meanwhile.
 		if ((ShowGalaxyMap || ShowSystemMap /* US-T258 */ || ShowHelp || ShowLogs || ShowDiscoveries || ShowEncyclopedia || ShowSociety /* US-T293 */) && !ScreenCleared) Input.ReleaseLook(); // US-T261: the logs screen too; US-T259: the discoveries; US-T271: the Encyclopedia
+		// US-T555: Pause when the window loses focus, single-player only (a co-op session runs on for the others).
+		if (!pauseMenu->IsOpen && PlayerOptions::PausesOnFocusLoss() && Coop::CoopPeer::Current() == nullptr && !FApp::HasFocus())
+			pauseMenu->Open();
 		// The pause menu has the frame: nothing else moves, and the stick and trigger do nothing, until it closes.
 		if (pauseMenu->IsOpen)
 		{

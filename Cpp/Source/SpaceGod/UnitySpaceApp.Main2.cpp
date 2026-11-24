@@ -5,6 +5,7 @@
 #include "UnitySpaceApp.h"
 #include "CaptureEvents.h" // US-T72
 #include "GraphicsSettings.h" // US-T251: the flown field of view
+#include "PlayerOptions.h" // US-T555: the camera shake's strength
 
 #include "Astro.h"
 #include "BodyCatalog.h"
@@ -1442,8 +1443,9 @@ namespace SpaceGod
 		bool feeling = feelStepped;
 		feelStepped = false;
 		auto shake = Quaternion::identity();
-		if (!Travel->Active && (cs::Math::Abs(flightFeel.ShakeYawDeg) + cs::Math::Abs(flightFeel.ShakePitchDeg) + cs::Math::Abs(flightFeel.ShakeRollDeg)) > 1e-4)
-			shake = Quaternion::Euler(static_cast<float>(flightFeel.ShakePitchDeg), static_cast<float>(flightFeel.ShakeYawDeg), static_cast<float>(flightFeel.ShakeRollDeg));
+		const double shakeScale = PlayerOptions::ShakeScale(); // US-T555: Settings > Gameplay > Camera shake
+		if (!Travel->Active && shakeScale * (cs::Math::Abs(flightFeel.ShakeYawDeg) + cs::Math::Abs(flightFeel.ShakePitchDeg) + cs::Math::Abs(flightFeel.ShakeRollDeg)) > 1e-4)
+			shake = Quaternion::Euler(static_cast<float>(flightFeel.ShakePitchDeg * shakeScale), static_cast<float>(flightFeel.ShakeYawDeg * shakeScale), static_cast<float>(flightFeel.ShakeRollDeg * shakeScale));
 		UnityCamera->transform->SetPositionAndRotation(Vector3::zero(), SpaceCamera->Rotation * shake);
 
 		// The view widens with the pace of what is flown, more on the afterburner (kicked wide as it lights) and under the

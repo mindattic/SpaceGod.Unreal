@@ -92,6 +92,22 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& PlayerOptions::CameraShake()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("gameplay.cameraShake", Gameplay, "Camera shake", 100, 0, 100, 5,
+			"How hard the view shakes under thrust, a broadside and a hit (0% holds it still).", Percent(),
+			"shake camera rumble motion kick shudder");
+		return value;
+	}
+
+	const cs::Ref<ToggleSetting>& PlayerOptions::PauseOnFocusLoss()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.pauseOnFocusLoss", Gameplay, "Pause when the window loses focus", false,
+			"Switching away from the game opens the pause menu (single player only: a co-op session runs on).",
+			"pause focus alt tab background minimize window");
+		return value;
+	}
+
 	// ---------------------------------------------------------------- Accessibility
 
 	const cs::Ref<RangeSetting>& PlayerOptions::UiScale()
@@ -138,7 +154,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation();
+		AutosaveInterval(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -187,6 +203,13 @@ namespace SpaceGod
 	bool PlayerOptions::Calm() { return ReduceFlashes()->Value; }
 
 	float PlayerOptions::FlashScale() { return Calm() ? 0.2f : 1.0f; }
+
+	float PlayerOptions::ShakeScale()
+	{
+		return ScriptedRun() ? 1.0f : cs::Math::Max(0.0f, cs::Math::Min(1.0f, static_cast<float>(CameraShake()->Value / 100.0)));
+	}
+
+	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }
 
 	bool PlayerOptions::ScriptedRun()
 	{
