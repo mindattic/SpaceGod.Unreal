@@ -21,6 +21,7 @@ namespace SpaceGod::Core
 		case SettingKind::Toggle: return "Toggle";
 		case SettingKind::Range: return "Range";
 		case SettingKind::Choice: return "Choice";
+		case SettingKind::Text: return "Text";
 		}
 		return "";
 	}
@@ -223,5 +224,53 @@ namespace SpaceGod::Core
 				return true;
 			}
 		return false;
+	}
+
+	// ------------------------------------------------------------------------------------------------ TextSetting
+
+	TextSetting::TextSetting(const cs::String& key, const cs::String& group, const cs::String& label, const cs::String& defaultValue, int maxLength,
+		const cs::String& description, cs::Func<bool, cs::String> validator, const cs::String& keywords, const cs::Ref<SettingsRegistry>& registry)
+		: GameSetting(key, group, label, description, keywords)
+	{
+		if (maxLength <= 0) throw cs::ArgumentOutOfRangeException("maxLength");
+		MaxLength = maxLength;
+		this->validator = std::move(validator);
+		if (!IsValid(defaultValue)) throw cs::ArgumentException(cs::Cat("A text setting's default must be valid: ", key));
+		Default = Value = defaultValue;
+		(registry ? registry : SettingsRegistry::Default())->RegisterDeclared(this);
+	}
+
+	bool TextSetting::IsValid(const cs::String& value) const
+	{
+		int chars = 0; // UTF-8 code points: every byte but a continuation byte starts one
+		for (char c : value)
+		{
+			if (c == '\n' || c == '\r') return false;
+			if ((static_cast<unsigned char>(c) & 0xC0) != 0x80) chars++;
+		}
+		return chars <= MaxLength && (!validator || validator(value));
+	}
+
+	bool TextSetting::Set(const cs::String& value)
+	{
+		if (!IsValid(value)) return false;
+		if (value == Value) return true;
+		Value = value;
+		OnSet();
+		return true;
+	}
+
+	cs::Ref<TextSetting> TextSetting::Applying(const cs::Action<const cs::String&>& apply)
+	{
+		Changed += [this, apply](cs::Ref<GameSetting>) { apply(Value); };
+		apply(Value);
+		return std::static_pointer_cast<TextSetting>(Self());
+	}
+
+	bool TextSetting::TryLoad(const cs::String& text)
+	{
+		if (!IsValid(text)) return false;
+		Value = text;
+		return true;
 	}
 }

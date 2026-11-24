@@ -46,6 +46,7 @@ namespace SpaceGod::Core
 		Toggle,
 		Range,
 		Choice,
+		Text,
 	};
 	SPACEGODCORE_API const char* ToString(SettingKind v);
 
@@ -224,5 +225,45 @@ namespace SpaceGod::Core
 		bool TryLoad(const cs::String& text) override;
 
 		void SetToDefault() override { Index = Default; }
+	};
+
+	/// <summary>
+	/// A line of text (a name, an address) of at most <see cref="MaxLength"/> characters, that the optional validator
+	/// accepts. A value that is too long, holds a line break or is refused by the validator is not taken.
+	/// </summary>
+	class SPACEGODCORE_API TextSetting final : public GameSetting
+	{
+	public:
+		cs::String Default;
+		cs::String Value;
+		int MaxLength = 0;
+
+	private:
+		/// <summary>Whether a value may be taken; any value of the right length if none is given.</summary>
+		cs::Func<bool, cs::String> validator;
+
+	public:
+		TextSetting(const cs::String& key, const cs::String& group, const cs::String& label, const cs::String& defaultValue, int maxLength,
+			const cs::String& description = cs::String(), cs::Func<bool, cs::String> validator = nullptr, const cs::String& keywords = cs::String(),
+			const cs::Ref<SettingsRegistry>& registry = nullptr);
+
+		SettingKind Kind() const override { return SettingKind::Text; }
+		bool IsDefault() const override { return Value == Default; }
+		cs::String ValueText() const override { return Value; }
+
+		/// <summary>Whether <paramref name="value"/> may be taken: one line, no longer than <see cref="MaxLength"/>, and valid.</summary>
+		bool IsValid(const cs::String& value) const;
+
+		/// <summary>Takes <paramref name="value"/>; false (and the value left alone) when it is not valid.</summary>
+		bool Set(const cs::String& value);
+
+		/// <summary>Puts the value into effect now and after every change (set, reset or a profile loaded); returns this.</summary>
+		cs::Ref<TextSetting> Applying(const cs::Action<const cs::String&>& apply);
+
+		cs::String Format() const override { return Value; }
+
+		bool TryLoad(const cs::String& text) override;
+
+		void SetToDefault() override { Value = Default; }
 	};
 }
