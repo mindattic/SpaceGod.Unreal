@@ -4,6 +4,7 @@
 #include "Audio/FlightSounds.h" // US-T242
 #include "Audio/InterfaceSounds.h" // US-T244
 #include "Audio/Music.h" // US-T243
+#include "Voice/CommsVoice.h" // US-T589
 #include "Voice/TtsService.h" // US-T587
 #include "UnitySpaceApp.h"
 #include "SessionAudio.h"
@@ -120,6 +121,7 @@ void AUnitySpaceAppActor::EndPlay(const EEndPlayReason::Type EndPlayReason)
 		App->OnDestroy();
 		App.reset();
 	}
+	SpaceGod::Voice::CommsVoice::Stop(); // US-T589: lines still waiting belong to the scene that ends
 	// US-T587: the speech worker and its Piper process end with the run (a scene change keeps them).
 	if (EndPlayReason == EEndPlayReason::Quit || EndPlayReason == EEndPlayReason::EndPlayInEditor) SpaceGod::Voice::TtsService::Shutdown();
 	UnityScene::Detach();
@@ -144,6 +146,7 @@ void AUnitySpaceAppActor::Step(float RealDelta)
 	const double raceT0 = Race::Probe::Now(); // US-T46: the whole Unity frame, for the race (docs/RACE.md)
 	RefreshUnityStatics(RealDelta);
 	SpaceGod::Voice::TtsService::Tick(); // US-T587: finished spoken lines to their callbacks (never waits on the worker)
+	SpaceGod::Voice::CommsVoice::Tick(); // US-T589: the next comms line on the Voice bus once the last has ended
 	// Unity's player loop: finished loads and particles first (UnityScene's BeginFrame), then every Update.
 	UnityScene::BeginFrame(Time::deltaTime);
 

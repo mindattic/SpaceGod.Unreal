@@ -2,6 +2,7 @@
 
 #include "Audio/GameAudio.h"
 #include "Voice/PiperTts.h"
+#include "Voice/RadioEffect.h"
 #include "Voice/SapiTts.h"
 #include "Voice/VoiceCache.h"
 
@@ -98,6 +99,7 @@ namespace SpaceGod::Voice
 						if (!VoiceCache::Load(result.Key, result.Clip))
 						{
 							result.Clip = engine->Synthesize(job.Request);
+							if (job.Request.Effect) RadioEffect::Apply(result.Clip, result.Key);
 							if (result.Clip.IsValid() && !Stopping) VoiceCache::Store(result.Key, result.Clip);
 						}
 					}

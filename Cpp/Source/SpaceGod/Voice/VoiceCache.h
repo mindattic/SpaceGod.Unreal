@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Voice/RadioEffect.h"
 #include "Voice/TtsEngine.h"
 
 #include "CoreMinimal.h"
@@ -18,8 +19,8 @@ namespace SpaceGod::Voice
 	class VoiceCache
 	{
 	public:
-		/// The radio sound's version: bump it when the effect put on the PCM changes, so old clips are not reused.
-		static constexpr int EffectVersion = 1;
+		/// The radio sound's version, so clips spoken under an older effect are not reused.
+		static constexpr int EffectVersion = RadioEffect::Version;
 		static constexpr int64 MemoryBytes = 32ll * 1024 * 1024;
 		static constexpr int64 DiskBytes = 256ll * 1024 * 1024;
 
