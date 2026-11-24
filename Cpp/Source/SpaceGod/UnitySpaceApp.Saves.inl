@@ -39,6 +39,9 @@ private:
 	/// <summary>Off for the scripted tour and captures, so a demo run never rotates the player's autosaves out.</summary>
 	bool autosaveEnabled = true;
 
+	/// <summary>Docked at the last UpdateSaves, so docking (null to a port) is seen once.</summary>
+	bool wasDocked = false;
+
 	void InitSaves();
 
 	void UpdateSaves(float dt);
@@ -72,6 +75,9 @@ public:
 
 private:
 	void Autosave(bool quiet);
+
+	/// <summary>An autosave right before a trip, a gate or a manual FTL charge, when Settings asks for one.</summary>
+	void AutosaveBeforeJump();
 
 public:
 	/// <summary>Saves the whole simulation and the session into <paramref name="slot"/>.</summary>

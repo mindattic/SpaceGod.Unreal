@@ -300,6 +300,7 @@ namespace SpaceGod
 
 		auto destination = gate->Destination();
 		cs::Ref<Core::Ship> arrived;
+		AutosaveBeforeJump(); // US-T653
 		if (!Core::GateTransit::TryPerform(gate, shipHelioKm, ship, World(), Clock->Jd, arrived)) return false;
 		CaptureEvents::GateDeparture(ship->Name, gate->Name, ActiveSystem->Name, destination->Name); // US-T72
 		AdvanceCourse(gate, arrived);

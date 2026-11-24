@@ -387,6 +387,7 @@ namespace SpaceGod
 		if (TrySendFollowedShip(system)) return;
 		if (CoopPartyTrip(system)) return; // US-T44 (US-T43): the trip goes into the frames; the host's view makes it, every peer arrives
 		Select(Target::None());
+		AutosaveBeforeJump(); // US-T653
 		Travel->Begin(system);
 	}
 

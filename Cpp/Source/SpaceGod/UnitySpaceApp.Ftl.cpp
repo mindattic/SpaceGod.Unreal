@@ -124,6 +124,7 @@ namespace SpaceGod
 				ShowToast("FTL charge called off");
 				return false;
 			}
+			if (FtlPointed != nullptr && FtlBlocked.empty()) AutosaveBeforeJump(); // US-T653
 			if (!Ftl->Spool(ship, ActiveSystem, FtlPointed, PilotRootKm(), pilot().Forward, ship->Battle != nullptr, jd, Galaxy))
 			{
 				ShowToast(Ftl->AbortReason);

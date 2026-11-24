@@ -60,7 +60,13 @@ namespace SpaceGod
 	void UnitySpaceApp::UpdateSaves(float dt)
 	{
 		Saves->AutosavesKept = PlayerOptions::AutosavesKept(); // US-T616: Settings > Gameplay > Autosaves kept
+		// US-T653: Settings > Gameplay > Autosave on docking takes one as the clamps close.
+		bool docked = DockedAt != nullptr;
+		bool justDocked = docked && !wasDocked;
+		wasDocked = docked;
 		if (!autosaveEnabled) return;
+		if (justDocked && PlayerOptions::AutosavesOnDock() && SaveBlocker().empty())
+			Autosave(PlayerOptions::NoticeMode() != PlayerOptions::NoticeLevel::Everything);
 		// US-T252: Settings > Gameplay > Autosave (off, or every 2 to 30 minutes); a shorter interval picked takes hold at once.
 		float every = PlayerOptions::AutosaveSeconds();
 		if (every <= 0) return;
@@ -69,6 +75,13 @@ namespace SpaceGod
 		if (autosaveDueS > 0 || !SaveBlocker().empty()) return;
 		autosaveDueS = every;
 		// US-T252: Toasts and news below Everything takes the autosave without its toast.
+		Autosave(PlayerOptions::NoticeMode() != PlayerOptions::NoticeLevel::Everything);
+	}
+
+	void UnitySpaceApp::AutosaveBeforeJump()
+	{
+		// US-T653: Settings > Gameplay > Autosave before a jump, taken before the trip, the gate or the charge changes anything.
+		if (!autosaveEnabled || Galaxy == nullptr || !PlayerOptions::AutosavesBeforeJump() || !SaveBlocker().empty()) return;
 		Autosave(PlayerOptions::NoticeMode() != PlayerOptions::NoticeLevel::Everything);
 	}
 
