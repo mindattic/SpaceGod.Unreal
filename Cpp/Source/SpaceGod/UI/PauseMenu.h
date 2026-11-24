@@ -37,7 +37,6 @@ namespace SpaceGod::UI
 			Settings,
 			Display,
 			Credits, // US-T246: the rolling credits, over the whole screen
-			Developer, // US-T517: every design group, from Settings' Developer button
 		};
 
 		Page page = Page::Main;
@@ -66,7 +65,9 @@ namespace SpaceGod::UI
 		cs::String search = "";
 		Vector2 settingsScroll;
 
-		/// US-T252: how far the nav is scrolled when its groups run past the panel (the Developer page's nav too).
+		/// US-T252: whether the nav's "Advanced (simulation)" section (the design groups) is unfolded -- folded until the
+		/// player opens it -- and how far the nav is scrolled when its groups run past the panel.
+		bool advancedOpen = false;
 		Vector2 navScroll;
 
 		/// US-T249: the Key bindings page listening for a key: the action (an Input::KeyAction) and slot clicked, -1 while
@@ -193,19 +194,10 @@ namespace SpaceGod::UI
 
 		static constexpr float SettingRowH = 58;
 
-		/// The Settings page (U.SPC-T431): Display and the player's groups down the left, then Developer (US-T517) where it is
-		/// shown, the chosen group's settings (or, while something is typed in Search, every player setting it finds) on the right.
+		/// The Settings page (U.SPC-T431): the player's groups and Display down the left, then the design groups folded
+		/// under "Advanced (simulation)" (US-T252), the chosen group's settings (or, while something is typed in Search,
+		/// every setting it finds, folded or not) on the right.
 		void DrawSettings();
-
-		/// US-T517: whether the Developer page is offered: always outside Shipping, and in Shipping with -dev on the command line.
-		static bool DeveloperShown();
-		/// US-T517: the Developer page's groups in its order: Developer, then each "Tuning: <area>", then every other design group.
-		static cs::List<cs::String> DeveloperGroups();
-		/// US-T517: the Developer page opened on its first group (every lazily declared knob declared first).
-		void OpenDeveloper();
-		/// US-T517: the Developer page: its groups down the left, the chosen one's settings (or everything Search finds among
-		/// them) on the right, each marked "changed" off its default or "locked in" on a shipped default; the keys are Settings'.
-		void DrawDeveloper();
 
 		/// US-T322: the Settings page's keys: Up / Down pick a setting, Left / Right change it, Enter or Space flips, steps or
 		/// listens, Delete resets it, Page Up / Page Down step the groups, Ctrl+F types in Search (Enter or Down leaves it).

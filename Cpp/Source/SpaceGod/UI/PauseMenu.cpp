@@ -2,6 +2,7 @@
 #include "UI/UiMotion.h" // US-T255
 
 #include "ActiveProfile.h"
+#include "Audio/AudioOutput.h" // US-T654
 #include "GameSettingsHost.h"
 #include "Input/Gamepad.h" // US-T437
 #include "Input/KeyBindings.h" // US-T249
@@ -77,7 +78,7 @@ namespace SpaceGod::UI
 		if (!escape)
 		{
 			if (page == Page::Main) MainKeys(); // US-T311
-			else if (page == Page::Settings || page == Page::Developer) SettingsKeys(); // US-T322, US-T517
+			else if (page == Page::Settings) SettingsKeys(); // US-T322
 			return;
 		}
 		if (textEditing != nullptr)
@@ -109,14 +110,6 @@ namespace SpaceGod::UI
 				break;
 			case Page::Credits: // US-T246
 				page = Page::Main;
-				break;
-			case Page::Developer: // US-T517: back to Settings, a search cleared first
-				if (!search.empty()) search = "";
-				else
-				{
-					ShowGroup(cs::String());
-					page = Page::Settings;
-				}
 				break;
 			default:
 				Close();
@@ -189,7 +182,7 @@ namespace SpaceGod::UI
 			UiMotion::Scope shade("pause.shade", 0);
 			GUI::DrawTexture(Rect(0, 0, static_cast<float>(Screen::width), static_cast<float>(Screen::height)), shadeTexture);
 		}
-		UiMotion::Scope motion(page == Page::Main ? "pause.main" : page == Page::Settings ? "pause.settings" : page == Page::Credits ? "pause.credits" : page == Page::Developer ? "pause.developer" : "pause.display");
+		UiMotion::Scope motion(page == Page::Main ? "pause.main" : page == Page::Settings ? "pause.settings" : page == Page::Credits ? "pause.credits" : "pause.display");
 		bool enabled = GUI::enabled;
 		bool asking = leaving != Leave::None && page == Page::Main; // US-T252
 		GUI::enabled = confirm == nullptr && !asking;
@@ -197,7 +190,6 @@ namespace SpaceGod::UI
 		{
 			case Page::Main: DrawMain(); break;
 			case Page::Settings: DrawSettings(); break;
-			case Page::Developer: DrawDeveloper(); break; // US-T517
 			case Page::Credits: // US-T246
 				if (credits->Draw("Esc to go back")) page = Page::Main;
 				break;
@@ -307,13 +299,14 @@ namespace SpaceGod::UI
 	{
 		const auto& registry = GameSettingsHost::Registry();
 		auto groups = registry->Groups();
-		// US-T252: the player's own groups, in their order; every other group is design tuning, on the Developer page (US-T517).
-		cs::List<cs::String> playerGroups;
+		// US-T252: the player's own groups first, in their order; every other group is design tuning, folded under Advanced.
+		cs::List<cs::String> playerGroups, advancedGroups;
 		for (const auto& g : PlayerOptions::PlayerGroups())
 			if (groups.Contains(g)) playerGroups.Add(g);
-		if (group.empty() || !playerGroups.Contains(group))
-			group = playerGroups.Count() > 0 ? playerGroups[0] : cs::String();
-		const bool developer = DeveloperShown();
+		for (const auto& g : groups)
+			if (!PlayerOptions::IsPlayerGroup(g)) advancedGroups.Add(g);
+		if (group.empty() || !groups.Contains(group))
+			group = playerGroups.Count() > 0 ? playerGroups[0] : groups.Count() > 0 ? groups[0] : cs::String();
 
 		// US-T437: the bindings' three slots and their modes want a wider panel (the page, or a search that finds them).
 		bool bindingsPage = cs::Strings::IsNullOrWhiteSpace(search) && group == Input::KeyBindings::Group;
@@ -341,10 +334,10 @@ namespace SpaceGod::UI
 		const float navW = 190;
 		float top = r.y + 70, bottom = r.yMax() - 56;
 		{
-			// US-T570: Display, then the player's groups (Graphics, Sound, Gameplay, ...); then Developer (US-T517). Scrolls when it
-			// runs past the panel (a small window, or a large UI scale).
+			// US-T570: Display, then the player's groups (Graphics, Sound, Gameplay, ...); then "Advanced (simulation)", folded until
+			// opened, over the design groups. Scrolls when it runs past the panel (a small window, or a large UI scale).
 			const float step = 34, indent = 12;
-			int rowsNeeded = playerGroups.Count() + 1 + (developer ? 1 : 0);
+			int rowsNeeded = playerGroups.Count() + 1 + (advancedGroups.Count() > 0 ? 1 : 0) + (advancedOpen ? advancedGroups.Count() : 0);
 			auto navView = Rect(r.x + 20, top, navW, bottom - top);
 			float navH = rowsNeeded * step;
 			bool overflow = navH > navView.height;
@@ -360,19 +353,34 @@ namespace SpaceGod::UI
 				NavGroup(g, Rect(gx, ny, bw - gx, 30), searching);
 				ny += step;
 			}
-			if (developer && GUI::Button(Rect(0, ny, bw, 30), "Developer", button)) OpenDeveloper();
+			if (advancedGroups.Count() > 0)
+			{
+				bool shownInside = !searching && advancedGroups.Contains(group);
+				cs::String head = cs::Cat(advancedOpen ? "-  " : "+  ", "Advanced (simulation)");
+				if (GUI::Button(Rect(0, ny, bw, 30), head, shownInside && !advancedOpen ? buttonActive : button))
+				{
+					advancedOpen = !advancedOpen;
+					// Folding it away from under the group shown goes back to the player's first group.
+					if (!advancedOpen && advancedGroups.Contains(group) && playerGroups.Count() > 0)
+					{
+						group = playerGroups[0];
+						settingsScroll = Vector2::zero();
+					}
+				}
+				ny += step;
+				if (advancedOpen)
+					for (const auto& g : advancedGroups)
+					{
+						NavGroup(g, Rect(indent, ny, bw - indent, 30), searching);
+						ny += step;
+					}
+			}
 			GUI::EndScrollView();
 		}
 
 		// The settings.
 		float px = r.x + 20 + navW + 20, pw = r.xMax() - 20 - px;
-		cs::List<cs::Ref<GameSetting>> shown;
-		if (searching)
-		{
-			for (const auto& s : registry->Search(search)) // US-T517: the design groups are searched on the Developer page
-				if (PlayerOptions::IsPlayerGroup(s->Group)) shown.Add(s);
-		}
-		else if (!group.empty()) shown = registry->InGroup(group);
+		auto shown = searching ? registry->Search(search) : !group.empty() ? registry->InGroup(group) : cs::List<cs::Ref<GameSetting>>();
 		bool displayFound = searching && MatchesAll(DisplaySearchWords, search);
 		int rows = shown.Count() + (displayFound ? 1 : 0);
 		cs::String heading = searching ? cs::Cat(rows, " found for \"", cs::Strings::Trim(search), "\"") : !group.empty() ? GroupTitle(group) : cs::String("Nothing to set");
@@ -449,6 +457,7 @@ namespace SpaceGod::UI
 		displayRowShown = displayFound;
 		settingsViewH = view.height;
 		navGroups = playerGroups;
+		if (advancedOpen) navGroups.AddRange(advancedGroups);
 		if (settingsPick >= shown.Count()) settingsPick = shown.Count() - 1;
 		settingsScroll = GUI::BeginScrollView(view, settingsScroll, content);
 		float y = 0;
@@ -565,6 +574,13 @@ namespace SpaceGod::UI
 			setting->Reset();
 			return;
 		}
+		if (cs::As<TextSetting>(setting) == Audio::AudioOutput::Device()) // US-T654: stepped over the listed devices
+		{
+			int step = pressed(KeyCode::RightArrow) || pressed(KeyCode::D) ? 1 : pressed(KeyCode::LeftArrow) || pressed(KeyCode::A) ? -1 : 0;
+			if (step == 0 && (pressed(KeyCode::Return) || pressed(KeyCode::KeypadEnter) || pressed(KeyCode::Space))) step = 1;
+			if (step != 0) Audio::AudioOutput::Cycle(step);
+			return;
+		}
 		if (cs::As<TextSetting>(setting)) // US-T571: Enter types in its field
 		{
 			if (pressed(KeyCode::Return) || pressed(KeyCode::KeypadEnter)) GUI::FocusControl(cs::Cat("SettingText.", setting->Key));
@@ -664,6 +680,12 @@ namespace SpaceGod::UI
 			if (GUI::Button(Rect(cx, cy, 32, 28), "<", button)) choice->Cycle(-1);
 			GUI::Label(Rect(cx + 36, cy, controlW - 72, 28), choice->Selected(), rowSelected);
 			if (GUI::Button(Rect(cx + controlW - 32, cy, 32, 28), ">", button)) choice->Cycle(1);
+		}
+		else if (cs::As<TextSetting>(setting) == Audio::AudioOutput::Device()) // US-T654: a device picked, not typed
+		{
+			if (GUI::Button(Rect(cx, cy, 32, 28), "<", button)) Audio::AudioOutput::Cycle(-1);
+			GUI::Label(Rect(cx + 36, cy, controlW - 72, 28), Audio::AudioOutput::Shown(), rowSelected);
+			if (GUI::Button(Rect(cx + controlW - 32, cy, 32, 28), ">", button)) Audio::AudioOutput::Cycle(1);
 		}
 		else if (auto textSetting = cs::As<TextSetting>(setting)) // US-T571: typed in, taken on Enter
 		{
