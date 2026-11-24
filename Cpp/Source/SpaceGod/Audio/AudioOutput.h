@@ -2,7 +2,7 @@
 
 #include "Cs/Cs.h"
 
-namespace SpaceGod::Core { class TextSetting; }
+namespace SpaceGod::Core { class TextSetting; class ChoiceSetting; }
 
 namespace SpaceGod::Audio
 {
@@ -23,5 +23,10 @@ namespace SpaceGod::Audio
 		static cs::String Shown();
 		/// Steps the choice over System default and each listed device.
 		static void Cycle(int step);
+
+		/// audio.speakerMode (US-T613): Auto (the device's own), Headphones, Stereo speakers, Mono, Surround 5.1, Surround
+		/// 7.1, applied live. Mono plays every sound unpanned (the accessibility mono audio); Headphones narrows near
+		/// sounds; a Surround mode the device does not report says so on the row.
+		static const cs::Ref<Core::ChoiceSetting>& SpeakerMode();
 	};
 }

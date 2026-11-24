@@ -81,7 +81,9 @@ namespace SpaceGod::Core
 
 	cs::String DisplaySettings::Format() const
 	{
-		return cs::Cat(cs::Str(Width), "x", cs::Str(Height), ";", Mode, ";", VSync ? "vsync" : "novsync");
+		return cs::Cat(cs::Str(Width), "x", cs::Str(Height), ";", Mode, ";", VSync ? "vsync" : "novsync",
+			Monitor != 0 ? cs::Cat(";monitor=", cs::Str(Monitor)) : cs::String(),
+			RefreshHz != 0 ? cs::Cat(";hz=", cs::Str(RefreshHz)) : cs::String());
 	}
 
 	bool DisplaySettings::TryParse(const cs::String& text, DisplaySettings& settings)
@@ -89,7 +91,7 @@ namespace SpaceGod::Core
 		settings = DisplaySettings();
 		if (cs::Strings::IsNullOrEmpty(text)) return false;
 		auto parts = cs::Strings::Split(text, ';');
-		if (parts.Count() != 3) return false;
+		if (parts.Count() < 3 || parts.Count() > 5) return false;
 		auto size = cs::Strings::Split(parts[0], 'x');
 		int w = 0, h = 0;
 		if (size.Count() != 2
@@ -103,7 +105,22 @@ namespace SpaceGod::Core
 		if (parts[2] == "vsync") vSync = true;
 		else if (parts[2] == "novsync") vSync = false;
 		else return false;
-		settings = DisplaySettings(w, h, mode, vSync);
+		// US-T546: a string from before the monitor was kept reads as the primary monitor; US-T610: one from before the
+		// refresh rate was kept reads as Highest. Each comes at most once, the monitor first.
+		int monitor = 0, refreshHz = 0;
+		int next = 3;
+		if (next < parts.Count() && cs::Strings::StartsWith(parts[next], "monitor="))
+		{
+			if (!TryParseDigits(parts[next].substr(8), monitor)) return false;
+			next++;
+		}
+		if (next < parts.Count() && cs::Strings::StartsWith(parts[next], "hz="))
+		{
+			if (!TryParseDigits(parts[next].substr(3), refreshHz)) return false;
+			next++;
+		}
+		if (next != parts.Count()) return false;
+		settings = DisplaySettings(w, h, mode, vSync, monitor, refreshHz);
 		return true;
 	}
 
@@ -203,11 +220,14 @@ namespace SpaceGod::Core
 	size_t DisplaySettings::HashCode() const
 	{
 		int h = cs::WrapAdd(cs::WrapMul(cs::WrapMul(Width, 397) ^ Height, 397) ^ static_cast<int>(Mode), 0);
-		return static_cast<size_t>(cs::WrapAdd(cs::WrapMul(h, 2), VSync ? 1 : 0));
+		return static_cast<size_t>(cs::WrapAdd(cs::WrapMul(h, 2), VSync ? 1 : 0)) ^ static_cast<size_t>(cs::WrapMul(Monitor, 7919))
+			^ static_cast<size_t>(cs::WrapMul(RefreshHz, 104729));
 	}
 
 	cs::String DisplaySettings::ToString() const
 	{
-		return cs::Cat(Width, " x ", Height, ", ", ModeName(Mode), ", VSync ", VSync ? "on" : "off");
+		return cs::Cat(Width, " x ", Height, ", ", ModeName(Mode), ", VSync ", VSync ? "on" : "off",
+			Monitor != 0 ? cs::Cat(", monitor ", Monitor + 1) : cs::String(),
+			RefreshHz != 0 ? cs::Cat(", ", RefreshHz, " Hz") : cs::String());
 	}
 }

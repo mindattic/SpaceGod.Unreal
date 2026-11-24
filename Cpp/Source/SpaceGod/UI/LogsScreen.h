@@ -1,6 +1,6 @@
 #pragma once
 
-// LogsScreen (US-T261): the Prose books the player has recovered, to read.
+// LogsScreen (US-T261): the Prose books the player has recovered, to read; US-T674: and the radio lines heard.
 
 #include "Cs/Cs.h"
 #include "UnityCompat/UnityTypes.h"
@@ -12,13 +12,19 @@ namespace SpaceGod::Core
 	struct LoreBook;
 }
 
+namespace SpaceGod::Radio
+{
+	class RadioHeard;
+}
+
 namespace SpaceGod::UI
 {
 	/// The logs screen (Shift+L), in the Help screen's look (UiStyle): the ship logs and station records recovered from
 	/// derelicts, wrecks, prizes and ports (Core::LoreBooks), listed down the left by title and author, newest first; the one
 	/// picked is read on the right a page at a time. Up / Down pick a log (Page Up / Page Down / Home / End jump, the list
 	/// following the pick), Left / Right turn its pages. Only books Prose wrote
-	/// are ever listed: with none recovered it says how logs are found.
+	/// are ever listed: with none recovered it says how logs are found. US-T674: a Radio tab lists the radio lines heard
+	/// (Radio::RadioHeard), newest first.
 	class LogsScreen final
 	{
 	public:
@@ -27,7 +33,7 @@ namespace SpaceGod::UI
 
 		/// Draws the screen over <paramref name="keys"/> (recovered book keys, oldest first); true once the player has clicked
 		/// Back (Esc and the key that opens it are the owner's to handle).
-		bool Draw(const cs::List<cs::String>& keys, const Core::LoreLibrary& lore, const cs::String& closeHint);
+		bool Draw(const cs::List<cs::String>& keys, const Core::LoreLibrary& lore, const Radio::RadioHeard& heard, const cs::String& closeHint);
 
 		/// The screen's own textures go with whatever owns it (U.SPC-T366).
 		void DestroyOwnedTextures();
@@ -36,9 +42,11 @@ namespace SpaceGod::UI
 		static constexpr float Margin = 40, Gutter = 28, HeadingH = 24, RowH = 44, PageGap = 14;
 
 		bool stylesReady = false;
-		cs::Ref<GUIStyle> panel, title, bookTitle, heading, text, small, button, entry, entrySelected;
+		cs::Ref<GUIStyle> panel, title, bookTitle, heading, text, small, button, entry, entrySelected, radioLine;
 		cs::Ref<Texture2D> panelTexture, buttonTexture, buttonActiveTexture;
-		Vector2 scroll, listScroll;
+		Vector2 scroll, listScroll, radioScroll;
+		/// US-T674: the tab shown, Books or Radio.
+		bool radioTab = false;
 		int selected = 0, page = 0;
 		/// The list scrolls to the pick on the next draw (a key moved it, not a click). US-T301.
 		bool follow = false;
@@ -52,6 +60,8 @@ namespace SpaceGod::UI
 		void Turn(int to);
 		void DrawList(Rect area, const cs::List<Core::LoreBook>& books);
 		void DrawBook(const Core::LoreBook& book, Rect view);
+		void DrawTabs(const Rect& screen);
+		void DrawRadio(Rect area, const Radio::RadioHeard& heard);
 		void EnsureStyles();
 	};
 }

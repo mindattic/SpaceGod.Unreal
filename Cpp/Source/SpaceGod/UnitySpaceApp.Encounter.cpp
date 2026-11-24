@@ -8,6 +8,7 @@
 
 #include "UnitySpaceApp.h"
 
+#include "Audio/GameAudio.h" // US-T602
 #include "BodyCatalog.h"
 #include "BodyDefinition.h"
 #include "Comms/Comms.h"
@@ -119,6 +120,7 @@ namespace SpaceGod
 			if (EndOfTalk(open.Next)) EncounterEnd();
 			else EncounterGo(c, open.Next, lines);
 		}
+		else EncounterPrefetch(c, open);
 		return true;
 	}
 
@@ -137,10 +139,36 @@ namespace SpaceGod
 			bool player = Encounters::IsPlayerSpeaker(node.Speaker, cs::String());
 			cs::String said = EncounterFill(c, node.Line);
 			if (!said.empty()) lines.Add({ EncounterWho(c, player), said, player });
-			if (node.Choices.Count() > 0) return; // the player's turn
+			if (node.Choices.Count() > 0)
+			{
+				EncounterPrefetch(c, node);
+				return; // the player's turn
+			}
 			at = node.Next;
 		}
 		EncounterEnd();
+	}
+
+	void UnitySpaceApp::EncounterPrefetch(const CommsContext& c, const EncounterNode& node)
+	{
+		// US-T602: whichever choice is picked, their answer is already synthesized: each offered choice's next nodes, up to
+		// the next choice. An outcome's node is not known until the verb is said, so it is not fetched.
+		if (encounterText == nullptr || !Audio::GameAudio::Enabled()) return;
+		cs::List<CommsLine> ahead;
+		for (int i : Encounters::Offered(node, Comms::Verbs(c, encounterParty)))
+		{
+			cs::String at = node.Choices[i].Next;
+			for (int step = 0; step < MaxNodesPerStep; step++)
+			{
+				EncounterNode next;
+				if (EndOfTalk(at) || !Encounters::Node(*encounterText, at, next)) break;
+				cs::String said = EncounterFill(c, next.Line);
+				if (!said.empty() && !Encounters::IsPlayerSpeaker(next.Speaker, cs::String())) ahead.Add({ EncounterWho(c, false), said, false });
+				if (next.Choices.Count() > 0) break;
+				at = next.Next;
+			}
+		}
+		SpeakComms(ahead, c, encounterParty, encounterParty.Faction(), true);
 	}
 
 	bool UnitySpaceApp::EncounterNow(const CommsContext& c, EncounterNode& node, cs::List<int>& offered)
@@ -172,12 +200,14 @@ namespace SpaceGod
 		if (index < 0 || index > offered.Count()) return;
 		const EncounterChoice& ch = node.Choices[offered[index]];
 		const cs::String words = EncounterFill(c, ch.Text);
+		const CommsParty party = encounterParty; // US-T602: who the lines are read in, after the talk may have ended
 		cs::List<CommsLine> lines;
 		CommsOutcome outcome = CommsOutcome::None;
 		if (ch.HasAction && ch.Action == CommsVerb::SignOff)
 		{
 			lines.Add({ EncounterWho(c, true), words, true });
 			for (const auto& l : lines) commsLog.Add(l);
+			SpeakComms(lines, c, party, party.Faction());
 			EncounterEnd();
 			CommsSay(CommsVerb::SignOff);
 			return;
@@ -203,6 +233,7 @@ namespace SpaceGod
 			if (r.Battle != nullptr)
 			{
 				for (const auto& l : lines) commsLog.Add(l);
+				SpeakComms(lines, c, party, party.Faction());
 				while (commsLog.Count() > 40) commsLog.RemoveAt(0);
 				EncounterEnd();
 				CloseComms(); // a fight has started: the hands go back to the helm
@@ -215,6 +246,7 @@ namespace SpaceGod
 		if (next == "$outcome") next = Encounters::OutcomeNode(outcome);
 		EncounterGo(c, next, lines);
 		for (const auto& l : lines) commsLog.Add(l);
+		SpeakComms(lines, c, party, party.Faction());
 		while (commsLog.Count() > 40) commsLog.RemoveAt(0);
 	}
 }

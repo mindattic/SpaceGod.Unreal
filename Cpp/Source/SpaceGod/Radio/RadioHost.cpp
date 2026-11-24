@@ -48,6 +48,7 @@ namespace SpaceGod::Radio
 		log->Retire(jd);
 		if (rebasePending)
 		{
+			if (wentBack) log->DropAfter(jd);
 			DoRebase();
 			if (wentBack) receiver.DropAfter(jd);
 		}
@@ -57,15 +58,23 @@ namespace SpaceGod::Radio
 		for (const RadioArrival& a : arrivals)
 		{
 			heard++;
-			RecentEntry r;
-			r.Message = *a.Message;
-			r.Text = log->Text(a.Index);
-			r.ArrivalJd = a.ArrivalJd;
-			r.DistanceKm = a.DistanceKm;
-			r.AgeDays = a.AgeDays;
-			if (static_cast<int>(recent.size()) >= RecentCapacity) recent.erase(recent.begin());
-			recent.push_back(std::move(r));
-			for (IRadioSink* sink : sinks) sink->OnRadioArrival(*this, a);
+			RadioReceptionResult reception = RadioReception::Route(*a.Message, a.DistanceKm, listener);
+			routed[static_cast<size_t>(reception.Route)]++;
+			if (reception.Route == RadioRoute::Ignored) continue;
+			if (reception.Route == RadioRoute::Subtitled || reception.Route == RadioRoute::Spoken)
+			{
+				RecentEntry r;
+				r.Message = *a.Message;
+				r.Text = log->Text(a.Index);
+				if (reception.Clarity == RadioClarity::Noisy) r.Text = RadioReception::Garble(r.Text, a.Message->Id);
+				r.Reception = reception;
+				r.ArrivalJd = a.ArrivalJd;
+				r.DistanceKm = a.DistanceKm;
+				r.AgeDays = a.AgeDays;
+				if (static_cast<int>(recent.size()) >= RecentCapacity) recent.erase(recent.begin());
+				recent.push_back(std::move(r));
+			}
+			for (IRadioSink* sink : sinks) sink->OnRadioArrival(*this, a, reception);
 		}
 	}
 
