@@ -12,6 +12,7 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioTick()
 	{
 		if (Clock == nullptr) return;
+		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
 		if (ActiveSystem != radioSystem)
 		{
 			radioSystem = ActiveSystem;
@@ -28,6 +29,7 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioReset()
 	{
 		radio.Reset();
+		radioHeard.Clear();
 		radioSystem = nullptr;
 		radioSystemIndex = -1;
 	}

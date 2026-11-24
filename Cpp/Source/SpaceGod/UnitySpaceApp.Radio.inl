@@ -8,6 +8,8 @@
 public:
 	SpaceGod::Radio::RadioHost& GameRadio() { return radio; }
 	const SpaceGod::Radio::RadioHost& GameRadio() const { return radio; }
+	/// <summary>US-T674: the lines heard, for the HUD's radio log and the Logs screen's Radio tab.</summary>
+	const SpaceGod::Radio::RadioHeard& RadioHeardLines() const { return radioHeard; }
 
 	/// <summary>Once a frame: the host's Tick at the listener, in the active system, at the clock's Jd.</summary>
 	void RadioTick();
@@ -21,3 +23,5 @@ private:
 	/// <summary>The active system RadioTick last saw and its index in the galaxy (looked up only when it changes).</summary>
 	cs::Ref<Core::StarSystem> radioSystem;
 	int radioSystemIndex = -1;
+	/// <summary>US-T674: a sink on radio, so declared after it (gone first); the HUD only reads it.</summary>
+	SpaceGod::Radio::RadioHeard radioHeard{*this};
