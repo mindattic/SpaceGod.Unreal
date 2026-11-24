@@ -2568,10 +2568,12 @@ namespace SpaceGod::Core
 		ShipComponents::KnockOut(c);
 	}
 
-	void Battle::ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp)
+	void Battle::ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp) { ApplyImpact(target, at, hp, false); }
+
+	void Battle::ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp, bool selfInflicted)
 	{
 		if (!target->Present() || hp <= 0) return;
-		if (target->PlayerControlled() && DevFlags::Invulnerable()->Value) return; // US-T527
+		if (!selfInflicted && target->PlayerControlled() && DevFlags::Invulnerable()->Value) return; // US-T527, US-T566
 		hp = Difficulty::Incoming(target->PlayerControlled(), hp); // US-T253
 		auto c = target->Combat;
 		double shieldBefore = c->Shield();

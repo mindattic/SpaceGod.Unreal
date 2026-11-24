@@ -286,7 +286,7 @@ namespace SpaceGod::Core
 		}
 		// Then the craft itself, as any kill: its wreck and debris, and its pods (empty: nobody got to them).
 		c->ZeroAllShields();
-		b->ApplyImpact(u, u->Pos, c->Hull + 1e9);
+		b->ApplyImpact(u, u->Pos, c->Hull + 1e9, true);
 		Record(r);
 		return r;
 	}

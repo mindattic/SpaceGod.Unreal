@@ -1320,7 +1320,10 @@ namespace SpaceGod::Core
 		/// A collision's damage to a unit (U.SPC-T60): <paramref name="hp"/> (see <see cref="Collisions.DamageHp"/>)
 		/// done at battle-local point <paramref name="at"/> to the hardpoints on that side, through its shields there
 		/// (<see cref="Collisions.ApplyDamage"/>), with the same effects and the same death as a shot.
+		/// <paramref name="selfInflicted"/> marks the unit's own doing (its self-destruct), which the developer's
+		/// Invulnerable lets through (US-T566).
 		/// </summary>
+		void ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp, bool selfInflicted);
 		void ApplyImpact(const cs::Ref<BattleUnit>& target, DVec3 at, double hp);
 
 	private:

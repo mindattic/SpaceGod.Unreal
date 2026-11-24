@@ -23,6 +23,8 @@
 #include "Combat/Wreck.h"
 #include "Infrastructure/Infrastructure.h"
 #include "Sensors/Sensors.h"
+#include "Settings/DevFlags.h"
+#include "Settings/GameSetting.h"
 
 #include "Views/AsteroidBelt.h"
 
@@ -120,7 +122,9 @@ namespace SpaceGod
 		// US-T91), then the hull and its hardpoints through Struck. False if the hull was lost.
 		auto HitMe = [&](const SectionImpact& hit, const ContactKey& what, const cs::String& name)
 		{
-			if (hit.SectionA >= 0 && hit.SectionA < (int)me.Sections.size())
+			// US-T566: the developer's Invulnerable spares the flown hull's sections too, as Battle::ApplyImpact spares its hull.
+			bool spared = mine != nullptr && mine->PlayerControlled() && DevFlags::Invulnerable()->Value;
+			if (!spared && hit.SectionA >= 0 && hit.SectionA < (int)me.Sections.size())
 				SectionColliders::StrikeStructure(ship->Combat, me.Sections[hit.SectionA].ModuleId, Collisions::DamageHp(ship->Combat->Spec, hit.Hit.EnergyShareTJ()));
 			return Struck(ship, me.Volume, hit.Hit, what, name);
 		};
