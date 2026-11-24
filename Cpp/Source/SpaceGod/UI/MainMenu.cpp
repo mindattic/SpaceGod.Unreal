@@ -495,7 +495,7 @@ namespace SpaceGod::UI
 		GUI::enabled = enabled;
 		// US-T245: one Co-op entry, leading to US-T248's Host Co-op and Join Co-op pages.
 		if (KeyButton(Rect(r.x + 20, y + 144, bw, 38), "Co-op", button, 4)) Open(Page::Coop);
-		if (KeyButton(Rect(r.x + 20, y + 192, bw, 38), "Settings", button, 5)) settings->OpenSettings();
+		if (KeyButton(Rect(r.x + 20, y + 192, bw, 38), "Options", button, 5)) settings->OpenSettings();
 		// US-T246: Credits beside Help.
 		const float half = (bw - 10) * 0.5f;
 		if (KeyButton(Rect(r.x + 20, y + 240, half, 38), "Help", button, 6)) Open(Page::Help);
@@ -506,7 +506,7 @@ namespace SpaceGod::UI
 		}
 		// US-T245: the demos and the tour on a page of their own, out of the player's list.
 		if (KeyButton(Rect(r.x + 20, y + 288, bw, 38), "Extras", button, 8)) Open(Page::Extras);
-		if (KeyButton(Rect(r.x + 20, y + 336, bw, 38), "Quit", button, 9)) Quit();
+		if (KeyButton(Rect(r.x + 20, y + 336, bw, 38), "Exit Game", button, 9)) Quit();
 		DrawKeyHint(Rect(r.x + 20, y + 384, bw, 18)); // US-T314
 	}
 

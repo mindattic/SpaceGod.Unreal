@@ -217,17 +217,25 @@ namespace SpaceGod::UI
 	void PauseMenu::DrawMain()
 	{
 		// US-T271: one more button, the Encyclopedia; US-T293: and Society; US-T311: and the keys' hint under them.
-		// US-T450: and the showcase tour, from inside the game.
-		static const char* const labels[MainCount] = { "Resume", "Help", "Encyclopedia", "Society", "Save / Load", "Settings", "Showcase Tour", "Credits", "Main Menu", "Quit" };
-		const float w = 320, h = 542;
+		// US-T450: and the showcase tour, from inside the game. US-T607: Save Game and Load Game apart, Options, Return to Title, Exit Game.
+		static const char* const labels[MainCount] = { "Resume", "Save Game", "Load Game", "Options", "Help", "Encyclopedia", "Society", "Showcase Tour", "Credits", "Return to Title", "Exit Game" };
+		const cs::String blocked = SaveBlocker ? SaveBlocker() : cs::String();
+		const float w = 320, h = 102 + MainCount * 44;
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
 		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "PAUSED", title);
 		GUI::Label(Rect(r.x + 20, r.y + 38, w - 40, 18), "Every system stands still  ·  Esc to resume", small);
 		const float y = r.y + 70;
 		for (int i = 0; i < MainCount; i++)
+		{
+			const bool off = i == SaveEntry && !blocked.empty();
+			const bool was = GUI::enabled;
+			if (off) GUI::enabled = false;
 			if (GUI::Button(Rect(r.x + 20, y + i * 44, w - 40, 34), labels[i], i == mainPick ? buttonActive : button)) PressMain(i, false);
-		GUI::Label(Rect(r.x + 20, y + MainCount * 44, w - 40, 18), "Up / Down to pick  ·  Enter to press", small);
+			GUI::enabled = was;
+		}
+		// US-T607: under a greyed Save Game, why it is greyed.
+		GUI::Label(Rect(r.x + 20, y + MainCount * 44, w - 40, 18), blocked.empty() ? cs::String("Up / Down to pick  ·  Enter to press") : blocked, small);
 	}
 
 	void PauseMenu::PressMain(int i, bool keyed)
@@ -235,34 +243,39 @@ namespace SpaceGod::UI
 		switch (i)
 		{
 			case 0: Close(); break;
-			case 1:
+			case SaveEntry: // US-T607
+				if (SaveBlocker && !SaveBlocker().empty()) break;
+				Close();
+				if (ShowSaveGame) ShowSaveGame();
+				break;
+			case 2: // US-T607
+				Close();
+				if (ShowLoadGame) ShowLoadGame();
+				break;
+			case 3: page = Page::Settings; break;
+			case 4:
 				Close();
 				if (ShowHelp) ShowHelp();
 				break;
-			case 2: // US-T271
+			case 5: // US-T271
 				Close();
 				if (ShowEncyclopedia) ShowEncyclopedia();
 				break;
-			case 3: // US-T293
+			case 6: // US-T293
 				Close();
 				if (ShowSociety) ShowSociety();
 				break;
-			case 4:
-				Close();
-				if (ShowSaves) ShowSaves();
-				break;
-			case 5: page = Page::Settings; break;
-			case 6: // US-T450: the showcase tour from its first stop, in the game already running (sg.Tour, as the main menu's Extras)
+			case 7: // US-T450: the showcase tour from its first stop, in the game already running (sg.Tour, as the main menu's Extras)
 				Close();
 				if (GEngine) GEngine->Exec(nullptr, TEXT("sg.Tour"));
 				break;
-			case 7: // US-T246
+			case 8: // US-T246
 				if (!credits) credits = cs::New<CreditsScreen>();
 				credits->Restart();
 				page = Page::Credits;
 				break;
-			case 8: AskLeave(Leave::MainMenu, keyed); break;
-			case 9: AskLeave(Leave::Quit, keyed); break;
+			case 9: AskLeave(Leave::MainMenu, keyed); break;
+			case 10: AskLeave(Leave::Quit, keyed); break;
 			default: break;
 		}
 	}
@@ -322,7 +335,7 @@ namespace SpaceGod::UI
 		float w = Mathf::Min(wide ? 1120.0f : 820.0f, Screen::width - 40.0f), h = Mathf::Min(wide ? 640.0f : 560.0f, Screen::height - 40.0f);
 		auto r = Centred(w, h);
 		GUI::Box(r, GUIContent::none(), panel);
-		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "SETTINGS", title);
+		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), "OPTIONS", title);
 		GUI::Label(Rect(r.x + 20, r.y + 38, w - 340, 18),
 			cs::Cat("Changes take effect at once and are kept in profile ", ActiveProfile::Current()->Name, "  ·  Esc to go back"), small);
 
@@ -615,13 +628,13 @@ namespace SpaceGod::UI
 		GUI::DrawTexture(Rect(0, 0, static_cast<float>(Screen::width), static_cast<float>(Screen::height)), shadeTexture); // over the first page
 		GUI::Box(r, GUIContent::none(), panel);
 		bool quit = leaving == Leave::Quit;
-		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), quit ? "Quit the game?" : "Leave for the main menu?", title);
+		GUI::Label(Rect(r.x + 20, r.y + 14, w - 40, 22), quit ? "Exit the game?" : "Return to the title screen?", title);
 		GUI::Label(Rect(r.x + 20, r.y + 40, w - 40, 36),
-			quit ? "The game autosaves on the way out." : "The game autosaves on the way.  (Settings > Gameplay stops this question.)", small);
+			quit ? "The game autosaves on the way out." : "The game autosaves on the way.  (Options > Gameplay stops this question.)", small);
 		float bw = (w - 50) * 0.5f;
 		// US-T311: once the keys are used here, the one they pick is the one lit.
 		bool leaveLit = !leaveKeyed || leavePick == 0;
-		if (GUI::Button(Rect(r.x + 20, r.yMax() - 46, bw, 30), quit ? "Quit" : "Main Menu", leaveLit ? buttonActive : button)) LeaveNow(leaving);
+		if (GUI::Button(Rect(r.x + 20, r.yMax() - 46, bw, 30), quit ? "Exit Game" : "Return to Title", leaveLit ? buttonActive : button)) LeaveNow(leaving);
 		else if (GUI::Button(Rect(r.x + 30 + bw, r.yMax() - 46, bw, 30), "Stay", leaveKeyed && leavePick == 1 ? buttonActive : button)) leaving = Leave::None;
 	}
 

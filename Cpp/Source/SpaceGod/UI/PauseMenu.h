@@ -19,7 +19,8 @@ namespace SpaceGod::UI
 	class CreditsScreen;
 
 	/// The pause menu (U.SPC-T276), opened by Esc once there is nothing left for it to back out of (or at the
-	/// helm): Resume, Help, Save / Load, Settings, Credits (US-T246), Main Menu and Quit. Settings lists every setting the game's systems
+	/// helm): Resume, Save Game, Load Game, Options, Help, Encyclopedia, Society, Showcase Tour, Credits (US-T246), Return to
+	/// Title and Exit Game (US-T607). Options (the Settings page) lists every setting the game's systems
 	/// declare in the <see cref="SettingsRegistry"/> (U.SPC-T431), by group, with a search across them all, each
 	/// taking effect at once and remembered in the profile, with Reset per setting and per group; a new setting
 	/// shows up here by being declared, never by an edit to this menu. Settings also holds the Display page, where
@@ -94,7 +95,8 @@ namespace SpaceGod::UI
 
 		/// US-T311: the first page's button the keys have picked (-1 until Up / Down is pressed), and the leave question's
 		/// (0 leave, 1 stay; Stay first), shown only once the keys have been used on it.
-		static constexpr int MainCount = 10; // US-T450: Showcase Tour
+		static constexpr int MainCount = 11; // US-T450: Showcase Tour; US-T607: Save Game and Load Game
+		static constexpr int SaveEntry = 1; // US-T607: greyed out while SaveBlocker says why
 		int mainPick = -1, leavePick = 1;
 		bool leaveKeyed = false;
 
@@ -129,8 +131,11 @@ namespace SpaceGod::UI
 		bool settingsOnly = false;
 
 	public:
-		/// Save / Load: the game's saves panel (the menu closes first).
-		cs::Action<> ShowSaves;
+		/// US-T607: Save Game and Load Game: the game's saves panel in its save or its load mode (the menu closes first).
+		cs::Action<> ShowSaveGame, ShowLoadGame;
+
+		/// US-T607: why no save can be made right now (empty when one can): Save Game is greyed out with it.
+		cs::Func<cs::String> SaveBlocker;
 
 		/// Help: the game's Help screen, every key and control (the menu closes first, U.SPC-T494).
 		cs::Action<> ShowHelp;
@@ -245,7 +250,7 @@ namespace SpaceGod::UI
 		void DrawDisplay();
 		void DrawConfirm();
 
-		/// US-T252: "Leave for the main menu?" / "Quit the game?" over the first page; Yes leaves, No (or Esc) stays.
+		/// US-T252: "Return to the title screen?" / "Exit the game?" over the first page; Yes leaves, No (or Esc) stays.
 		void DrawLeave();
 		/// Main Menu or Quit, now (the question answered, or none asked).
 		void LeaveNow(Leave what);

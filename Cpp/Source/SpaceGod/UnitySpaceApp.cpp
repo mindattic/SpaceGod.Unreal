@@ -205,7 +205,9 @@ namespace SpaceGod
 		GameSettingsHost::Bind(); // every declared setting, from the active profile (U.SPC-T431)
 		StartGameVoice(); // US-T139: the player's own LLM key and persona, if they brought them
 		UI::DisplayOptions::ApplySaved(); // the resolution, window mode and VSync last kept (VSync on until then)
-		pauseMenu->ShowSaves = [this] { ShowSaves = true; };
+		pauseMenu->ShowSaveGame = [this] { OpenSaves(SavesMode::Save); }; // US-T607
+		pauseMenu->ShowLoadGame = [this] { OpenSaves(SavesMode::Load); };
+		pauseMenu->SaveBlocker = [this] { return SaveBlocker(); };
 		pauseMenu->ShowHelp = [this] { ShowHelp = true; };
 		pauseMenu->ShowEncyclopedia = [this] { ShowEncyclopedia = true; }; // US-T271
 		pauseMenu->ShowSociety = [this] { ShowSociety = true; }; // US-T293

@@ -222,7 +222,7 @@ namespace SpaceGod::Smoke
 			Draw("main menu");
 			Click("Profiles", "main menu > profiles");
 			Click("Back", "main menu");
-			Click("Settings", "main menu > settings");
+			Click("Options", "main menu > settings");
 			Click("Back", "main menu");
 			Click("Help", "main menu > help");
 			KeyDown(KeyCode::DownArrow, "main menu > help, next chapter (Down)");
@@ -269,7 +269,7 @@ namespace SpaceGod::Smoke
 			{
 				pause->Open();
 				Draw("pause menu (Esc)");
-				Click("Settings", "pause menu > settings");
+				Click("Options", "pause menu > settings");
 				Click("Display", "pause menu > settings > display");
 				Click("Cancel", "pause menu > settings");
 				Click("Back", "pause menu");
