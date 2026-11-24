@@ -287,7 +287,10 @@ namespace SpaceGod::Core
 			auto dwarf = [&](const cs::String& n)
 			{
 				double m = rng.Range(0.03, 0.075), teff = rng.Range(700, 2200);
-				return NewStar(n, cs::Cat(teff < 1300 ? "T" : "L", cs::ToInt(cs::Math::Floor(rng.Range(0, 9.99)))), m, rng.Range(0.08, 0.1), teff, rng.Range(0.1, 1),
+				int digit = cs::ToInt(cs::Math::Floor(rng.Range(0, 9.99)));
+				double radius = rng.Range(0.08, 0.1);
+				double lum = rng.Range(0.1, 1);
+				return NewStar(n, cs::Cat(teff < 1300 ? "T" : "L", digit), m, radius, teff, lum,
 					cs::Cat("A brown dwarf, ", cs::Fmt(m / JupiterMassSolar, "0"), " Jupiter masses: too small ever to burn hydrogen, glowing dull red with the heat it was born with. Fiction."));
 			};
 			auto a = dwarf(name + " A"), b = dwarf(name + " B");
@@ -313,7 +316,9 @@ namespace SpaceGod::Core
 		{
 			double mj = rng.LogRange(0.5, 12), teff = rng.Range(90, 400);
 			double mass = mj * JupiterMassSolar;
-			*star = *NewStar(name, RogueSpectral, mass, JupiterRadiusSolar * rng.Range(0.9, 1.2), teff, rng.Range(0.3, 1.2),
+			double rogueRadius = JupiterRadiusSolar * rng.Range(0.9, 1.2);
+			double rogueLum = rng.Range(0.3, 1.2);
+			*star = *NewStar(name, RogueSpectral, mass, rogueRadius, teff, rogueLum,
 				cs::Cat("A rogue planet: a gas giant of ", cs::Fmt(mj, "0.0"), " Jupiter masses flung out of the system it was born in, ",
 					"drifting between the stars with no sun at all; it glows only faintly with its own leftover heat. Fiction, from the galaxy's seed."));
 			spec.Planets.Clear();
@@ -346,7 +351,9 @@ namespace SpaceGod::Core
 			if (wide && rng.NextDouble() < 0.6)
 			{
 				double m = rng.LogRange(0.2, 300);
-				spec.Planets.Add(NewPlanet(PlanetName(b->Name, 0), b->Name, b->MassSolar, aAu * rng.Range(0.05, 0.18), rng.Range(0, 0.15), m, rng,
+				double orbitAu = aAu * rng.Range(0.05, 0.18);
+				double orbitEcc = rng.Range(0, 0.15);
+				spec.Planets.Add(NewPlanet(PlanetName(b->Name, 0), b->Name, b->MassSolar, orbitAu, orbitEcc, m, rng,
 					cs::Cat(cs::Fmt(m, "0.0"), " Earth masses about the fainter star, with two suns in its sky. Fiction.")));
 			}
 			for (const auto& d : spec.Discs)

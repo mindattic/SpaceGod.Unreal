@@ -479,7 +479,9 @@ namespace SpaceGod::Core
 		{
 			static const cs::List<cs::String> clouds = { "Veil", "Shroud", "Smoke", "Pall", "Mantle", "Murk", "Bloom", "Caul", "Gauze", "Haze" };
 			static const cs::List<cs::String> hues = { "Rose", "Cinder", "Violet", "Jade", "Amber", "Cobalt", "Saffron", "Orchid", "Teal", "Ember" };
-			plan.NebulaName = cs::Cat("the ", rng.Pick(hues), " ", rng.Pick(clouds));
+			const auto& hue = rng.Pick(hues);
+			const auto& cloud = rng.Pick(clouds);
+			plan.NebulaName = cs::Cat("the ", hue, " ", cloud);
 			VoidSite den;
 			den.Kind = VoidSiteKind::DenRock;
 			den.Name = cs::Cat(rng.Pick(DriftWords()), " Hollow");
