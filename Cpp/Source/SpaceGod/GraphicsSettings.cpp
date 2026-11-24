@@ -27,6 +27,7 @@ namespace SpaceGod
 		// reaches back into a static still being built.
 		int qualityIndex = GraphicsSettings::Epic;
 		int shadows = 3, textures = 3, effects = 3, postProcess = 3, viewDistance = 3;
+		int globalIllumination = 3, reflections = 3, shading = 3;
 		int aaIndex = 0, upscalerIndex = 0;
 		double resolutionScale = 100;
 		float flownFov = 60.0f;
@@ -63,7 +64,7 @@ namespace SpaceGod
 			if (IConsoleVariable* v = IConsoleManager::Get().FindConsoleVariable(name)) v->Set(value, ECVF_SetByCode);
 		}
 
-		/// Unreal's scalability groups: the five with rows of their own, and the rest following the preset (left where
+		/// Unreal's scalability groups: the eight with rows of their own, and the rest following the preset (left where
 		/// they were under Custom). SetQualityLevels does nothing when nothing changed.
 		void ApplyScalability()
 		{
@@ -73,11 +74,11 @@ namespace SpaceGod
 			levels.EffectsQuality = effects;
 			levels.PostProcessQuality = postProcess;
 			levels.ViewDistanceQuality = viewDistance;
+			levels.GlobalIlluminationQuality = globalIllumination;
+			levels.ReflectionQuality = reflections;
+			levels.ShadingQuality = shading;
 			if (qualityIndex != GraphicsSettings::Custom)
-			{
-				levels.AntiAliasingQuality = levels.GlobalIlluminationQuality = levels.ReflectionQuality = qualityIndex;
-				levels.FoliageQuality = levels.ShadingQuality = levels.LandscapeQuality = qualityIndex;
-			}
+				levels.AntiAliasingQuality = levels.FoliageQuality = levels.LandscapeQuality = qualityIndex;
 			Scalability::SetQualityLevels(levels);
 		}
 
@@ -130,13 +131,14 @@ namespace SpaceGod
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("graphics.quality", SettingGroups::Graphics,
 			"Quality preset", cs::List<cs::String>{ "Low", "Medium", "High", "Epic", "Custom" }, Epic,
-			"Sets shadows, textures, effects, post-processing, view distance and the LOD budgets together. Changing any of them makes it Custom. Picked from a hardware benchmark on a profile's first launch.",
+			"Sets shadows, textures, effects, post-processing, view distance, global illumination, reflections, shading and the LOD budgets together. Changing any of them makes it Custom. Picked from a hardware benchmark on a profile's first launch.",
 			"graphics quality preset scalability performance low medium high epic custom")->Applying([](int i)
 			{
 				qualityIndex = i;
 				if (i == Custom) { ApplyScalability(); return; }
 				quiet++;
 				Shadows()->Set(i); Textures()->Set(i); Effects()->Set(i); PostProcessing()->Set(i); ViewDistance()->Set(i);
+				GlobalIllumination()->Set(i); Reflections()->Set(i); Shading()->Set(i);
 				RenderLod::SimplifyBelowPx()->Set(PresetSimplifyPx[i]);
 				ShipLod::IconBelowPx()->Set(PresetShipIconPx[i]);
 				Views::BattleFx::EffectsBudget()->Set(PresetEffects[i]);
@@ -178,6 +180,30 @@ namespace SpaceGod
 	{
 		static const cs::Ref<ChoiceSetting> value = Level("graphics.viewDistance", "View distance",
 			"How far away the engine keeps drawing detail.", "view draw distance lod quality scalability", &viewDistance);
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::GlobalIllumination()
+	{
+		static const cs::Ref<ChoiceSetting> value = Level("graphics.globalIllumination", "Global illumination",
+			"How much light bounces between surfaces, such as a planet's glow on a hull (Unreal's global illumination scalability).",
+			"global illumination gi lumen bounce indirect lighting quality scalability", &globalIllumination);
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::Reflections()
+	{
+		static const cs::Ref<ChoiceSetting> value = Level("graphics.reflections", "Reflections",
+			"The detail of reflections on hulls, stations and other shiny surfaces (Unreal's reflection scalability).",
+			"reflections reflective mirror shiny quality scalability", &reflections);
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::Shading()
+	{
+		static const cs::Ref<ChoiceSetting> value = Level("graphics.shading", "Shading",
+			"The quality of surface materials and how they take light (Unreal's shading scalability).",
+			"shading materials surface lighting quality scalability", &shading);
 		return value;
 	}
 
@@ -234,6 +260,7 @@ namespace SpaceGod
 	void GraphicsSettings::Declare()
 	{
 		Quality(); Shadows(); Textures(); Effects(); PostProcessing(); ViewDistance();
+		GlobalIllumination(); Reflections(); Shading();
 		AntiAliasing(); ResolutionScale(); Upscaler(); FieldOfView();
 		static bool watching = false;
 		if (watching) return;

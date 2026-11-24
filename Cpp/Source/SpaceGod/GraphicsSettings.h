@@ -30,6 +30,9 @@ namespace SpaceGod
 		static const cs::Ref<Core::ChoiceSetting>& Effects();
 		static const cs::Ref<Core::ChoiceSetting>& PostProcessing();
 		static const cs::Ref<Core::ChoiceSetting>& ViewDistance();
+		static const cs::Ref<Core::ChoiceSetting>& GlobalIllumination();
+		static const cs::Ref<Core::ChoiceSetting>& Reflections();
+		static const cs::Ref<Core::ChoiceSetting>& Shading();
 		static const cs::Ref<Core::ChoiceSetting>& AntiAliasing();
 		static const cs::Ref<Core::RangeSetting>& ResolutionScale();
 		static const cs::Ref<Core::ChoiceSetting>& Upscaler();
