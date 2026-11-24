@@ -40,6 +40,8 @@ public class SpaceGod : ModuleRules
 		PrivateDependencyModuleNames.Add("Sockets");
 		// US-T552: Settings > Sound's night dynamic range, a compressor on the main submix.
 		PrivateDependencyModuleNames.Add("AudioMixer");
+		// US-T598: the SAPI 5 speech fallback (Voice/SapiTts.cpp) when Piper is missing.
+		if (Target.Platform == UnrealTargetPlatform.Win64) PublicSystemLibraries.Add("sapi.lib");
 		// US-T245: the build number and short commit hash the main menu shows in its corner (BuildInfo.cpp).
 		StampBuild();
 	}

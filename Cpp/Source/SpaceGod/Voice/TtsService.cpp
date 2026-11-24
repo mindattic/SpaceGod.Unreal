@@ -2,6 +2,7 @@
 
 #include "Audio/GameAudio.h"
 #include "Voice/PiperTts.h"
+#include "Voice/SapiTts.h"
 
 #include "Containers/Queue.h"
 #include "HAL/Event.h"
@@ -40,7 +41,9 @@ namespace SpaceGod::Voice
 			TQueue<Result, EQueueMode::Spsc> Done;
 			FEvent* Wake = FPlatformProcess::GetSynchEventFromPool(false);
 			std::atomic<bool> Stopping { false };
-			std::unique_ptr<ITtsEngine> Engine = std::make_unique<PiperTts>();
+			std::unique_ptr<ITtsEngine> Piper = std::make_unique<PiperTts>();
+			/// US-T598: when Piper is missing or has given up.
+			std::unique_ptr<ITtsEngine> Sapi = std::make_unique<SapiTts>();
 
 			~Worker() override { FPlatformProcess::ReturnSynchEventToPool(Wake); }
 
@@ -66,7 +69,8 @@ namespace SpaceGod::Voice
 						continue;
 					}
 					Result result { job.Id, {} };
-					if (Engine->Available()) result.Clip = Engine->Synthesize(job.Request);
+					if (Piper->Available()) result.Clip = Piper->Synthesize(job.Request);
+					else if (Sapi->Available()) result.Clip = Sapi->Synthesize(job.Request);
 					Done.Enqueue(MoveTemp(result));
 				}
 				return 0;
@@ -75,7 +79,8 @@ namespace SpaceGod::Voice
 			void Stop() override
 			{
 				Stopping = true;
-				Engine->Abort();
+				Piper->Abort();
+				Sapi->Abort();
 				Wake->Trigger();
 			}
 		};
