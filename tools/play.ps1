@@ -15,11 +15,11 @@ param(
   # copies have no counterpart of; without it the audit is the 85 probes every copy runs, row for row.
   [switch]$AuditFacade,
   # -Mode coop-smoke only (US-T72, docs/CAPTURE.md section 7): the host also runs with "-capture video" (in a 960x540
-  # window, not headless: MindAttic.Capture records the game's window), so the smoke's join, resync, trade, hail, party
+  # window, not headless: MindAttic.Media.Capture records the game's window), so the smoke's join, resync, trade, hail, party
   # trip and load raise their capture events; the script lists the [capture] event lines the host wrote.
   [switch]$CaptureHost,
   # US-T163: headless capture. -Offscreen runs -Mode solo or dogfight with -RenderOffScreen (the GPU renders, no window
-  # opens on anyone's screen, no sound plays) under "-capture $Capture"; MindAttic.Capture records the game's own frames
+  # opens on anyone's screen, no sound plays) under "-capture $Capture"; MindAttic.Media.Capture records the game's own frames
   # (read back from the GPU into the capture host, Capture/README.md) into the usual session folder. -Seconds stops the
   # game after that long (the host then exports the session); -ExecCmds runs a scenario (e.g. "sg.Tour auto");
   # -CaptureStats logs the game's frame rate and the frame feed's cost every 5 s ([MindAttic.Capture] feed: ...).

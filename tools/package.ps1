@@ -24,7 +24,7 @@ Steps:
  2. RunUAT BuildCookRun -platform=Win64 -clientconfig=<Configuration> -build -cook -stage -pak -archive.
     UBT runs with -WaitMutex (queued behind any other UE build) and -MaxParallelActions (default 4).
  3. Renames the launcher exe (see below).
- 4. dotnet publish of the MindAttic.Capture host (Capture/SpaceGod.Capture) into <archive>/Capture/ (US-T72).
+ 4. dotnet publish of the MindAttic.Media.Capture host (Capture/SpaceGod.Capture) into <archive>/Capture/ (US-T72).
  5. Data/Lore (the applied Prose texts, docs/PROSE.md) into <archive>/Lore/, where the game reads them (US-T236).
  6. Data/Vehicles/Vehicles.json (engine ports and hardpoint placements, docs/Vehicles.md) into <archive>/Vehicles/,
     where the game reads it (US-T452).
@@ -80,8 +80,8 @@ if (-not (Test-Path -LiteralPath $launcher)) { throw "BuildCookRun archived no l
 # 3. The exe name.
 Move-Item -LiteralPath $launcher -Destination $renamed -Force
 
-# 4. The MindAttic.Capture host (US-T72; Capture/README.md): built from Capture/SpaceGod.Capture and the vendored
-#    MindAttic.Capture sources, next to the package's Engine/ folder, where the game looks for Capture/capture.exe.
+# 4. The MindAttic.Media.Capture host (US-T72; Capture/README.md): built from Capture/SpaceGod.Capture and the vendored
+#    MindAttic.Media.Capture sources, next to the package's Engine/ folder, where the game looks for Capture/capture.exe.
 #    Framework-dependent: it runs on the .NET 10 runtime the SDK that builds it installs.
 $captureProject = Join-Path $repo 'Capture\SpaceGod.Capture\SpaceGod.Capture.csproj'
 $captureOut = Join-Path $archive 'Capture'

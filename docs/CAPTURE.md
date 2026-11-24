@@ -1,4 +1,4 @@
-# Capture: recording SpaceGod through MindAttic.Capture (US-T72)
+# Capture: recording SpaceGod through MindAttic.Media.Capture (US-T72)
 
 > Mirrored from SpaceGod.Unity.CSharp `docs/CAPTURE.md` at `e29d871` (the reference copy, where it changes first). This copy's own side: [Capture/README.md](../Capture/README.md).
 
@@ -19,14 +19,14 @@ digests stay identical, and the co-op smoke stays 15/15.
 | `-capture` or `-capture video` | Records the game from start to exit at its native resolution (lossless FFV1 tape), exported on exit as `.mkv` + `.mp4`. |
 | `-capture screen N` | A PNG every N (`500ms`, `5`, `10s`, `1m`) until exit. Combine: `-capture video screen 10`. |
 | `-capture video hq` | Hardware HEVC tape instead of lossless. |
-| `-capture video 8h` | Stops recording after that long (MindAttic.Capture's shut-off valve can stop it sooner). |
+| `-capture video 8h` | Stops recording after that long (MindAttic.Media.Capture's shut-off valve can stop it sooner). |
 | `-capture-config <path>` | The player's own capture.json, used **instead of** the game's shipped defaults (section 4). |
-| `-demo` with `-capture` | The scripted tour (CaptureRunner/SceneTour) plays and quits as before; with `-capture` on, each tour stop's screenshot goes through MindAttic.Capture (`ScreenshotAsync(<stop name>)`) into the session folder. Without `-capture` the tour still plays, with no screenshots. |
+| `-demo` with `-capture` | The scripted tour (CaptureRunner/SceneTour) plays and quits as before; with `-capture` on, each tour stop's screenshot goes through MindAttic.Media.Capture (`ScreenshotAsync(<stop name>)`) into the session folder. Without `-capture` the tour still plays, with no screenshots. |
 | `-capture` and saves | Autosave is off while `-capture` (or `-demo`) is on, as before (UnitySpaceApp.Saves `InitSaves`). Manual saves still work and raise `game-saved`. |
-| `-capturedir=<dir>` | Unreal copies only, kept for tools/play.ps1: where their tour PNGs also go. Not a MindAttic.Capture flag. |
+| `-capturedir=<dir>` | Unreal copies only, kept for tools/play.ps1: where their tour PNGs also go. Not a MindAttic.Media.Capture flag. |
 | `-RenderOffScreen` with `-capture` | This copy only (US-T163): no window opens, the GPU still renders; the game reads its frames back and feeds them to the capture host, so video, screenshots, markers and events work as with a window (`tools/play.ps1 -Offscreen`; [Capture/README.md](../Capture/README.md), "Frames"). `-capture-source=frames` does the same with a window; `-capture-source=window` forces window capture. `-nullrhi` renders nothing, so it has no images. |
 
-Anything after `-capture` that is not a capture word is left for the game, as MindAttic.Capture does.
+Anything after `-capture` that is not a capture word is left for the game, as MindAttic.Media.Capture does.
 
 **The 1920x1080 tour video (US-T291).** `tools/play.ps1 -Offscreen -Capture 'video hq' -ResX 1920 -ResY 1080 -Seconds 1100
 -ExecCmds 'sg.Tour auto quit'` records the whole showcase tour (about 18 minutes; hardware HEVC, ~1% of frames dropped).
@@ -38,7 +38,7 @@ tape, and so does free RAM under 2 GB (parallel Unreal builds); the valve's reas
 - Root: `R:\MindAttic\Capture\{RepoName}\`. If `R:` is missing: `%USERPROFILE%\Videos\MindAttic\Capture\{RepoName}\`.
 - `{RepoName}` is the copy's own repo name: `SpaceGod.Unity.CSharp`, `SpaceGod.Unreal.CSharp`, `SpaceGod`,
   so the three never write into one folder. Unity stamps it into `StreamingAssets/mindattic-capture-app.txt` at build time.
-- Per session, MindAttic.Capture's standard layout: the session video (`.mkv`, `.mp4`), every screenshot, clip and
+- Per session, MindAttic.Media.Capture's standard layout: the session video (`.mkv`, `.mp4`), every screenshot, clip and
   replay (`.png`, `.mp4`), a `.json` sidecar beside each file, `session.json` (the manifest, with every marker as a
   chapter), `{RepoName}_{start}.log` and `.stats.csv`.
 - Every game event (section 3) is also written to the game's own log as one line, so the three copies can be compared

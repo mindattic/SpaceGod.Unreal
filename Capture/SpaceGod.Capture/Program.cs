@@ -9,7 +9,7 @@ using MindAttic.Capture.Windows;
 namespace SpaceGod.Capture;
 
 /// <summary>
-/// The game's MindAttic.Capture host (US-T72): what MindAttic.Capture's Unity package does inside a Unity player, done
+/// The game's MindAttic.Media.Capture host (US-T72): what MindAttic.Media.Capture's Unity package does inside a Unity player, done
 /// beside the Unreal game, which cannot load .NET. See Capture/README.md for the protocol.
 /// <list type="bullet">
 /// <item><c>capture host --hwnd 0x.. --pid N --app Name [--version V] --cmdline "the game's command line"</c>: builds the
