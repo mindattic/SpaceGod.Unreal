@@ -5,6 +5,7 @@
 // simulation, and the readings remembered are this session's.
 
 #include "UnitySpaceApp.h"
+#include "PlayerOptions.h"
 
 #include "Astro.h"
 #include "BodyCatalog.h"
@@ -44,7 +45,7 @@ namespace SpaceGod
 
 		cs::String ScanDate(double jd)
 		{
-			return jd <= 0 ? cs::String("date unknown") : Astro::ToDateTime(jd).ToString("yyyy-MM-dd");
+			return jd <= 0 ? cs::String("date unknown") : PlayerOptions::Date(Astro::ToDateTime(jd));
 		}
 	}
 

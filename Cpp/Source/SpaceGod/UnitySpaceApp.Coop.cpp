@@ -39,6 +39,7 @@
 #include "Embodiment/MechWalker.h" // US-T270: a mech in co-op
 #include "Embodiment/RepairWorker.h" // US-T135
 #include "Views/EmbodiedShine.h" // US-T136: seat colours
+#include "UI/CoopNames.h" // US-T564
 #include "Embodiment/StationSeat.h"
 #include "Fleet.h"
 #include "Persistence/SaveGame.h"
@@ -840,6 +841,7 @@ namespace SpaceGod
 			GUI::color = Color(seatColor.r, seatColor.g, seatColor.b, 1.0f);
 			GUI::Label(Rect(x, y, 334, 20), line);
 			y += 18;
+			if (!mine && !hidden && SystemVisible && UI::CoopNames::DrawOverShip(*this, p->Seat, p->Name)) continue; // US-T564
 			if (mine || hidden || p->Body < 0 || p->Body >= Catalog()->Count() || !SystemVisible) continue;
 			DVec3 scene = BodyScene(p->Body) + Scale()->LocalOffset((*Catalog())[p->Body], p->OffsetKm);
 			Vector2 g;
