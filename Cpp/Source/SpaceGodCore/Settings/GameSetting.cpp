@@ -9,7 +9,7 @@ namespace SpaceGod::Core
 	{
 		static const cs::List<cs::String> value =
 		{
-			Gameplay, Graphics, RenderPipeline, RenderBudget, Streaming, Simulation, Ftl, Civilizations, Ai, Dogfighting, Broadsides, Weapons, Economy, Controls, Audio,
+			Gameplay, Graphics, RenderPipeline, RenderBudget, Streaming, Simulation, Ftl, Civilizations, Ai, Dogfighting, Broadsides, Weapons, Economy, Controls, Audio, Developer,
 		};
 		return value;
 	}

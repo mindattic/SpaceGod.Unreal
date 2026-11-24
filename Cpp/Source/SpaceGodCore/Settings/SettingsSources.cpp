@@ -48,6 +48,7 @@
 #include "Combat/WeakPatches.h"
 #include "Economy/TradeDesk.h"
 #include "Rendering/Skyboxes.h"
+#include "Settings/DevFlags.h"
 #include "Systems/CruiseDrive.h"
 #include "Systems/FleetDoctrine.h"
 #include "Systems/FtlNavigation.h"
@@ -106,6 +107,8 @@ namespace SpaceGod::Core
 		TradeRules::RunClassConstructor(); found++;                         // Economy/TradeDesk.cs
 		// ---- Core/Rendering/
 		SkyboxSettings::DefaultSky(); SkyboxSettings::Brightness(); SkyboxSettings::NebulaResolution(); found++; // Rendering/Skyboxes.cs
+		// ---- Core/Settings/
+		DevFlags::All(); found++;                                           // US-T524 (not a C# source)
 		// ---- Core/Systems/
 		CruiseDrives::SpeedScale(); CruiseDrives::WellLimit(); found++;     // Systems/CruiseDrive.cs
 		FleetDoctrine::StrikeGroups(); FleetDoctrine::ReserveShare(); FleetDoctrine::StrikeRangeLy(); FleetDoctrine::StrikeDays(); found++;
