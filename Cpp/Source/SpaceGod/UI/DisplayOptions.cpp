@@ -29,9 +29,12 @@ namespace SpaceGod::UI
 	void DisplayOptions::Apply(DisplaySettings settings)
 	{
 		DisplayBackend::SetVSyncCount(settings.VSync ? 1 : 0);
+		// A monitor no longer plugged in (or headless) means the primary one.
+		if (settings.Monitor >= DisplayBackend::Monitors().Count()) settings = settings.WithMonitor(0);
+		DisplayBackend::MoveToMonitor(settings.Monitor, settings.Width, settings.Height);
 		auto mode = ToUnity(settings.Mode);
 		DisplayBackend::Resolution best;
-		if (settings.Mode == DisplayMode::Exclusive && TryFindMode(settings.Width, settings.Height, best))
+		if (settings.Mode == DisplayMode::Exclusive && TryFindMode(settings.Monitor, settings.Width, settings.Height, best))
 			DisplayBackend::SetResolution(settings.Width, settings.Height, mode, best.refreshRateHz);
 		else
 			DisplayBackend::SetResolution(settings.Width, settings.Height, mode);
@@ -44,17 +47,17 @@ namespace SpaceGod::UI
 		catch (const std::exception& e) { Debug::LogError(cs::Cat("[Unity.SpaceGod] Saving the display settings failed: ", e.what())); }
 	}
 
-	cs::List<DisplayResolution> DisplayOptions::Resolutions()
+	cs::List<DisplayResolution> DisplayOptions::Resolutions(int monitor)
 	{
 		cs::List<DisplayResolution> modes;
 		int maxW = Current.Width, maxH = Current.Height;
-		for (const auto& r : DisplayBackend::Resolutions())
+		for (const auto& r : DisplayBackend::Resolutions(monitor))
 		{
 			modes.Add(DisplayResolution(r.width, r.height, r.refreshRateHz));
 			maxW = Mathf::Max(maxW, r.width);
 			maxH = Mathf::Max(maxH, r.height);
 		}
-		auto native = DisplayBackend::CurrentResolution();
+		auto native = DisplayBackend::CurrentResolution(monitor);
 		maxW = Mathf::Max(maxW, native.width);
 		maxH = Mathf::Max(maxH, native.height);
 		auto list = DisplaySettings::WithStandardSizes(DisplaySettings::Distinct(modes), maxW, maxH);
@@ -62,11 +65,13 @@ namespace SpaceGod::UI
 		return list;
 	}
 
-	bool DisplayOptions::TryFindMode(int width, int height, DisplayBackend::Resolution& best)
+	cs::List<cs::String> DisplayOptions::Monitors() { return DisplayBackend::Monitors(); }
+
+	bool DisplayOptions::TryFindMode(int monitor, int width, int height, DisplayBackend::Resolution& best)
 	{
 		best = DisplayBackend::Resolution();
 		bool found = false;
-		for (const auto& r : DisplayBackend::Resolutions())
+		for (const auto& r : DisplayBackend::Resolutions(monitor))
 			if (r.width == width && r.height == height && (!found || r.refreshRateHz > best.refreshRateHz))
 			{
 				best = r;
@@ -77,7 +82,8 @@ namespace SpaceGod::UI
 
 	DisplaySettings DisplayOptions::FromScreen()
 	{
-		return DisplaySettings(Screen::width, Screen::height, FromUnity(DisplayBackend::CurrentMode()), DisplayBackend::VSyncCount() > 0);
+		return DisplaySettings(Screen::width, Screen::height, FromUnity(DisplayBackend::CurrentMode()), DisplayBackend::VSyncCount() > 0,
+			DisplayBackend::CurrentMonitor());
 	}
 
 	DisplayBackend::FullScreenMode DisplayOptions::ToUnity(DisplayMode mode)

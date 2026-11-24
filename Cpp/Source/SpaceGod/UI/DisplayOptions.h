@@ -40,11 +40,23 @@ namespace SpaceGod::UI::DisplayBackend
 	/// call asked for none (the audit's display.exclusive-rate, US-T56).
 	Resolution RequestedRefresh();
 
-	/// Screen.resolutions: every mode the screen offers, each at each of its real refresh rates (US-T56).
-	cs::List<Resolution> Resolutions();
+	/// Screen.resolutions: every mode the screen offers, each at each of its real refresh rates (US-T56); `monitor` -1
+	/// the screen the game is on, else that one of Monitors() (US-T546).
+	cs::List<Resolution> Resolutions(int monitor = -1);
 
-	/// Screen.currentResolution: the screen's own (desktop) mode.
-	Resolution CurrentResolution();
+	/// Screen.currentResolution: the screen's own (desktop) mode, of `monitor` as for Resolutions.
+	Resolution CurrentResolution(int monitor = -1);
+
+	/// US-T546: the monitors' names, the primary one first (index 0), then the others in the order Windows lists them;
+	/// empty headless.
+	cs::List<cs::String> Monitors();
+
+	/// The index in Monitors() of the one holding the game window's centre (0 headless).
+	int CurrentMonitor();
+
+	/// Puts the game window on that monitor, `width` x `height` centred on its work area; from a fullscreen mode the
+	/// window goes windowed first. Nothing when it is already there, headless, or there is no such monitor.
+	void MoveToMonitor(int monitor, int width, int height);
 
 	/// Screen.fullScreenMode.
 	FullScreenMode CurrentMode();
@@ -83,10 +95,13 @@ namespace SpaceGod::UI
 		/// The sizes the screen offers, once each at its best refresh rate, and the usual widescreen and ultrawide
 		/// sizes that fit on it (U.SPC-T284), smallest first; at least the size the game is drawn at now (the editor's
 		/// game view lists nothing).
-		static cs::List<Core::DisplayResolution> Resolutions();
+		static cs::List<Core::DisplayResolution> Resolutions(int monitor = -1);
+
+		/// US-T546: the monitors the Display page offers, the primary one first (empty headless).
+		static cs::List<cs::String> Monitors();
 
 	private:
-		static bool TryFindMode(int width, int height, DisplayBackend::Resolution& best);
+		static bool TryFindMode(int monitor, int width, int height, DisplayBackend::Resolution& best);
 
 		static Core::DisplaySettings FromScreen();
 
