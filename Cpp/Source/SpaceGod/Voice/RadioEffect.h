@@ -22,5 +22,9 @@ namespace SpaceGod::Voice
 
 		/// The line with the radio sound on it, 80 ms longer; an invalid clip stays as it is.
 		void Apply(Audio::SoundClip& clip, std::uint64_t seed);
+
+		/// One 40 ms squelch click with the radio band-pass and soft clip on it (US-T684: an urgent line cutting the one
+		/// playing), rendered once on first use and shared after; always the same click.
+		const Audio::SoundClip& SquelchClip();
 	}
 }

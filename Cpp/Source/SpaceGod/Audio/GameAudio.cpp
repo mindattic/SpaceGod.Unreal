@@ -363,6 +363,14 @@ namespace SpaceGod::Audio
 		Spawn(clip, bus, volume, pitch, false, false, UnityCompat::Vector3(), 0, 0);
 	}
 
+	LoopId GameAudio::Play2DStoppable(const SoundClip& clip, AudioBus bus, float volume, float pitch)
+	{
+		if (!Spawn(clip, bus, volume, pitch, false, false, UnityCompat::Vector3(), 0, 0)) return 0;
+		Voice& v = S().voices.Last();
+		v.Loop = S().nextLoop++;
+		return v.Loop;
+	}
+
 	void GameAudio::Play3D(const SoundClip& clip, AudioBus bus, UnityCompat::Vector3 position, float volume, float pitch, float minDistance, float maxDistance)
 	{
 		Spawn(clip, bus, volume, pitch, false, true, position, minDistance, maxDistance);

@@ -27,6 +27,8 @@ namespace SpaceGod::Voice
 			double TurnSince = 0;
 			/// When the line playing ends, the gap after it included.
 			double BusyUntil = 0;
+			/// The line playing (Play2DStoppable), so Cut can end it; 0: none.
+			Audio::LoopId Playing = 0;
 		};
 
 		Playback& P()
@@ -96,7 +98,7 @@ namespace SpaceGod::Voice
 			s.TurnSince = 0;
 			if (clip.IsValid())
 			{
-				Audio::GameAudio::Play2D(clip, Audio::AudioBus::Voice, volume);
+				s.Playing = Audio::GameAudio::Play2DStoppable(clip, Audio::AudioBus::Voice, volume);
 				s.BusyUntil = now + clip.Seconds() + Gap;
 				return;
 			}
@@ -109,5 +111,20 @@ namespace SpaceGod::Voice
 		for (const QueuedLine& line : s.Lines) TtsService::Cancel(line.Id);
 		s.Lines.Reset();
 		s.TurnSince = 0;
+	}
+
+	bool CommsVoice::Idle()
+	{
+		const Playback& s = P();
+		return s.Lines.IsEmpty() && FPlatformTime::Seconds() >= s.BusyUntil;
+	}
+
+	void CommsVoice::Cut(double holdSeconds)
+	{
+		Stop();
+		Playback& s = P();
+		if (s.Playing) Audio::GameAudio::StopLoop(s.Playing, 0.02f);
+		s.Playing = 0;
+		s.BusyUntil = FPlatformTime::Seconds() + holdSeconds;
 	}
 }

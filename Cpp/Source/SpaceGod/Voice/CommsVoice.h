@@ -37,6 +37,11 @@ namespace SpaceGod::Voice
 		static void Tick();
 		/// Drops every waiting line (a scene change); the one playing ends on its own.
 		static void Stop();
+		/// No line waiting or playing, the gap after the last one over (US-T684: VoiceArbiter starts a radio line only then).
+		static bool Idle();
+		/// Drops every waiting line and ends the one playing now (US-T684: a radio line a comms or urgent line
+		/// interrupts); the next line may start <paramref name="holdSeconds"/> from now (room for a squelch click).
+		static void Cut(double holdSeconds = 0);
 
 		static constexpr double ReadyWithin = 1.5;
 		/// The pause between two lines.

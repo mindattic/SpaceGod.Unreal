@@ -106,4 +106,32 @@ namespace SpaceGod::Voice::RadioEffect
 		}
 		clip.Samples = std::move(out);
 	}
+
+	const Audio::SoundClip& SquelchClip()
+	{
+		static const Audio::SoundClip clip = []
+		{
+			constexpr int rate = 22050;
+			const std::size_t length = static_cast<std::size_t>(SquelchSeconds * static_cast<float>(rate));
+			std::vector<float> buffer(length, 0.0f);
+			Noise noise(0x5175E1C4ull);
+			Squelch(buffer, 0, length, rate, noise);
+			Biquad high = Biquad::Pass(LowHz, rate, true);
+			Biquad low = Biquad::Pass(std::min(HighHz, 0.45f * static_cast<float>(rate)), rate, false);
+			constexpr float drive = 1.8f;
+			const float norm = 1.0f / std::tanh(drive);
+			auto out = std::make_shared<std::vector<std::int16_t>>(length);
+			for (std::size_t i = 0; i < length; ++i)
+			{
+				const float y = std::tanh(drive * low.Run(high.Run(buffer[i]))) * norm;
+				(*out)[i] = static_cast<std::int16_t>(std::clamp(y * 0.9f, -1.0f, 1.0f) * 32767.0f);
+			}
+			Audio::SoundClip c;
+			c.Samples = std::move(out);
+			c.SampleRate = rate;
+			c.Name = "radio.squelch";
+			return c;
+		}();
+		return clip;
+	}
 }

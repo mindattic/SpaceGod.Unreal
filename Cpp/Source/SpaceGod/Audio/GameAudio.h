@@ -32,6 +32,9 @@ namespace SpaceGod::Audio
 		/// A one-shot that is not placed in the world (the interface, music stings). <paramref name="volume"/> scales
 		/// the bus's volume; <paramref name="pitch"/> changes speed and pitch together.
 		static void Play2D(const SoundClip& clip, AudioBus bus, float volume = 1.0f, float pitch = 1.0f);
+		/// Play2D that can be cut short (US-T684: a radio line an urgent one or a comms line interrupts): StopLoop ends
+		/// it, LoopPlaying is false once it has ended by itself. Returns 0 when nothing plays.
+		static LoopId Play2DStoppable(const SoundClip& clip, AudioBus bus, float volume = 1.0f, float pitch = 1.0f);
 
 		/// A one-shot at a camera-relative scene point (scene units, Unity axes): heard from the camera, fading out
 		/// between <paramref name="minDistance"/> and <paramref name="maxDistance"/> scene units.
