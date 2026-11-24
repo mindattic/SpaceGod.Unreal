@@ -2,8 +2,12 @@
 
 #include "UnitySpaceApp.h"
 
+#include "Information/News.h"
 #include "SimClock.h"
 #include "Systems/Galaxy.h"
+#include "Systems/InterstellarTraffic.h"
+
+#include <vector>
 
 namespace SpaceGod
 {
@@ -13,6 +17,13 @@ namespace SpaceGod
 	{
 		if (Clock == nullptr) return;
 		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
+		cs::Ref<Newswire> news = Galaxy != nullptr && Galaxy->Traffic != nullptr ? Galaxy->Traffic->News : nullptr;
+		if (news != radioNews)
+		{
+			if (radioNews != nullptr) radioNews->Received -= radioNewsToken;
+			radioNews = news;
+			radioNewsToken = news != nullptr ? (news->Received += [this](cs::Ref<StarSystem> at, cs::Ref<SystemReport> report) { RadioRelayReceived(at, report); }) : 0;
+		}
 		if (ActiveSystem != radioSystem)
 		{
 			radioSystem = ActiveSystem;
@@ -30,7 +41,16 @@ namespace SpaceGod
 	{
 		radio.Reset();
 		radioHeard.Clear();
+		radioRelay.Clear();
 		radioSystem = nullptr;
 		radioSystemIndex = -1;
+	}
+
+	void UnitySpaceApp::RadioRelayReceived(const cs::Ref<StarSystem>& at, const cs::Ref<SystemReport>& report)
+	{
+		if (at == nullptr || at != ActiveSystem || radioSystemIndex < 0 || report == nullptr) return;
+		std::vector<RadioRelay::Bulletin> bulletins;
+		radioRelay.Bulletins(at, radioSystemIndex, *report, bulletins);
+		for (const auto& b : bulletins) radio.EmitText(b.Message, b.Text);
 	}
 }

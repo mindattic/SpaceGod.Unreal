@@ -19,7 +19,14 @@ public:
 	void RadioReset();
 
 private:
+	/// <summary>US-T645: a report delivered to the listener's system goes out on its Relay channel (Core::RadioRelay).</summary>
+	void RadioRelayReceived(const cs::Ref<Core::StarSystem>& at, const cs::Ref<Core::SystemReport>& report);
+
 	SpaceGod::Radio::RadioHost radio;
+	Core::RadioRelay radioRelay;
+	/// <summary>The newswire whose Received RadioTick subscribed to (a load or rewind brings another), and the token.</summary>
+	cs::Ref<Core::Newswire> radioNews;
+	int radioNewsToken = 0;
 	/// <summary>The active system RadioTick last saw and its index in the galaxy (looked up only when it changes).</summary>
 	cs::Ref<Core::StarSystem> radioSystem;
 	int radioSystemIndex = -1;
