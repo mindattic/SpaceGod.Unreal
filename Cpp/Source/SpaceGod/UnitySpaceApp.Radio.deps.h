@@ -4,6 +4,8 @@
 
 #include "Cs/Cs.h"
 #include "Radio/ChatterEvents.h" // held by value (US-T682)
+#include "Radio/ChatterSampler.h" // held by value (US-T681)
+#include "Radio/RadioMessage.h" // the sampler's reused buffer (US-T681)
 #include "Radio/RadioHeard.h" // held by value (US-T674)
 #include "Radio/RadioHost.h" // held by value
 #include "Radio/RadioRelay.h" // held by value

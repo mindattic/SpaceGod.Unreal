@@ -27,6 +27,16 @@ private:
 	/// <summary>US-T682: the world's events in the listener's system as chatter (Core::ChatterEvents), and its reused buffer.</summary>
 	Core::ChatterEvents radioChatter;
 	std::vector<Core::ChatterEvents::Chatter> radioChatterOut;
+	/// <summary>
+	/// US-T681: the ambient talk on the air (Core::ChatterSampler), seeded once a session from the machine (never the
+	/// simulation's random stream), and its reused buffer. It back-fills when the host's system or rebase count moves.
+	/// </summary>
+	Core::ChatterSampler radioAmbient;
+	std::vector<Core::RadioMessage> radioAmbientOut;
+	bool radioAmbientSeeded = false;
+	/// <summary>The host's system and rebase count the sampler last back-filled for (-1 and ~0: back-fill next time).</summary>
+	int radioAmbientSystemId = -1;
+	uint64_t radioAmbientRebases = ~0ull;
 	/// <summary>The newswire whose Received RadioTick subscribed to (a load or rewind brings another), and the token.</summary>
 	cs::Ref<Core::Newswire> radioNews;
 	int radioNewsToken = 0;
