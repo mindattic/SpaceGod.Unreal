@@ -711,8 +711,6 @@ namespace SpaceGod
 					if (star.Name == name) { target = FtlTarget::OfStar(star); break; }
 			if (target != nullptr) PlotFtlCourse(target, a.at(0) == "1");
 		}
-		else if (verb == "comms") CoopComms(seat, true, args);
-		else if (verb == "voidping" || verb == "voiddark") VoidStopKey(verb == "voidping", FtlCruise, Clock->Jd);
 		else if (verb == "ftlclear") ClearFtlCourse();
 		else if (verb == "ftlauto") EngageFtlAutopilot();
 		else if (!hud->CoopExecute(verb, a) && !UI::GalaxyMapScreen::CoopExecute(this, verb, a))
