@@ -9,6 +9,7 @@
 
 #include "Cs/Cs.h"
 #include "DVec3.h"
+#include "Radio/RadioDigest.h"
 #include "Radio/RadioLog.h"
 #include "Radio/RadioMessage.h"
 #include "Radio/RadioReceiver.h"
@@ -93,6 +94,9 @@ namespace SpaceGod::Radio
 			double AgeDays = 0;
 		};
 		const std::vector<RecentEntry>& Recent() const { return recent; }
+		/// <summary>US-T703: what was counted, not shown (CountedOnly, Digest routes); cleared on a system change and in Reset.</summary>
+		Core::RadioDigest& Digest() { return digest; }
+		const Core::RadioDigest& Digest() const { return digest; }
 		uint64_t HeardCount() const { return heard; }
 		uint64_t RebaseCount() const { return rebases; }
 		const Core::DVec3& ListenerKm() const { return listenerKm; }
@@ -109,6 +113,7 @@ namespace SpaceGod::Radio
 		std::vector<IRadioSink*> sinks;
 		std::vector<Core::RadioArrival> arrivals;
 		std::vector<RecentEntry> recent;
+		Core::RadioDigest digest;
 		Core::RadioListener listener;
 		/// <summary>US-T679: the tuner that receives each arrival (SetListener); null for none.</summary>
 		Core::RadioTuner* tuner = nullptr;

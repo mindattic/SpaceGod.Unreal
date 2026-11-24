@@ -10,6 +10,7 @@
 #include "Radio/RadioHost.h"
 
 #include <deque>
+#include <vector>
 
 namespace SpaceGod
 {
@@ -30,7 +31,10 @@ namespace SpaceGod::Radio
 		static constexpr int Capacity = 200;
 
 		/// <summary>How a line is coloured: PlayerOptions' Hostile, Wary, Friendly or Neutral colour.</summary>
-		enum class Tone : uint8_t { Neutral, Hostile, Wary, Friendly };
+		/// <summary>Digest (US-T703): a RadioDigest summary line, shown neutral and dimmed.</summary>
+		enum class Tone : uint8_t { Neutral, Hostile, Wary, Friendly, Digest };
+		/// <summary>US-T703: real seconds between two spoken digest lines.</summary>
+		static constexpr float DigestSpeakSeconds = 120.0f;
 
 		struct HeardLine
 		{
@@ -53,6 +57,12 @@ namespace SpaceGod::Radio
 		/// <summary>The clock went back (a rewind or a load): drops the lines that arrived after <paramref name="jd"/>.</summary>
 		void DropAfter(double jd);
 		void Clear() { lines.clear(); }
+		/// <summary>
+		/// US-T703: logs each digest summary taken at game <paramref name="jd"/> (Tone::Digest) and speaks one (a distress first,
+		/// else the largest Total) at the lowest score, only when the voice is idle, nothing waits and DigestSpeakSeconds have
+		/// passed since the last.
+		/// </summary>
+		void AddDigest(const std::vector<Core::RadioDigestLine>& digest, double jd);
 
 	private:
 		/// <summary>US-T685: the voice a message's emitter is cast in (VoiceCasting).</summary>
@@ -61,5 +71,7 @@ namespace SpaceGod::Radio
 		UnitySpaceApp& app;
 		Core::RadioChannels channels;
 		std::deque<HeardLine> lines;
+		/// <summary>Time::unscaledTime of the last spoken digest line; none yet when negative.</summary>
+		float lastDigestSpoken = -1.0f;
 	};
 }

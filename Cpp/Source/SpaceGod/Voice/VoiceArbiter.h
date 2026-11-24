@@ -17,6 +17,8 @@ namespace SpaceGod::Voice
 		int Priority = 0;
 		/// The channel it was heard on (the log, the digest).
 		int ChannelId = 0;
+		/// The message's situation (ChatterSituation; the digest's bucket when it is evicted).
+		int Situation = 0;
 		/// A distress call on Guard, or a line addressed to the player: kept under warp, and it cuts a non-urgent radio
 		/// line playing (with a squelch click).
 		bool Urgent = false;

@@ -45,9 +45,24 @@ namespace SpaceGod
 		listener.Channels = GameRadioChannels();
 		listener.Tuner = &radioTuner;
 		radio.SetListener(listener, &radioTuner);
+		// US-T703: after the host's tick, the digest's period summaries go to the log (one may be spoken); scripted runs keep
+		// none.
+		auto takeDigest = [this]()
+		{
+			if (PlayerOptions::ScriptedRun())
+			{
+				radio.Digest().Clear();
+				return;
+			}
+			const bool warped = !Clock->Paused() && Clock->Warp().SimSecondsPerSecond * Clock->Speed > 1.0;
+			std::vector<RadioDigestLine> digest;
+			radio.Digest().Take(Clock->Jd, static_cast<double>(UnityCompat::Time::unscaledTime), warped, GameRadioChannels(), digest);
+			radioHeard.AddDigest(digest, Clock->Jd);
+		};
 		if (ActiveSystem == nullptr)
 		{
 			radio.Tick(-1, DVec3(), Clock->Jd);
+			takeDigest();
 			return;
 		}
 		if (radioSystemIndex >= 0 && radio.SystemId() == radioSystemIndex && !PlayerOptions::ScriptedRun() && SpaceGod::Audio::GameAudio::Enabled())
@@ -86,6 +101,7 @@ namespace SpaceGod
 			}
 		}
 		radio.Tick(radioSystemIndex, CommsHere().HelioKm, Clock->Jd);
+		takeDigest();
 	}
 
 	void UnitySpaceApp::RadioReset()

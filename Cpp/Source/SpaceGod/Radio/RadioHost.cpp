@@ -15,6 +15,7 @@ namespace SpaceGod::Radio
 			// A new system: its own log, made on its first message; the old one's fronts cannot cross the stars.
 			log.reset();
 			receiver.Clear();
+			digest.Clear();
 			systemId = system;
 			rebasePending = false;
 		}
@@ -63,7 +64,17 @@ namespace SpaceGod::Radio
 			if (tuner != nullptr && listener.Channels != nullptr)
 			{
 				acceptance = tuner->Receive(*a.Message, *listener.Channels, nullptr, a.ArrivalJd);
-				if (acceptance == RadioAcceptance::CountedOnly) continue;
+				if (acceptance == RadioAcceptance::CountedOnly)
+				{
+					// US-T703: counted for the digest unless muted; encrypted when that is why it went unheard.
+					if (!tuner->IsMuted(a.Message->ChannelId))
+					{
+						const RadioChannel* channel = listener.Channels->Find(a.Message->ChannelId);
+						bool encrypted = channel != nullptr && channel->Encrypted && tuner->IsListening(*channel);
+						digest.Count(a.Message->ChannelId, a.Message->Situation, RadioDigestKind::CountedOnly, encrypted);
+					}
+					continue;
+				}
 			}
 			heard++;
 			RadioReceptionResult reception;
@@ -77,6 +88,9 @@ namespace SpaceGod::Radio
 				reception = RadioReception::Route(*a.Message, a.DistanceKm, listener);
 			routed[static_cast<size_t>(reception.Route)]++;
 			if (reception.Route == RadioRoute::Ignored) continue;
+			if (reception.Route == RadioRoute::Digest)
+				digest.Count(a.Message->ChannelId, a.Message->Situation,
+					reception.Clarity == RadioClarity::Unreadable ? RadioDigestKind::Unreadable : RadioDigestKind::Overflow, false);
 			if (reception.Route == RadioRoute::Subtitled || reception.Route == RadioRoute::Spoken)
 			{
 				RecentEntry r;
@@ -119,6 +133,7 @@ namespace SpaceGod::Radio
 		log.reset();
 		receiver.Clear();
 		recent.clear();
+		digest.Clear();
 		started = false;
 		rebasePending = false;
 		velocityKmPerDay = DVec3();

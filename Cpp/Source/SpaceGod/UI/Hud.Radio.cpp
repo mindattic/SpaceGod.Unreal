@@ -24,6 +24,7 @@ namespace SpaceGod::UI
 			case Radio::RadioHeard::Tone::Hostile: return PlayerOptions::HostileColor(alpha);
 			case Radio::RadioHeard::Tone::Wary: return PlayerOptions::WaryColor(alpha);
 			case Radio::RadioHeard::Tone::Friendly: return PlayerOptions::FriendlyColor(alpha);
+			case Radio::RadioHeard::Tone::Digest: return PlayerOptions::NeutralColor(alpha * 0.6f); // US-T703: a summary, dimmed
 			default: return PlayerOptions::NeutralColor(alpha);
 			}
 		}
