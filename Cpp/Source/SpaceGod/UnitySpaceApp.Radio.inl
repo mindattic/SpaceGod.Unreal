@@ -10,6 +10,17 @@ public:
 	const SpaceGod::Radio::RadioHost& GameRadio() const { return radio; }
 	/// <summary>US-T674: the lines heard, for the HUD's radio log and the Logs screen's Radio tab.</summary>
 	const SpaceGod::Radio::RadioHeard& RadioHeardLines() const { return radioHeard; }
+	/// <summary>
+	/// US-T679: the local player's tuner (US-T640). Session-only: there is no profile view-state slot to keep it in, so a
+	/// restart starts untuned; a load (RadioReset) resets it too.
+	/// </summary>
+	Core::RadioTuner& GameRadioTuner() { return radioTuner; }
+	const Core::RadioTuner& GameRadioTuner() const { return radioTuner; }
+	/// <summary>US-T679: the active system's channels (built or refreshed on demand), null between the stars.</summary>
+	const Core::RadioChannelSet* GameRadioChannels()
+	{
+		return ActiveSystem != nullptr && radioSystemIndex >= 0 ? &radioChannels.For(ActiveSystem, radioSystemIndex) : nullptr;
+	}
 
 	/// <summary>Once a frame: the host's Tick at the listener, in the active system, at the clock's Jd.</summary>
 	void RadioTick();
@@ -22,6 +33,9 @@ private:
 	/// <summary>US-T645: a report delivered to the listener's system goes out on its Relay channel (Core::RadioRelay).</summary>
 	void RadioRelayReceived(const cs::Ref<Core::StarSystem>& at, const cs::Ref<Core::SystemReport>& report);
 
+	/// <summary>US-T679: what the host's listener points at, so declared before radio (they outlive it).</summary>
+	Core::RadioTuner radioTuner;
+	Core::RadioChannels radioChannels;
 	SpaceGod::Radio::RadioHost radio;
 	Core::RadioRelay radioRelay;
 	/// <summary>US-T682: the world's events in the listener's system as chatter (Core::ChatterEvents), and its reused buffer.</summary>

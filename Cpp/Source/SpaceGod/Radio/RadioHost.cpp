@@ -57,8 +57,24 @@ namespace SpaceGod::Radio
 		receiver.Advance(*log, jd, [this](double atJd) { return ListenerAt(atJd); }, arrivals);
 		for (const RadioArrival& a : arrivals)
 		{
+			// US-T679: the tuner hears it first (activity for its scan); muted, unlistened or encrypted traffic stops here,
+			// while a message on no channel of the set (Ignored, ChannelId 0) is routed as if there were no tuner.
+			RadioAcceptance acceptance = RadioAcceptance::Heard;
+			if (tuner != nullptr && listener.Channels != nullptr)
+			{
+				acceptance = tuner->Receive(*a.Message, *listener.Channels, nullptr, a.ArrivalJd);
+				if (acceptance == RadioAcceptance::CountedOnly) continue;
+			}
 			heard++;
-			RadioReceptionResult reception = RadioReception::Route(*a.Message, a.DistanceKm, listener);
+			RadioReceptionResult reception;
+			if (acceptance == RadioAcceptance::Ignored)
+			{
+				RadioListener open = listener;
+				open.Channels = nullptr;
+				reception = RadioReception::Route(*a.Message, a.DistanceKm, open);
+			}
+			else
+				reception = RadioReception::Route(*a.Message, a.DistanceKm, listener);
 			routed[static_cast<size_t>(reception.Route)]++;
 			if (reception.Route == RadioRoute::Ignored) continue;
 			if (reception.Route == RadioRoute::Subtitled || reception.Route == RadioRoute::Spoken)

@@ -8,6 +8,7 @@
 #include "SimClock.h"
 #include "Systems/Galaxy.h"
 #include "Systems/InterstellarTraffic.h"
+#include "UnityCompat/UnityRuntime.h"
 
 #include <chrono>
 #include <cstdint>
@@ -34,6 +35,13 @@ namespace SpaceGod
 			radioSystem = ActiveSystem;
 			radioSystemIndex = Galaxy != nullptr && ActiveSystem != nullptr ? Galaxy->Systems.IndexOf(ActiveSystem) : -1;
 		}
+		// US-T679: the tuner's scan dwells in real time; the host routes each arrival through it and the active system's
+		// channels (none between the stars), and records it as channel activity.
+		radioTuner.Tick(UnityCompat::Time::unscaledDeltaTime, Clock->Jd);
+		RadioListener listener;
+		listener.Channels = GameRadioChannels();
+		listener.Tuner = &radioTuner;
+		radio.SetListener(listener, &radioTuner);
 		if (ActiveSystem == nullptr)
 		{
 			radio.Tick(-1, DVec3(), Clock->Jd);
@@ -80,6 +88,9 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioReset()
 	{
 		radio.Reset();
+		radio.SetListener(RadioListener());
+		radioTuner.Reset();
+		radioChannels.Clear();
 		radioHeard.Clear();
 		radioRelay.Clear();
 		radioChatter.Clear();

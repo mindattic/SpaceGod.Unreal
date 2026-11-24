@@ -63,8 +63,17 @@ namespace SpaceGod::Radio
 		void AddSink(IRadioSink* sink);
 		void RemoveSink(IRadioSink* sink);
 
-		/// <summary>Who routes the arrivals (RadioReception::Route); the channels and tuner it points at must outlive it.</summary>
-		void SetListener(const Core::RadioListener& value) { listener = value; }
+		/// <summary>
+		/// Who routes the arrivals (RadioReception::Route); the channels and tuner it points at must outlive it. US-T679: with
+		/// <paramref name="receiverTuner"/> (the listener's own tuner) and channels set, each arrival is first received by it (counted
+		/// as channel activity) and a CountedOnly one (muted, not listened to, encrypted) goes no further; one on no channel of
+		/// the set (Ignored, ChannelId 0) is still routed as if there were no tuner.
+		/// </summary>
+		void SetListener(const Core::RadioListener& value, Core::RadioTuner* receiverTuner = nullptr)
+		{
+			listener = value;
+			tuner = receiverTuner;
+		}
 		const Core::RadioListener& Listener() const { return listener; }
 		/// <summary>Arrivals routed each way since the start (the digest's counter hook).</summary>
 		uint64_t RoutedCount(Core::RadioRoute route) const { return routed[static_cast<size_t>(route)]; }
@@ -101,6 +110,8 @@ namespace SpaceGod::Radio
 		std::vector<Core::RadioArrival> arrivals;
 		std::vector<RecentEntry> recent;
 		Core::RadioListener listener;
+		/// <summary>US-T679: the tuner that receives each arrival (SetListener); null for none.</summary>
+		Core::RadioTuner* tuner = nullptr;
 		std::array<uint64_t, static_cast<size_t>(Core::RadioRoute::Spoken) + 1> routed{};
 		int systemId = -1;
 		bool started = false;

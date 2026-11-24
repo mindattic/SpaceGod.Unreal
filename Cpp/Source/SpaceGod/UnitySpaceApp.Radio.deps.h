@@ -9,6 +9,8 @@
 #include "Radio/RadioHeard.h" // held by value (US-T674)
 #include "Radio/RadioHost.h" // held by value
 #include "Radio/RadioRelay.h" // held by value
+#include "Radio/RadioChannels.h" // held by value (US-T679)
+#include "Radio/RadioTuner.h" // held by value (US-T679)
 
 namespace SpaceGod::Core
 {
