@@ -401,6 +401,13 @@ private:
 	void DrawPossession();
 	cs::Ref<Texture2D> visorTexture, bandTexture;
 
+	// ---------------------------------------------------------------- US-T637: captions (Hud.Captions.cpp)
+
+	/// <summary>Audio::Captions' queue as a strip above the bottom edge's drawers, newest at the bottom, at Settings >
+	/// Accessibility's caption size and background; nothing while Captions is Off.</summary>
+	void DrawCaptions();
+	cs::Ref<GUIStyle> captionStyles[3]; // by AccessibilityOptions::CaptionScale
+
 	/// Streaks of light streaming out from <paramref name="centre"/>, longer and faster with
 	/// <paramref name="strength"/>; <paramref name="seed"/> gives a set its own pattern.
 	void DrawStreaks(Vector2 centre, float strength, int count, Color tint, int seed, float maxLength);

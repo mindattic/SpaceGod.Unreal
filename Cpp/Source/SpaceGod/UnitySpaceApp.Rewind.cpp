@@ -3,7 +3,6 @@
 // (Persistence/RewindRing.h).
 
 #include "UnitySpaceApp.h"
-#include "PlayerOptions.h"
 #include "UI/Hud.h"
 #include "UI/GalaxyMapScreen.h" // US-T492: an order replayed
 #include "UI/UiMotion.h"
@@ -298,7 +297,7 @@ namespace SpaceGod
 		rewindReplaying = false;
 		ShowRewindBar(8);
 		ShowSaves = false;
-		ShowToast(cs::Cat("Rewound ", RewindSpan(back), " to ", PlayerOptions::DateAndTime(Astro::ToDateTime(jd)),
+		ShowToast(cs::Cat("Rewound ", RewindSpan(back), " to ", Astro::ToDateTime(jd).ToString("yyyy-MM-dd HH:mm"),
 			" UTC  (Shift+F8 again to go further back; play on and the old future is replaced)"));
 		UI::UiMotion::FadeFromBlack();
 		return true;
@@ -749,7 +748,7 @@ namespace SpaceGod
 		rewindLastVerdict = cs::Cat(rewindReplayNext - rewindReplayStart, " of ", rewindReplayStop - rewindReplayStart, " frames replayed, ", exact);
 		if (drifted) Debug::LogWarning(cs::Cat("[Unity.SpaceGod] Rewind replay ", rewindLastVerdict));
 		else Debug::Log(cs::Cat("[Unity.SpaceGod] Rewind replay ", rewindLastVerdict));
-		cs::String when = PlayerOptions::DateAndTime(Astro::ToDateTime(Clock->Jd), true);
+		cs::String when = Astro::ToDateTime(Clock->Jd).ToString("yyyy-MM-dd HH:mm:ss");
 		cs::String tail = drifted ? cs::String("  (sg.Rewind list)") : cs::String();
 		if (drifted) ShowToast(cs::Cat("Replay stopped at ", when, " UTC, short of the moment picked: the world drifted from the play at frame ",
 			rewindReplayFirstMismatchSerial, tail));
@@ -851,7 +850,7 @@ namespace SpaceGod
 				bool logged = false;
 				double jd = RewindJdAt(s, logged);
 				line = off ? cs::String("Release here to drop the scrub (nothing changes)")
-					: cs::Cat("Release to go back ", RewindSpan(rewindSessionS - s), " to ", PlayerOptions::DateAndTime(Astro::ToDateTime(jd)),
+					: cs::Cat("Release to go back ", RewindSpan(rewindSessionS - s), " to ", Astro::ToDateTime(jd).ToString("yyyy-MM-dd HH:mm"),
 						logged ? "" : " (about)", " UTC", exact ? " (replayed from the keyframe before)" : " (lands on the keyframe before)");
 				DrawRewindScrubPreview(panel, jd, logged, RewindSystemAt(s));
 			}

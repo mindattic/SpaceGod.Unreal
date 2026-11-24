@@ -8,7 +8,6 @@
 #include "UI/UiMotion.h" // US-T255
 
 #include "UnitySpaceApp.h"
-#include "PlayerOptions.h"
 
 #include "Ships.h"
 #include "World.h"
@@ -251,7 +250,7 @@ namespace SpaceGod::UI
 		float y = area.y, x = area.x + 12, lw = area.width - 24;
 		GUI::contentColor = Color::white();
 		auto pct = [](double v) { return cs::Cat(cs::Fmt(v * 100, "0"), "%"); };
-		auto date = [](double jd) { return jd <= 0 ? cs::String("?") : PlayerOptions::Date(Astro::ToDateTime(jd)); };
+		auto date = [](double jd) { return jd <= 0 ? cs::String("?") : Astro::ToDateTime(jd).ToString("yyyy-MM-dd"); };
 		auto civ = app->Galaxy != nullptr ? Civilization::Find(*app->Galaxy) : nullptr;
 		auto society = app->Galaxy != nullptr ? Society::Find(*app->Galaxy) : nullptr;
 		double jd = app->Clock != nullptr ? app->Clock->Jd : 0;
