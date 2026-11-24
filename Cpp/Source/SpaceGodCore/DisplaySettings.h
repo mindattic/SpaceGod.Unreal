@@ -59,23 +59,30 @@ namespace SpaceGod::Core
 		DisplayMode Mode{};
 		bool VSync = false;
 
+		/// <summary>US-T546: which monitor the game is shown on, 0 the primary one, then the others in the order the
+		/// system lists them.</summary>
+		int Monitor = 0;
+
 		DisplaySettings() = default;
-		DisplaySettings(int width, int height, DisplayMode mode, bool vSync)
+		DisplaySettings(int width, int height, DisplayMode mode, bool vSync, int monitor = 0)
 		{
 			Width = width;
 			Height = height;
 			Mode = mode;
 			VSync = vSync;
+			Monitor = monitor;
 		}
 
-		DisplaySettings WithSize(int width, int height) const { return DisplaySettings(width, height, Mode, VSync); }
-		DisplaySettings WithMode(DisplayMode mode) const { return DisplaySettings(Width, Height, mode, VSync); }
-		DisplaySettings WithVSync(bool vSync) const { return DisplaySettings(Width, Height, Mode, vSync); }
+		DisplaySettings WithSize(int width, int height) const { return DisplaySettings(width, height, Mode, VSync, Monitor); }
+		DisplaySettings WithMode(DisplayMode mode) const { return DisplaySettings(Width, Height, mode, VSync, Monitor); }
+		DisplaySettings WithVSync(bool vSync) const { return DisplaySettings(Width, Height, Mode, vSync, Monitor); }
+		DisplaySettings WithMonitor(int monitor) const { return DisplaySettings(Width, Height, Mode, VSync, monitor); }
 
 		/// <summary>What the menu calls each mode.</summary>
 		static cs::String ModeName(DisplayMode mode);
 
-		/// <summary>How the settings are remembered between runs: "1920x1080;Borderless;vsync" (or "novsync").</summary>
+		/// <summary>How the settings are remembered between runs: "1920x1080;Borderless;vsync" (or "novsync"), with
+		/// ";monitor=N" after it for any monitor but the primary (US-T546).</summary>
 		cs::String Format() const;
 
 		/// <summary>Reads back what <see cref="Format"/> wrote; false (and nothing applied) for anything else, such as an
@@ -127,7 +134,7 @@ namespace SpaceGod::Core
 		/// that the one closest to it in pixel count (-1 for an empty list): what the menu starts with picked.</summary>
 		static int IndexOfNearest(const cs::List<DisplayResolution>& list, int width, int height);
 
-		bool Equals(const DisplaySettings& other) const { return Width == other.Width && Height == other.Height && Mode == other.Mode && VSync == other.VSync; }
+		bool Equals(const DisplaySettings& other) const { return Width == other.Width && Height == other.Height && Mode == other.Mode && VSync == other.VSync && Monitor == other.Monitor; }
 		size_t HashCode() const;
 		bool operator==(const DisplaySettings& b) const { return Equals(b); }
 		bool operator!=(const DisplaySettings& b) const { return !Equals(b); }
