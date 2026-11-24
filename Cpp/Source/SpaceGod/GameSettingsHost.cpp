@@ -48,7 +48,11 @@ namespace SpaceGod
 		SettingsRegistry::AddDeclarationSource([] { PlayerOptions::Declare(); }); // US-T252: Settings > Gameplay and Accessibility
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::AutoReorientSetting(); });
 		SettingsRegistry::AddDeclarationSource([] { UnitySpaceApp::TutorialHintsSetting(); }); // US-T254: the first-time hints
-		SettingsRegistry::AddDeclarationSource([] { Cameras::SpaceCamera::LookSensitivitySetting(); Cameras::SpaceCamera::InvertLook(); });
+		SettingsRegistry::AddDeclarationSource([]
+		{
+			Cameras::SpaceCamera::LookSensitivitySetting(); Cameras::SpaceCamera::InvertLook();
+			Cameras::SpaceCamera::LookHorizontal(); Cameras::SpaceCamera::LookVertical(); Cameras::SpaceCamera::MouseSmoothing(); // US-T557
+		});
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::DriftKey::ModeSetting(); }); // US-T165: drift on R, hold or toggle
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::Gamepad::Declare(); }); // US-T250: the pad's dead zone, aim and buttons
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::KeyBindings::Declare(); }); // US-T249: Controls > Key bindings

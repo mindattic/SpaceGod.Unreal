@@ -2,6 +2,7 @@
 
 #include "Camera/SpaceCamera.h"
 #include "Input/InputState.h"
+#include "PlayerOptions.h"
 #include "BodyCatalog.h"
 #include "BodyDefinition.h"
 #include "ScaleModel.h"
@@ -36,6 +37,53 @@ namespace SpaceGod::Cameras
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("controls.invertLook", SettingGroups::Controls,
 			"Invert vertical look", false, "Pushing the mouse forward looks (and pitches) down instead of up.", "mouse y pitch flight");
 		return value;
+	}
+
+	namespace
+	{
+		cs::Ref<RangeSetting> AxisScale(const char* key, const char* label, const char* axis, const char* tags)
+		{
+			return cs::New<RangeSetting>(key, SettingGroups::Controls, label, 1.0, 0.25, 4.0, 0.05,
+				cs::Cat("Scales the mouse look sensitivity ", axis, " only."),
+				cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.00"), "x"); }), tags);
+		}
+	}
+
+	const cs::Ref<RangeSetting>& SpaceCamera::LookHorizontal()
+	{
+		static const cs::Ref<RangeSetting> value = AxisScale("controls.lookHorizontal", "Horizontal look sensitivity",
+			"left and right", "mouse camera speed aim yaw x axis");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& SpaceCamera::LookVertical()
+	{
+		static const cs::Ref<RangeSetting> value = AxisScale("controls.lookVertical", "Vertical look sensitivity",
+			"up and down", "mouse camera speed aim pitch y axis");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& SpaceCamera::MouseSmoothing()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.mouseSmoothing", SettingGroups::Controls,
+			"Mouse smoothing", 0.0, 0.0, 0.9, 0.05,
+			"Evens out a jittery mouse by blending each movement with the last few; higher is smoother but lags behind the hand.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::ToInt(cs::Math::Round(v * 100)), "%"); }),
+			"mouse camera smooth filter jitter lag");
+		return value;
+	}
+
+	Vector2 SpaceCamera::ShapeMouse(Vector2 raw, float dt)
+	{
+		static Vector2 smoothed = Vector2::zero();
+		if (PlayerOptions::ScriptedRun()) return raw;
+		Vector2 scaled(raw.x * static_cast<float>(LookHorizontal()->Value), raw.y * static_cast<float>(LookVertical()->Value));
+		float s = static_cast<float>(MouseSmoothing()->Value);
+		if (s <= 0) return smoothed = scaled;
+		// The blend is per 60 Hz frame, so the same setting feels the same at any frame rate.
+		float keep = Mathf::Pow(s, Mathf::Max(0.0f, dt) * 60.0f);
+		smoothed = smoothed * keep + scaled * (1.0f - keep);
+		return smoothed;
 	}
 
 	float SpaceCamera::LookSensitivity() { return BaseLookSensitivity * static_cast<float>(LookSensitivitySetting()->Value); }

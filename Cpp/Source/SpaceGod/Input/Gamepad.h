@@ -15,7 +15,8 @@
 // the keys and the mouse: each pad default of before (fire RT, second trigger LT, roll LB/RB, boost A, drift B, flip X,
 // lock/focus Y, flight assist RS, embody LS, pause Menu, help View) is that action's default binding now, rebound under
 // Settings > Controls > Key bindings like any other. The sticks' movement and aim, the d-pad's reactor/time/ship steps
-// and B's back-out in menus stay fixed. The dead zone, the aim sensitivity and an inverted aim are Controls settings. The
+// and B's back-out in menus stay fixed. The dead zone, the aim sensitivity, an inverted aim and the vibration strength
+// (US-T557, the player controller's force feedback scale) are Controls settings. The
 // Help screen shows the pad's buttons when the pad was used last (LastUsed).
 //
 // No Unreal headers here: only UnrealInputDevice.cpp touches the engine.
@@ -67,6 +68,10 @@ namespace SpaceGod::Input
 		static const cs::Ref<Core::RangeSetting>& AimSensitivity();
 		/// <summary>Controls: pushing the right stick forward looks (and pitches) down instead of up.</summary>
 		static const cs::Ref<Core::ToggleSetting>& InvertAim();
+		/// <summary>Controls (US-T557): the scale on any force feedback the pad plays, 0 (off) to 1.</summary>
+		static const cs::Ref<Core::RangeSetting>& VibrationStrength();
+		/// <summary>The force feedback scale in effect: the setting, or 1 in a scripted run.</summary>
+		static float Vibration();
 		/// <summary>Builds every pad setting (the declaration source GameSettingsHost registers).</summary>
 		static void Declare();
 

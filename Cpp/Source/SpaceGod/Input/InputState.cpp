@@ -1,6 +1,7 @@
 // Port of Unity.SpaceGod Runtime/Input/InputState.cs (US-T29).
 
 #include "Input/InputState.h"
+#include "Camera/SpaceCamera.h" // US-T557
 #include "Input/InputDevice.h"
 #include "Input/DriftKey.h"
 #include "Input/Gamepad.h" // US-T250
@@ -61,7 +62,7 @@ namespace SpaceGod::Input
 			: hit(A::PowerBalance) ? 6 : -1;
 
 		MousePosition = mouse.position;
-		MouseDelta = mouse.delta;
+		MouseDelta = Cameras::SpaceCamera::ShapeMouse(mouse.delta, Time::unscaledDeltaTime); // US-T557
 		Fire = (mouse.leftButton.isPressed && !pointerOverUi) || down(A::Fire); // US-T437: the pad's trigger (RT by default) too
 		padSecondary = down(A::SecondaryFire); // US-T437: the seat's second trigger (LT by default), the right button's at the controls
 		FireEmp = mouse.middleButton.isPressed && !pointerOverUi;

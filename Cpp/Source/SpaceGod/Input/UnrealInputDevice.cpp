@@ -210,6 +210,7 @@ namespace SpaceGod::Input
 
 		// US-T250: the pad, and which device was used last (the GUI's focus highlight and the Help screen's pad buttons).
 		FeedPad(pc);
+		pc->ForceFeedbackScale = Gamepad::Vibration(); // US-T557: every rumble played through this controller, live
 		if (GamepadDevice::current().Touched()) Gamepad::LastUsed = true;
 		else if (KeyboardMouseTouched(device)) Gamepad::LastUsed = false;
 	}

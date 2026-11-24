@@ -75,8 +75,8 @@ namespace SpaceGod::Cameras
 	/// made level (Alpha Centauri's A-B orbit lies steeply across the ecliptic). Yaw, pitch and the
 	/// focus orbit are measured in that frame; <see cref="Level"/> swings to a new one smoothly.
 	/// </summary>
-	// C#: [SettingsSource] -- its settings (LookSensitivitySetting, InvertLook, in that order) register when their
-	// accessors are first called; GameSettingsHost touches both.
+	// C#: [SettingsSource] -- its settings (LookSensitivitySetting, InvertLook, in that order; then US-T557's LookHorizontal,
+	// LookVertical and MouseSmoothing) register when their accessors are first called; GameSettingsHost touches them all.
 	class SpaceCamera final
 	{
 	public:
@@ -142,6 +142,17 @@ namespace SpaceGod::Cameras
 
 		/// <summary>Controls (U.SPC-T431): mouse forward looks down, as in a flight stick.</summary>
 		static const cs::Ref<Core::ToggleSetting>& InvertLook();
+
+		/// <summary>Controls (US-T557): the mouse look sensitivity's scale left and right, and up and down.</summary>
+		static const cs::Ref<Core::RangeSetting>& LookHorizontal();
+		static const cs::Ref<Core::RangeSetting>& LookVertical();
+
+		/// <summary>Controls (US-T557): how much of the last mouse movement carries into this one (0 is off).</summary>
+		static const cs::Ref<Core::RangeSetting>& MouseSmoothing();
+
+		/// <summary>US-T557: this frame's raw mouse counts through the axis scales and the smoothing; a scripted run keeps
+		/// them raw. Each machine's own: co-op sends the shaped delta, never the settings.</summary>
+		static Vector2 ShapeMouse(Vector2 raw, float dt);
 
 		/// <summary>Degrees of turn per mouse count, as the player has set it.</summary>
 		static float LookSensitivity();

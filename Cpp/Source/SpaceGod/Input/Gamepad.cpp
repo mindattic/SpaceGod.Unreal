@@ -2,6 +2,7 @@
 
 #include "Input/Gamepad.h"
 #include "Camera/SpaceCamera.h"
+#include "PlayerOptions.h"
 #include "Settings/GameSetting.h"
 
 using namespace SpaceGod::Core;
@@ -76,12 +77,25 @@ namespace SpaceGod::Input
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& Gamepad::VibrationStrength()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.pad.vibration", SettingGroups::Controls,
+			"Gamepad vibration strength", 1.0, 0.0, 1.0, 0.05,
+			"How hard the pad rumbles; at 0 it never does.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::ToInt(cs::Math::Round(v * 100)), "%"); }),
+			"gamepad controller vibration rumble force feedback haptics");
+		return value;
+	}
+
 	void Gamepad::Declare()
 	{
 		DeadZone();
 		AimSensitivity();
 		InvertAim();
+		VibrationStrength();
 	}
+
+	float Gamepad::Vibration() { return PlayerOptions::ScriptedRun() ? 1.0f : static_cast<float>(VibrationStrength()->Value); }
 
 	// ---------------------------------------------------------------- reads
 
