@@ -4,6 +4,7 @@
 
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Facilities.h"
 #include "Combat/FireCones.h"
 #include "Combat/Outfitting.h"
@@ -350,7 +351,7 @@ namespace SpaceGod::Core
 		if (c == nullptr) return 0;
 		double reach = cs::Double::MaxValue;
 		for (const auto& s : c->Subsystems)
-			if (s->Def->Spinal && !s->Destroyed() && s->Def->Weapon != nullptr) reach = cs::Math::Min(reach, s->Def->Weapon->RangeKm);
+			if (s->Def->Spinal && !s->Destroyed() && s->Def->Weapon != nullptr) reach = cs::Math::Min(reach, CombatTuning::RangeKm(s->Def->Weapon));
 		return reach == cs::Double::MaxValue ? 0 : reach;
 	}
 

@@ -3,6 +3,7 @@
 #include "Combat/Choreography.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h"
 #include "Combat/Gunnery.h"
@@ -57,7 +58,7 @@ namespace SpaceGod::Core
 				if (s == nullptr || s->Def == nullptr) continue;
 				auto w = s->Def->Weapon;
 				if (s->Destroyed() || w == nullptr || w->Missile || w->AntiSmall || w->Supporting()) continue;
-				speed = Max(speed, w->MuzzleSpeedKmS);
+				speed = Max(speed, CombatTuning::MuzzleSpeedKmS(w));
 			}
 			return speed;
 		}

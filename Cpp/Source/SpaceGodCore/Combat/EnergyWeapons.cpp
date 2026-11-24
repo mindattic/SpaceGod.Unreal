@@ -5,6 +5,7 @@
 #include "Combat/Battle.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Outfitting.h"
 #include "Settings/GameSetting.h"
 #include "Ships.h"
@@ -204,8 +205,8 @@ namespace SpaceGod::Core
 
 	PhaserTuning EnergyWeapons::Choose(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u)
 	{
-		double reach = PhaserSweep()->RangeKm * 1.5, reach2 = reach * reach;
-		double lance = PhaserLance()->RangeKm;
+		double reach = CombatTuning::RangeKm(PhaserSweep()) * 1.5, reach2 = reach * reach;
+		double lance = CombatTuning::RangeKm(PhaserLance());
 		// (C#'s local is small; renamed because <rpcndr.h> defines small as a macro in a UE unity build.)
 		int smallCount = 0;
 		bool hullInReach = false;

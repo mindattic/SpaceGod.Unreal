@@ -5,6 +5,7 @@
 #include "Combat/Battle.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Settings/GameSetting.h"
 #include "Ships.h"
 
@@ -149,7 +150,7 @@ namespace SpaceGod::Core
 	{
 		double reach = cs::Double::MaxValue;
 		for (const auto& s : u->Combat->Subsystems)
-			if (IsStrikeMount(s) && !s->Destroyed() && s->Ammo > 0) reach = cs::Math::Min(reach, s->Def->Weapon->RangeKm);
+			if (IsStrikeMount(s) && !s->Destroyed() && s->Ammo > 0) reach = cs::Math::Min(reach, CombatTuning::RangeKm(s->Def->Weapon));
 		return reach == cs::Double::MaxValue ? 0 : reach * VolleyShare()->Value;
 	}
 

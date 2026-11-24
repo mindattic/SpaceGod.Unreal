@@ -10,6 +10,7 @@
 #include "Combat/Choreography.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/PilotFlight.h"
 #include "Settings/GameSetting.h"
 
@@ -82,7 +83,7 @@ namespace SpaceGod::Core
 		{
 			const auto& w = s->Def->Weapon;
 			if (w == nullptr || s->Destroyed() || w->Supporting()) continue;
-			reach = cs::Math::Max(reach, w->RangeKm);
+			reach = cs::Math::Max(reach, CombatTuning::RangeKm(w));
 		}
 		return reach;
 	}

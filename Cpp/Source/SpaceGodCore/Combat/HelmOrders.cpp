@@ -11,6 +11,7 @@
 #include "Combat/CarrierWings.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h"
 #include "Combat/FleetCoordination.h" // US-T332
@@ -89,7 +90,7 @@ namespace SpaceGod::Core
 		if (target->Combat->HasShieldGenerator() && target->Combat->Shield() > target->Combat->Spec->Shield * 0.05)
 			return cs::Cat("the ", target->Name(), "'s shields are up: pods cannot get through them");
 		double d = (target->Pos - u->Pos).Length();
-		if (d > ready->Def->Weapon->RangeKm) return cs::Cat("out of reach: ", Km(d), " (", Km(ready->Def->Weapon->RangeKm), " at most)");
+		if (d > CombatTuning::RangeKm(ready->Def->Weapon)) return cs::Cat("out of reach: ", Km(d), " (", Km(CombatTuning::RangeKm(ready->Def->Weapon)), " at most)");
 		FirePodsAt(u, ready, target);
 		return cs::String();
 	}

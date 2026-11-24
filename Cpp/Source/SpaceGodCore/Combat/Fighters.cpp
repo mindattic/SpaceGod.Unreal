@@ -6,6 +6,7 @@
 #include "Combat/CarrierWings.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/DogfightManeuvers.h"
 #include "Combat/ElectronicWarfare.h"
 #include "Combat/FlightDecks.h"
@@ -621,7 +622,7 @@ namespace SpaceGod::Core
 			|| !b->Hostile(u, u->Target) || u->Target->Surrendering || u->Target->Captured || Battle::IgnoredByAi(u, u->Target)) return; // US-T528
 		auto to = u->Target->Pos - u->Pos;
 		double dist = to.Length();
-		if (dist > WeaponSpec::Torpedo()->RangeKm || DVec3::Dot(u->Forward, to / dist) < TorpedoBoresightCos) return;
+		if (dist > CombatTuning::RangeKm(WeaponSpec::Torpedo()) || DVec3::Dot(u->Forward, to / dist) < TorpedoBoresightCos) return;
 		LaunchTorpedoes(b, u, u->Target);
 	}
 
@@ -657,7 +658,7 @@ namespace SpaceGod::Core
 			m->Target = target;
 			m->TargetSub = sub;
 			m->Damage = s->Def->Weapon->Damage;
-			m->Speed = s->Def->Weapon->MissileSpeedKmS + u->Vel.Length();
+			m->Speed = CombatTuning::MissileSpeedKmS(s->Def->Weapon) + u->Vel.Length();
 			m->Hp = 25;
 			m->Life = 30;
 			m->Side = u->Side;
@@ -754,7 +755,7 @@ namespace SpaceGod::Core
 		{
 			auto toLocked = locked->Pos - u->Pos;
 			double d = toLocked.Length();
-			if (d > 1e-9 && d - locked->Radius() <= WeaponSpec::Torpedo()->RangeKm && DVec3::Dot(u->Forward, toLocked / d) >= TorpedoBoresightCos) return locked;
+			if (d > 1e-9 && d - locked->Radius() <= CombatTuning::RangeKm(WeaponSpec::Torpedo()) && DVec3::Dot(u->Forward, toLocked / d) >= TorpedoBoresightCos) return locked;
 		}
 		cs::Ref<BattleUnit> best = nullptr;
 		double bestCos = TorpedoBoresightCos;
@@ -763,7 +764,7 @@ namespace SpaceGod::Core
 			if (!o->Present() || o->Kind == UnitKind::Fighter || !b->Hostile(u, o) || o->Surrendering || o->Captured) continue;
 			auto to = o->Pos - u->Pos;
 			double dist = to.Length();
-			if (dist < 1e-9 || dist - o->Radius() > WeaponSpec::Torpedo()->RangeKm) continue;
+			if (dist < 1e-9 || dist - o->Radius() > CombatTuning::RangeKm(WeaponSpec::Torpedo())) continue;
 			double cos = DVec3::Dot(u->Forward, to / dist);
 			if (cos >= bestCos)
 			{

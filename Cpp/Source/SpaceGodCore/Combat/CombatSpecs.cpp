@@ -5,6 +5,7 @@
 #include "Ships.h"
 #include "Combat/AlphaStrike.h"
 #include "Combat/BulkFreighters.h"
+#include "Combat/CombatTuning.h"
 #include "Combat/EnergyWeapons.h"
 #include "Combat/Facilities.h"
 #include "Combat/FireCones.h"
@@ -13,6 +14,7 @@
 #include "Combat/SpinalMounts.h"
 #include "Combat/TachyonLances.h"
 #include "Combat/VehicleData.h"
+#include "Settings/GameSetting.h"
 
 namespace SpaceGod::Core
 {
@@ -74,7 +76,7 @@ namespace SpaceGod::Core
 	double WeaponSpec::DamageAt(double km) const
 	{
 		if (FalloffEdgeShare >= 1 || RangeKm <= 0) return Damage;
-		double f = cs::Math::Max(0.0, cs::Math::Min(1.0, km / RangeKm));
+		double f = cs::Math::Max(0.0, cs::Math::Min(1.0, km / (RangeKm * CombatTuning::WeaponRange()->Value)));
 		return Damage * (1 - (1 - cs::Math::Max(0.0, FalloffEdgeShare)) * f);
 	}
 
