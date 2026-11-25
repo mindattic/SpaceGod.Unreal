@@ -19,6 +19,7 @@
 #include "Materials/MaterialInstanceDynamic.h"
 #include "Materials/MaterialInterface.h"
 #include "Misc/CoreMisc.h"
+#include "UObject/Package.h"
 #include "UObject/StrongObjectPtr.h"
 #include "UObject/WeakObjectPtrTemplates.h"
 
@@ -1068,7 +1069,7 @@ namespace SpaceGod::UnityCompat
 
 	InstancedBatch::~InstancedBatch() = default;
 
-	void InstancedBatch::Add(Vector3 position, Quaternion rotation, float scale)
+	void InstancedBatch::Add(Vector3 position, Quaternion rotation, Vector3 scale)
 	{
 		if (count == static_cast<int>(items.size())) items.push_back({});
 		items[count++] = { position, rotation, scale };
@@ -1124,7 +1125,7 @@ namespace SpaceGod::UnityCompat
 		for (int n = 0; n < count; n++)
 		{
 			const Item& it = items[n];
-			Vector3 col[3] = { it.Rotation * Vector3(it.Scale, 0, 0), it.Rotation * Vector3(0, it.Scale, 0), it.Rotation * Vector3(0, 0, it.Scale) };
+			Vector3 col[3] = { it.Rotation * Vector3(it.Scale.x, 0, 0), it.Rotation * Vector3(0, it.Scale.y, 0), it.Rotation * Vector3(0, 0, it.Scale.z) };
 			WorldMatrix iw;
 			for (int k = 0; k < 3; k++)
 			{

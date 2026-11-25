@@ -104,7 +104,10 @@ namespace SpaceGod::UnityCompat
 
 		/// A copy at <paramref name="position"/>, turned by <paramref name="rotation"/> and scaled by <paramref name="scale"/>
 		/// (uniformly), all in the parent's frame (a child's localPosition, localRotation and localScale).
-		void Add(Vector3 position, Quaternion rotation, float scale);
+		void Add(Vector3 position, Quaternion rotation, float scale) { Add(position, rotation, Vector3(scale, scale, scale)); }
+
+		/// US-T744: a copy scaled per axis (its own x, y and z before the turn), for a glow stretched into a streak.
+		void Add(Vector3 position, Quaternion rotation, Vector3 scale);
 
 		/// Writes the frame's copies to Unreal in one batch update.
 		void Flush();
@@ -121,7 +124,7 @@ namespace SpaceGod::UnityCompat
 		{
 			Vector3 Position;
 			Quaternion Rotation;
-			float Scale;
+			Vector3 Scale;
 		};
 		struct Engine;
 

@@ -6,6 +6,7 @@
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
 #include "UnityCompat/UnityRendering.h"
+#include "UnityCompat/UnityRuntime.h"
 #include "UnityCompat/UnityScene.h"
 
 #include "ScaleModel.h"
@@ -31,6 +32,13 @@ namespace SpaceGod::Views
 		constexpr double DustFadeFrom = 0.55;
 		/// <summary>The camera moving more than this share of the reach in one frame (cruise, a jump, time warp) hides the field.</summary>
 		constexpr double DustJumpShare = 0.5;
+		/// <summary>US-T744: a mote streaks the way it slides across the view by as far as it slides in this long (s), a
+		/// shutter's worth of motion, the same at any frame rate.</summary>
+		constexpr double StreakSeconds = 0.04;
+		/// <summary>The longest a streak is drawn, as a share of its distance (so a lurch never draws a line across the screen).</summary>
+		constexpr double StreakMaxShare = 0.35;
+		/// <summary>A streak shorter than this share of its mote's own width is drawn as the plain mote.</summary>
+		constexpr double StreakFrom = 0.25;
 
 		uint64 DustMix(uint64 x)
 		{
@@ -75,6 +83,9 @@ namespace SpaceGod::Views
 		double cell = DustCellM * app->Scale()->ShipLength(0.001);
 		double reach = DustCells * cell;
 		DVec3 eye = app->SpaceCamera->ScenePosition;
+		// US-T744: the camera's own motion this frame, in the motes' frame (both ends through this frame's mapping).
+		Vector3 moved = hasEye ? app->Relative(eye) - app->Relative(lastEye) : Vector3::zero();
+		float dt = Time::deltaTime;
 		bool jumped = hasEye && DVec3::Distance(eye, lastEye) > reach * DustJumpShare;
 		lastEye = eye;
 		hasEye = true;
@@ -107,7 +118,19 @@ namespace SpaceGod::Views
 						if (d >= reach) { DustNext(h); continue; }
 						double fade = 1.0 - Mathf::Clamp01(static_cast<float>((d / reach - DustFadeFrom) / (1.0 - DustFadeFrom)));
 						double size = DustMotePx * (1.0 + DustSizeSpread * (2.0 * DustNext(h) - 1.0)) * d / ppu * fade;
-						if (size > 0) motes->Add(rel, facing, static_cast<float>(size));
+						if (!(size > 0)) continue;
+						// US-T744: speed streaks. The mote slides across the view against the camera's motion: drawn
+						// stretched along that slide, by the part of the motion across its line of sight.
+						Vector3 across = d > 0 ? moved - rel * (Vector3::Dot(moved, rel) / static_cast<float>(d * d)) : Vector3::zero();
+						double streak = dt > 0 ? across.magnitude() / dt * StreakSeconds : 0;
+						streak = std::fmin(streak, d * StreakMaxShare);
+						if (streak > size * StreakFrom)
+						{
+							Quaternion along = Quaternion::LookRotation(rel.normalized(), across.normalized());
+							motes->Add(rel + across.normalized() * static_cast<float>(streak * 0.5), along,
+								Vector3(static_cast<float>(size), static_cast<float>(size + streak), static_cast<float>(size)));
+						}
+						else motes->Add(rel, facing, static_cast<float>(size));
 					}
 				}
 		motes->Flush();
