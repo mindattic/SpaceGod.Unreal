@@ -1567,9 +1567,10 @@ namespace SpaceGod
 		// The view widens with the pace of what is flown, more on the afterburner (kicked wide as it lights) and under the
 		// cruise drive, by its role's feel (US-T170): a fighter's snaps out, a capital ship's barely swells.
 		// US-T251: a flown view (behind the helm, in a cockpit) starts from Settings > Graphics > Field of view.
-		float flownFov = GraphicsSettings::FlownFov();
+		// US-T836: each seat from its own row (cockpit, gun mount, person, free view), eased as the seat changes.
+		float flownFov = GraphicsSettings::SeatFov(SeatFovView());
 		float targetFov = RidingLane() ? flownFov + (Mathf::Max(LaneFov, flownFov) - flownFov) * LaneRideSpeed
-			: feeling ? flownFov + static_cast<float>(flightFeel.ViewFovDeg()) : BaseFov;
+			: flownFov + (feeling ? static_cast<float>(flightFeel.ViewFovDeg()) : 0.0f);
 		cameraFov = Mathf::Lerp(cameraFov, targetFov, 1.0f - Mathf::Exp(-dt * (feeling && !RidingLane() ? FovResponseHz * 2.5f : FovResponseHz)));
 		// A ring gate kicks the view wide for a moment and flashes as the hull goes through (U.SPC-T41).
 		fovKick *= Mathf::Exp(-dt * 3.5f);
@@ -1577,6 +1578,23 @@ namespace SpaceGod
 		LaneExitFade = Mathf::Max(0.0f, LaneExitFade - dt / LaneExitFadeS);
 		// US-T446: and breathes a touch narrower as the SpaceGod goes into a seat, wider as it lets go.
 		UnityCamera->fieldOfView = Mathf::Clamp(cameraFov + fovKick + Travel->FovKick() - HelmFoldDeg * HelmGateFold() - PossessionFovBreath(), 10.0f, 150.0f);
+	}
+
+	GraphicsSettings::SeatView UnitySpaceApp::SeatFovView() const
+	{
+		auto held = HeldNonHelm();
+		if (held == nullptr) return IsPiloting() ? GraphicsSettings::SeatView::Helm : GraphicsSettings::SeatView::Free;
+		switch (held->Kind())
+		{
+		case Core::EmbodimentKind::Fighter: return GraphicsSettings::SeatView::Cockpit;
+		case Core::EmbodimentKind::Turret:
+		case Core::EmbodimentKind::Station: return GraphicsSettings::SeatView::Turret;
+		case Core::EmbodimentKind::RepairWorker:
+		case Core::EmbodimentKind::Mech:
+		case Core::EmbodimentKind::Marine:
+		case Core::EmbodimentKind::EvaPilot: return GraphicsSettings::SeatView::Person;
+		default: return GraphicsSettings::SeatView::Helm;
+		}
 	}
 
 	Vector3 UnitySpaceApp::Relative(Core::DVec3 scene)

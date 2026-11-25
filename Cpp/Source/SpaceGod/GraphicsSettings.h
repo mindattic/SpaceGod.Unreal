@@ -44,6 +44,11 @@ namespace SpaceGod
 		static const cs::Ref<Core::RangeSetting>& ResolutionScale();
 		static const cs::Ref<Core::ChoiceSetting>& Upscaler();
 		static const cs::Ref<Core::RangeSetting>& FieldOfView();
+		// US-T836: the base field of view of each other seat, beside FieldOfView (the helm's chase view).
+		static const cs::Ref<Core::RangeSetting>& CockpitFieldOfView();
+		static const cs::Ref<Core::RangeSetting>& TurretFieldOfView();
+		static const cs::Ref<Core::RangeSetting>& PersonFieldOfView();
+		static const cs::Ref<Core::RangeSetting>& FreeFieldOfView();
 
 		/// Builds every row in menu order and ties the LOD budgets to the preset (the settings source GameSettingsHost adds).
 		static void Declare();
@@ -57,6 +62,13 @@ namespace SpaceGod
 
 		/// The base field of view of a flown view (the helm's chase camera, a cockpit), in degrees.
 		static float FlownFov();
+
+		/// US-T836: the seats a view takes its base field of view by: no seat (the god's free view), the helm's chase, a
+		/// launched craft's cockpit, a gun mount, a person (an EVA worker or pilot, a mech, a marine).
+		enum class SeatView { Free, Helm, Cockpit, Turret, Person };
+
+		/// US-T836: that seat's base field of view (its row), in degrees.
+		static float SeatFov(SeatView seat);
 
 		/// While held, a knob or LOD budget loaded from a profile does not move the preset to Custom (the registry loads
 		/// each setting in turn, so for a moment they disagree).

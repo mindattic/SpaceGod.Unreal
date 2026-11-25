@@ -35,6 +35,7 @@ namespace SpaceGod
 		int aaIndex = 0, upscalerIndex = 0;
 		double resolutionScale = 100;
 		float flownFov = 60.0f;
+		float cockpitFov = 70.0f, turretFov = 55.0f, personFov = 70.0f, freeFov = 60.0f; // US-T836
 		bool screenPercentageSet = false;
 
 		/// > 0 while the preset pushes its values into the knobs, or a profile is being loaded: neither is the player
@@ -353,9 +354,51 @@ namespace SpaceGod
 	{
 		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.fieldOfView", SettingGroups::Graphics,
 			"Field of view", 60, 50, 100, 1,
-			"The vertical field of view behind the helm and in a cockpit; speed and the cruise drive still widen it. The maps keep their own.",
+			"The vertical field of view behind the helm; speed and the cruise drive still widen it. The cockpit, a gun mount, a person on EVA and the free view have their own rows; the maps keep their own.",
 			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }), "fov field of view camera chase cockpit wide zoom")
 			->Applying([](double v) { flownFov = static_cast<float>(v); });
+		return value;
+	}
+
+	// US-T836: the other seats' rows beside the helm's. A cockpit sits wider so the hardware round it reads at a person's
+	// scale next to a kilometres-long hull; a gun mount sits a touch narrower down its barrel. The view eases between them.
+	const cs::Ref<RangeSetting>& GraphicsSettings::CockpitFieldOfView()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.fieldOfViewCockpit", SettingGroups::Graphics,
+			"Field of view: cockpit", 70, 50, 100, 1,
+			"The vertical field of view from a launched craft's cockpit; speed and the afterburner still widen it.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }), "fov field of view camera cockpit fighter seat wide zoom")
+			->Applying([](double v) { cockpitFov = static_cast<float>(v); });
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& GraphicsSettings::TurretFieldOfView()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.fieldOfViewTurret", SettingGroups::Graphics,
+			"Field of view: gun mount", 55, 40, 100, 1,
+			"The vertical field of view down a gun mount's barrel, and from a station's guns.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }), "fov field of view camera turret gun mount gunner seat zoom")
+			->Applying([](double v) { turretFov = static_cast<float>(v); });
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& GraphicsSettings::PersonFieldOfView()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.fieldOfViewPerson", SettingGroups::Graphics,
+			"Field of view: person", 70, 50, 100, 1,
+			"The vertical field of view of a person: a worker or pilot on EVA, a mech, a marine.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }), "fov field of view camera eva person suit worker mech marine wide zoom")
+			->Applying([](double v) { personFov = static_cast<float>(v); });
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& GraphicsSettings::FreeFieldOfView()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.fieldOfViewFree", SettingGroups::Graphics,
+			"Field of view: free view", 60, 40, 100, 1,
+			"The vertical field of view of the free view, with no seat held. The maps keep their own.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }), "fov field of view camera free god view zoom")
+			->Applying([](double v) { freeFov = static_cast<float>(v); });
 		return value;
 	}
 
@@ -365,6 +408,7 @@ namespace SpaceGod
 		GlobalIllumination(); Reflections(); Shading();
 		Lumen(); VirtualShadows(); MegaLights();
 		AntiAliasing(); ResolutionScale(); Upscaler(); FieldOfView();
+		CockpitFieldOfView(); TurretFieldOfView(); PersonFieldOfView(); FreeFieldOfView();
 		static bool watching = false;
 		if (watching) return;
 		watching = true;
@@ -396,6 +440,18 @@ namespace SpaceGod
 	}
 
 	float GraphicsSettings::FlownFov() { return flownFov; }
+
+	float GraphicsSettings::SeatFov(SeatView seat)
+	{
+		switch (seat)
+		{
+		case SeatView::Helm: return flownFov;
+		case SeatView::Cockpit: return cockpitFov;
+		case SeatView::Turret: return turretFov;
+		case SeatView::Person: return personFov;
+		default: return freeFov;
+		}
+	}
 
 	void GraphicsSettings::AfterBind(const cs::Ref<ISettingStore>& store)
 	{

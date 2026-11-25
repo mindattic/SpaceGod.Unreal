@@ -12,6 +12,7 @@
 #include "BodyDefinition.h" // Rgb (SunLight)
 #include "UnityCompat/UnityTypes.h"
 #include "Target.h"
+#include "GraphicsSettings.h" // GraphicsSettings::SeatView (SeatFovView, US-T836)
 
 namespace SpaceGod::Core
 {

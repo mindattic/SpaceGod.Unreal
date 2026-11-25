@@ -341,6 +341,8 @@ public:
 
 private:
 	void UpdateClipPlanes(float dt);
+	/// US-T836: the seat whose Settings > Graphics field of view row the view starts from.
+	GraphicsSettings::SeatView SeatFovView() const;
 
 public:
 	Vector3 Relative(Core::DVec3 scene);
