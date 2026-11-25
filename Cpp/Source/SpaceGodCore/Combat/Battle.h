@@ -344,6 +344,10 @@ namespace SpaceGod::Core
 		/// (<see cref="Broadsides.FireGroupMounts"/>, <see cref="Broadsides.GroupChained"/>).</summary>
 		int PlayerFireGroup = 0;
 
+		/// <summary>US-T747: the gun group the player last fired from a piloted hull's nose guns, 1-9, which the lead pip
+		/// is drawn for; 0 the main trigger's guns (pulling the main trigger selects them again).</summary>
+		int PlayerGunGroup = 0;
+
 		/// <summary>How a small craft shares its reactor between weapons, shields and engines (U.SPC-T424); null runs
 		/// everything as designed.</summary>
 		cs::Ref<PowerDistribution> Power;
@@ -1077,7 +1081,8 @@ namespace SpaceGod::Core
 		/// <summary>
 		/// One of the player's guns fires down the crosshair (U.SPC-T270): swung off the nose as far as its
 		/// gimbal lets it (<see cref="Gunnery.Gimbal"/>), converged on whatever hostile the line of sight meets
-		/// (else at the gun's range) so guns spread along the hull all land where the crosshair is, and
+		/// (else at the locked hull's range when it is within the gun's, US-T747, else at the gun's range) so guns
+		/// spread along the hull all land where the crosshair is, and
 		/// building heat. What it hits is <see cref="ResolveShot"/>'s to decide.
 		/// </summary>
 		void FirePlayerGun(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& s, DVec3 origin, const cs::Ref<WeaponSpec>& w);
@@ -1162,6 +1167,13 @@ namespace SpaceGod::Core
 		cs::Ref<BattleUnit> LockedFor(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& s, DVec3 origin, const cs::Ref<WeaponSpec>& w);
 
 	public:
+		/// <summary>
+		/// US-T747: the round speed of the guns <paramref name="u"/>'s lead pip is for, km/s: the mount of its
+		/// <see cref="BattleUnit.PlayerGunGroup"/> when that names one (<see cref="PlayerWeaponGroupFires"/>'s numbering),
+		/// else the fastest of its direct-fire nose guns, as the main trigger fires them all (<paramref name="grouped"/> false). 0: only beams, no lead.
+		/// </summary>
+		static double PlayerGunSpeedKmS(const cs::Ref<BattleUnit>& u, bool& grouped);
+
 		// ---------------------------------------------------------------- the dogfight arsenal (U.SPC-T271)
 
 		/// <summary>How long a mine takes to arm once laid, and how long it lies waiting, seconds.</summary>

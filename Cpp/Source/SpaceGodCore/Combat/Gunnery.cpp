@@ -5,9 +5,32 @@
 #include "Astro.h"
 #include "Combat/Battle.h"
 #include "Combat/PilotFlight.h"
+#include "Settings/GameSetting.h"
+#include "Settings/Tuning.h"
 
 namespace SpaceGod::Core
 {
+	const cs::Ref<RangeSetting>& Gunnery::HeatPerDamage()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("guns", "heatPerDamage", "Heat per damage", 0.01, 0, 0.05, 0.0005, "",
+			TuningScope::Simulation, "The share of full heat a player's guns build per point of damage they fire.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Gunnery::HeatCoolPerS()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("guns", "heatCoolPerS", "Heat shed a second", 0.26, 0.01, 2, 0.01, "",
+			TuningScope::Simulation, "The share of full heat a player's guns shed each second at the even power share.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Gunnery::HeatRecoverBelow()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("guns", "heatRecoverBelow", "Overheat recovers below", 0.35, 0, 0.95, 0.05, "",
+			TuningScope::Simulation, "How far overheated guns must cool before they fire again, a share of full heat.");
+		return s;
+	}
+
 	double Gunnery::HitRadius(const cs::Ref<BattleUnit>& u) { return cs::Math::Max(MinHitRadiusKm, u->Radius()); }
 
 	double Gunnery::RaySphere(DVec3 origin, DVec3 dir, double maxT, DVec3 centre, double radius)

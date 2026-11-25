@@ -7,6 +7,7 @@
 namespace SpaceGod::Core
 {
 	class BattleUnit;
+	class RangeSetting;
 
 	/// <summary>
 	/// Aimed fire (U.SPC-T270): the geometry that decides whether a shot actually lands, for the guns the
@@ -25,8 +26,12 @@ namespace SpaceGod::Core
 		static constexpr double MinHitRadiusKm = 0.012;
 
 		/// <summary>Heat a player's guns build per point of damage fired, the share of full heat they shed
-		/// each second, and how far they must cool once overheated before they fire again.</summary>
-		static constexpr double HeatPerDamage = 0.004; static constexpr double HeatCoolPerS = 0.2; static constexpr double HeatRecoverBelow = 0.35;
+		/// each second, and how far they must cool once overheated before they fire again (US-T747: tune.guns.*,
+		/// sized to docs/FlightFeel.md's guns targets: a light fighter's guns held down overheat in about 5 s at
+		/// the even power share and fire again 2.5 s later).</summary>
+		static const cs::Ref<RangeSetting>& HeatPerDamage();
+		static const cs::Ref<RangeSetting>& HeatCoolPerS();
+		static const cs::Ref<RangeSetting>& HeatRecoverBelow();
 
 		/// <summary>A missile lock builds while the crosshair sits within <see cref="LockConeDeg"/> of the
 		/// locked target, over <see cref="LockSeconds"/>; once made it holds while the target stays within

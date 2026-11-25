@@ -357,9 +357,6 @@ private:
 	/// A mount's rounds left and its key, or that it is still cycling.
 	static void AddMount(cs::List<cs::String>& line, const cs::Ref<Core::ShipCombat>& c, Core::SubsystemKind kind, const cs::String& name, const cs::String& key);
 
-	/// The fastest round the flown hull's own guns fire, km/s; 0 if they are all beams.
-	static double RoundSpeed(const cs::Ref<Core::ShipCombat>& c);
-
 	/// The hostile hull nearest the crosshair, within 20 degrees of it.
 	cs::Ref<Core::BattleUnit> NearestHostileToAim(const cs::Ref<Core::Battle>& battle, const cs::Ref<Core::BattleUnit>& me);
 

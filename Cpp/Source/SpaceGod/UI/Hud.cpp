@@ -1272,8 +1272,9 @@ namespace SpaceGod::UI
 			DrawLabel("OPEN PRIZE", op + Vector2(16, -8), LockColor, true);
 		}
 
-		// The lead pip for the guns' rounds, on the locked hull or else the one nearest the crosshair.
-		double speed = RoundSpeed(c);
+		// The lead pip for the selected gun group's rounds (US-T747), on the locked hull or else the one nearest the crosshair.
+		bool grouped = false;
+		double speed = Battle::PlayerGunSpeedKmS(me, grouped);
 		auto pipOn = locked != nullptr && locked->Present() ? locked : NearestHostileToAim(battle, me);
 		if (speed > 0 && pipOn != nullptr)
 		{
@@ -1283,6 +1284,7 @@ namespace SpaceGod::UI
 			if (app->ToGui(app->BattleScene(battle, lead), pip, pd))
 			{
 				DrawRing(pip, 7, HostileColor);
+				if (grouped) DrawLabel(cs::Cat("G", me->PlayerGunGroup), pip + Vector2(10, -8), HostileColor, true);
 				Vector2 at;
 				float ad = 0;
 				if (app->ToGui(app->BattleScene(battle, pipOn->Pos), at, ad) && (at - pip).sqrMagnitude() > 64)
@@ -1792,19 +1794,6 @@ namespace SpaceGod::UI
 			ready |= s->Ammo > 0 && s->Cooldown <= 0;
 		}
 		if (ammo > 0) line.Add(cs::Cat(name, " ", ammo, ready ? cs::Cat(" (", key, ")") : cs::String(" (cycling)")));
-	}
-
-	double Hud::RoundSpeed(const cs::Ref<ShipCombat>& c)
-	{
-		double speed = 0;
-		for (const auto& s : c->Subsystems)
-		{
-			auto w = s->Def->Weapon;
-			// The guns the player lays down the nose: those whose fire cones take in dead ahead (U.SPC-T533).
-			if (s->Destroyed() || w == nullptr || w->Missile || w->AntiSmall || !s->Def->Covers(c->Spec, FireCones::Bow)) continue;
-			speed = cs::Math::Max(speed, w->MuzzleSpeedKmS);
-		}
-		return speed;
 	}
 
 	cs::Ref<BattleUnit> Hud::NearestHostileToAim(const cs::Ref<Battle>& battle, const cs::Ref<BattleUnit>& me)

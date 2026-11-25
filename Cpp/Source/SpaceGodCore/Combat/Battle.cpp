@@ -439,6 +439,11 @@ namespace SpaceGod::Core
 				u->PlayerDecoyRequested = false;
 				if (u->PlayerVolleyRelease) u->VolleyCharge = 0;
 				u->PlayerVolleyRelease = false;
+				if (!u->PlayerHelm)
+				{
+					if (u->PlayerFireGroup > 0) u->PlayerGunGroup = u->PlayerFireGroup;
+					else if (u->PlayerFireHeld) u->PlayerGunGroup = 0;
+				}
 				u->PlayerFireGroup = 0;
 				// US-T527: the developer's No weapon cooldown has every gun the player holds ready again the moment it fires.
 				if (DevFlags::NoWeaponCooldown()->Value)
@@ -1655,6 +1660,12 @@ namespace SpaceGod::Core
 		auto sight = Gunnery::Gimbal(aim, u->Forward, SpinalMounts::IsSlug(s->Kind()) || w->Lance || s->Def->Spinal ? Gunnery::RailgunGimbalDeg : Gunnery::GimbalDeg);
 		cs::Ref<BattleUnit> unusedHit;
 		double converge = FirstHostileAlong(u->Side, u->Pos, sight, CombatTuning::RangeKm(w), unusedHit);
+		auto lock = u->PlayerLockTarget;
+		if (converge < 0 && lock != nullptr && lock->Present())
+		{
+			double lockKm = (lock->Pos - u->Pos).Length();
+			if (lockKm <= CombatTuning::RangeKm(w)) converge = lockKm;
+		}
 		if (converge < 0) converge = CombatTuning::RangeKm(w);
 		auto toConverge = u->Pos + sight * converge - origin;
 		auto dir = toConverge.LengthSquared() > 1e-12 ? toConverge.Normalized() : sight;
@@ -1667,7 +1678,7 @@ namespace SpaceGod::Core
 		s->Cooldown = Arsenal::IsRotary(w) ? Arsenal::FireRotary(s, w) : w->Cooldown;
 		// A tachyon lance is fed by the reactor and held back by its recharge, not by the guns' heat (U.SPC-T487).
 		// Nor is a spinal mount, which its own power plant feeds (U.SPC-T490).
-		if (!w->Lance && !s->Def->Spinal) u->Heat += w->Damage * Gunnery::HeatPerDamage;
+		if (!w->Lance && !s->Def->Spinal) u->Heat += w->Damage * Gunnery::HeatPerDamage()->Value;
 		if (u->Heat >= 1)
 		{
 			u->Heat = 1;
@@ -1871,6 +1882,25 @@ namespace SpaceGod::Core
 		}
 		// A hull of one direct-fire mount has nothing to pick among: the main trigger already fires it.
 		return total > 1 && mine == u->PlayerFireGroup;
+	}
+
+	double Battle::PlayerGunSpeedKmS(const cs::Ref<BattleUnit>& u, bool& grouped)
+	{
+		grouped = false;
+		if (u->Combat == nullptr) return 0;
+		int total = 0;
+		double all = 0, group = -1;
+		for (const auto& o : u->Combat->Subsystems)
+		{
+			auto w = EnergyWeapons::Effective(o, u->Combat);
+			if (w == nullptr || o->Destroyed() || w->Missile || w->EmpSeconds > 0 || !IsPlayerAimable(u, o->Def)) continue;
+			total++;
+			double speed = CombatTuning::MuzzleSpeedKmS(w);
+			all = cs::Math::Max(all, speed);
+			if (total == u->PlayerGunGroup) group = speed;
+		}
+		grouped = total > 1 && group >= 0;
+		return grouped ? group : all;
 	}
 
 	cs::Ref<BattleUnit> Battle::VolleyTarget(const cs::Ref<BattleUnit>& u, DVec3 look, double rangeKm)
@@ -2129,9 +2159,9 @@ namespace SpaceGod::Core
 		// Power to the weapons cools the guns faster (U.SPC-T424).
 		// US-T269: heat sinks in the hull's sockets cool them faster still.
 		double sinks = u->Combat != nullptr && u->Combat->Spec != nullptr ? 1 + u->Combat->Spec->HeatShedBonus : 1;
-		u->Heat = cs::Math::Max(0.0, u->Heat - Gunnery::HeatCoolPerS * PowerFactor(u, PowerSystem::Weapons) * sinks * dt);
+		u->Heat = cs::Math::Max(0.0, u->Heat - Gunnery::HeatCoolPerS()->Value * PowerFactor(u, PowerSystem::Weapons) * sinks * dt);
 		if (u->PlayerHelm && u->PlayerFireHeld) u->VolleyCharge = cs::Math::Min(VolleyBuildSeconds, u->VolleyCharge + dt);
-		if (u->Overheated && u->Heat < Gunnery::HeatRecoverBelow) u->Overheated = false;
+		if (u->Overheated && u->Heat < Gunnery::HeatRecoverBelow()->Value) u->Overheated = false;
 
 		auto t = u->PlayerLockTarget;
 		if (t == nullptr || !t->Present() || !Hostile(u, t))

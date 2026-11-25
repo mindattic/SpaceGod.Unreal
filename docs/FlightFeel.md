@@ -136,6 +136,21 @@ Top speed narrows to x0.8 .. x1.2 so four pips to weapons does not leave a fight
 km/s fighter is a target, not a choice); acceleration and boost refill keep the full swing, so engines still decide
 who wins a chase.
 
+### Guns (US-T747)
+
+| What | Target | Now |
+|---|---|---|
+| Lead pip | on the locked hull (else the hostile nearest the crosshair), for the selected gun group's rounds: the last `Alt+1-9` mount fired, the main trigger's guns again once it is pulled; tagged `G<n>` while a group is picked | the fastest nose gun's catalog speed, `tune.combat.projectileSpeed` ignored |
+| Convergence | the crosshair's line where it meets a hostile, else the locked hull's range when inside the gun's reach, else the gun's reach | the hit or the gun's reach |
+| Fighter guns' flight time | about 0.5 s to their 1.6 km reach (3.5 km/s), under 0.3 s at a 1 km dogfight | kept: catalog `MuzzleSpeedKmS`, shared with the crews, scaled by `tune.combat.projectileSpeed` |
+| Overheat, guns held down | 5 s for the light fighter's guns at the even power share | never (46.7 dps x 0.004 = 0.19 a second, under the 0.2 shed) |
+| Fire again after overheating | 2.5 s; cold from full in 3.8 s | 3.25 s; 5 s |
+
+Heat is `tune.guns.heatPerDamage` 0.01, `tune.guns.heatCoolPerS` 0.26 and `tune.guns.heatRecoverBelow` 0.35
+(`Gunnery`); only the player's guns build heat (`Battle::FirePlayerGun`), so the crews and the Bench keep their
+numbers. Hulls with more guns on the trigger (the Gunship's railgun and turrets) heat faster in proportion to their
+damage, as before.
+
 ### Input and latency
 
 | What | Target | Now |
