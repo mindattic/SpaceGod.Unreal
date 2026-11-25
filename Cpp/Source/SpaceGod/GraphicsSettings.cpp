@@ -11,6 +11,7 @@
 #include "RenderLod.h"
 #include "ShipLod.h"
 #include "Rendering/Pipeline/RenderBackend.h"
+#include "Rendering/SpaceLighting.h"
 #include "Settings/GameSetting.h"
 #include "Settings/SettingsRegistry.h"
 #include "UnityCompat/UnityTypes.h"
@@ -145,6 +146,7 @@ namespace SpaceGod
 			if (qualityIndex != GraphicsSettings::Custom)
 				levels.AntiAliasingQuality = levels.FoliageQuality = levels.LandscapeQuality = qualityIndex;
 			Scalability::SetQualityLevels(levels);
+			Rendering::SpaceLighting::Apply();
 		}
 
 		void ApplyResolution()

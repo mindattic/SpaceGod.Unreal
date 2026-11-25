@@ -1,6 +1,7 @@
 // Port of Unity.SpaceGod Runtime/Rendering/Pipeline/RenderBackend.cs, RenderPipelineSelection.cs (RenderPipelineSettings)
 // and Urp/UrpPostProcessSettings.cs, with UrpRenderBackend.cs's look on Unreal's post-process volume (US-T30).
 #include "Rendering/Pipeline/RenderBackend.h"
+#include "Rendering/SpaceLighting.h"
 #include "GraphicsEffects.h" // US-T596
 #include "Rendering/HullLighting.h"
 #include "Rendering/RenderPipelineProfiles.h"
@@ -285,7 +286,7 @@ namespace SpaceGod::Rendering
 		s.bOverride_AutoExposureMethod = true;
 		s.AutoExposureMethod = AEM_Manual;
 		s.bOverride_AutoExposureBias = true;
-		s.AutoExposureBias = 0;
+		s.AutoExposureBias = SpaceLighting::ExposureEv();
 		s.bOverride_AutoExposureApplyPhysicalCameraExposure = true;
 		s.AutoExposureApplyPhysicalCameraExposure = false;
 		s.bOverride_ExpandGamut = true;
