@@ -49,13 +49,17 @@ namespace SpaceGod::Input
 		/// <summary>Where the cursor sits, half-screens from the centre (x right, y up), for the HUD.</summary>
 		static Vector2 Cursor() { return cursor; }
 
+		/// <summary>Whether the cursor is flying a nose this frame (the HUD draws it then).</summary>
+		static bool Engaged() { return engaged; }
+
 		/// <summary>Back to the centre (taking a seat, leaving one).</summary>
-		static void Centre() { cursor = Vector2::zero(); }
+		static void Centre() { cursor = Vector2::zero(); engaged = false; }
 
 		/// <summary>Degrees of mouse look that move the cursor a half-screen.</summary>
 		static constexpr float LookDegPerHalfScreen = 60.0f;
 
 	private:
 		static inline Vector2 cursor = Vector2::zero();
+		static inline bool engaged = false;
 	};
 }

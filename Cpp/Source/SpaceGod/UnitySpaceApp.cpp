@@ -9,6 +9,7 @@
 #include "Camera/StarTravel.h"
 #include "Input/InputState.h"
 #include "Input/InputDevice.h"
+#include "Input/MouseFlight.h" // US-T736
 #include "EngineSettings.h"
 #include "GraphicsSettings.h"
 #include "GameSettingsHost.h"
@@ -1361,10 +1362,23 @@ namespace SpaceGod
 		// hauler's, nor under the cruise drive or with the drives knocked out.
 		bool drifting = (Input.Drift || DriftHeldByScript) && (control == PilotControl::FreeAim || control == PilotControl::DirectNose)
 			&& !SystemCruiseActive() && PilotStunSeconds() <= 0;
+		// US-T736: mouse flight's virtual stick flies a fighter's or hauler's nose at the helm as in a cockpit, the view on
+		// the nose; a capital's mouse stays its look-around, and the flip still swings onto the retrograde by aim.
+		bool rateStick = control != PilotControl::Helm && ::SpaceGod::Input::MouseFlight::VirtualStick() && !Input.Manoeuvre;
+		Vector2 stickOut = Vector2::zero();
+		if (!rateStick) ::SpaceGod::Input::MouseFlight::Centre();
 		switch (control)
 		{
 			default:
 			{
+				if (rateStick)
+				{
+					stickOut = ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * PilotLookSensitivity(), look.y * PilotLookSensitivity()));
+					pilotAim = pilot().Forward;
+					pilotViewUp = pilot().Up;
+					pilotLookOwedRight = pilotLookOwedUp = 0;
+					break;
+				}
 				// Every fighter and hauler flies "pulled by a string" (US-T168): the camera looks where the mouse puts it and
 				// the hull chases it. A light fighter's string is slack (a full 180 at once, the hull whipping round after it,
 				// LightFighterFeel::Whip); a heavy hull's taut, its look barely faster than its own turn. Drifting, any
@@ -1449,6 +1463,10 @@ namespace SpaceGod
 		// Tab, an active ping; Shift+F3, go dark or power up again (US-T93): a command the helm lands, said on a toast.
 		stick.Sensor = SensorCommand(ship);
 		CruiseStick(stick); // US-T127: cruising, the stick turns the hull and the drive carries it
+		// US-T736: the virtual stick's rate demand, unless Cruise to is still swinging the nose onto its target.
+		stick.RateStick = rateStick && !(SystemCruiseActive() && cruiseAlign);
+		stick.StickRight = stickOut.x;
+		stick.StickUp = stickOut.y;
 		helmFlight->FrameBody = pilotFrameBody;
 		pilotHelm->Control(stick, dt);
 		if (stick.HelmAbility != 0) NoteHelmAbility();

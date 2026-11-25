@@ -5,6 +5,8 @@
 #include "InterfaceOptions.h"
 #include "UnitySpaceApp.h"
 #include "UI/Icons.h"
+#include "Input/MouseFlight.h" // US-T736
+#include "Settings/GameSetting.h"
 
 #include "Combat/Battle.h"
 #include "Combat/Diplomacy.h"
@@ -39,6 +41,40 @@ namespace SpaceGod::UI
 		if (apart < 3) return;
 		if (apart > 22) DrawLine(nose, centre, Color(1, 1, 1, 0.18f), 1.0f);
 		DrawBoresight(nose, Color(1, 1, 1, 0.85f));
+	}
+
+	// ---------------------------------------------------------------- the virtual stick (US-T736)
+
+	void Hud::DrawVirtualStick()
+	{
+		if (!::SpaceGod::Input::MouseFlight::VirtualStick() || !::SpaceGod::Input::MouseFlight::Engaged()) return;
+		// A half-screen is half the screen's height, so the rings stay round; a fixed handful of quads a frame.
+		float half = Screen::height * 0.5f;
+		auto centre = Vector2(Screen::width * 0.5f, half);
+		float dead = static_cast<float>(::SpaceGod::Input::MouseFlight::DeadZone()->Value) * half;
+		float full = static_cast<float>(::SpaceGod::Input::MouseFlight::FullAt()->Value) * half;
+		auto old = GUI::color;
+		const auto& w = Icons::White();
+		GUI::color = Color(0.6f, 0.95f, 1.0f, 0.22f);
+		for (int i = 0; i < VirtualStickRingDots; i++)
+		{
+			float a = i * 2 * Mathf::PI / VirtualStickRingDots;
+			GUI::DrawTexture(Rect(centre.x + Mathf::Cos(a) * full - 1, centre.y + Mathf::Sin(a) * full - 1, 2, 2), w);
+		}
+		GUI::color = old;
+		if (dead >= 2) DrawRing(centre, dead, Color(0.6f, 0.95f, 1.0f, 0.6f));
+		auto c = ::SpaceGod::Input::MouseFlight::Cursor();
+		auto at = Vector2(centre.x + c.x * half, centre.y - c.y * half);
+		float out = (at - centre).magnitude();
+		bool turning = out > dead;
+		auto tint = turning ? Color(0.6f, 0.95f, 1.0f, 0.9f) : Color(0.6f, 0.95f, 1.0f, 0.5f);
+		if (turning && out > 12) DrawLine(centre, at, Color(0.6f, 0.95f, 1.0f, 0.25f), 1.0f);
+		GUI::color = tint;
+		GUI::DrawTexture(Rect(at.x - 7, at.y - 1, 5, 2), w);
+		GUI::DrawTexture(Rect(at.x + 2, at.y - 1, 5, 2), w);
+		GUI::DrawTexture(Rect(at.x - 1, at.y - 7, 2, 5), w);
+		GUI::DrawTexture(Rect(at.x - 1, at.y + 2, 2, 5), w);
+		GUI::color = old;
 	}
 
 	// ---------------------------------------------------------------- off-screen target arrows (US-T128)

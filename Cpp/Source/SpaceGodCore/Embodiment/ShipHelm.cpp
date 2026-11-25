@@ -172,7 +172,10 @@ namespace SpaceGod::Core
 		auto model = FlightModelRegistry::Default()->For(ship->Spec->Class);
 		auto capital = cs::As<CapitalFlightModel>(model);
 		PilotInput input;
-		input.DesiredForward = e.Aim;
+		// Mouse flight's virtual stick (US-T736): a turn-rate demand in place of an aim.
+		input.DesiredForward = e.RateStick ? DVec3::Zero : e.Aim;
+		input.StickRight = e.RateStick ? e.StickRight : 0;
+		input.StickUp = e.RateStick ? e.StickUp : 0;
 		input.Throttle = Clamp1(e.Throttle);
 		input.StrafeRight = Clamp1(e.StrafeRight);
 		input.StrafeUp = Clamp1(e.StrafeUp);

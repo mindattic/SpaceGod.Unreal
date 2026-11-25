@@ -256,6 +256,11 @@ private:
 	/// the seat's crosshair (the middle of the view, where the mouse aims) as the craft turns after it. Hud.Sights.cpp.</summary>
 	void DrawSeatNose();
 
+	/// <summary>Mouse flight's virtual stick (US-T736), in a cockpit or at a fighter's or hauler's helm: the cursor, the dead
+	/// zone's ring about the centre and a faint ring where the nose turns at full rate. Hud.Sights.cpp.</summary>
+	void DrawVirtualStick();
+	static constexpr int VirtualStickRingDots = 32;
+
 	// ---------------------------------------------------------------- off-screen target arrows (US-T128)
 
 	/// <summary>Arrows grow from <see cref="ArrowMinPx"/> (at <see cref="ArrowReachGuns"/> gun ranges or more) to

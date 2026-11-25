@@ -76,6 +76,7 @@ namespace SpaceGod::Input
 
 	Vector2 MouseFlight::Step(Vector2 lookDeg)
 	{
+		engaged = true;
 		cursor = Vector2::ClampMagnitude(Vector2(cursor.x + lookDeg.x / LookDegPerHalfScreen, cursor.y + lookDeg.y / LookDegPerHalfScreen), 1.0f);
 		return Shape(cursor);
 	}

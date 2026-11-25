@@ -201,7 +201,8 @@ by more than 10%:
    string aim, default for free-aim hulls; Virtual stick; Nose, the current direct-nose). In Virtual stick the cursor's
    offset from the screen's centre is the turn rate demand: a dead zone (`controls.mouseFlight.deadZone`, 3% of the
    half-screen), full rate at `controls.mouseFlight.fullAt` (40%), an exponent (1.5); fed to `PilotInput` as a rate
-   rather than a `DesiredForward`. A centre ring and the cursor drawn on the HUD.
+   rather than a `DesiredForward`. A centre ring and the cursor drawn on the HUD. The same in a cockpit and at a
+   fighter's or hauler's helm (US-T817, `ShipHelm::Fly`); a capital's helm keeps the mouse as its look-around.
 2. A piloted-only floor on assist's push along the nose and back (a `ThrottleS` beside `SpinUpS` on
    `LightFighterFeel` and the `HeavyFighterFeel`, a bomber and hauler equivalent), sized to the 0-to-top and
    top-to-stop targets above; the crews keep the hull's own thrust.

@@ -1162,6 +1162,7 @@ namespace SpaceGod::UI
 		Vector2 aim;
 		if (app->PilotControlMode != PilotControl::Helm && DirectionToGui(app->PilotAimDirection(), aim) && (!noseOn || (aim - nose).sqrMagnitude() > 4))
 			DrawCrosshair(aim, InterfaceOptions::CrosshairColor());
+		DrawVirtualStick(); // US-T736
 		return noseOn;
 	}
 
