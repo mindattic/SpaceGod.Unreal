@@ -224,6 +224,56 @@ Where a hull's tubes come from:
 The flight deck view draws a tube by its mouth alone (no breech frame), so dozens of small mouths read as rows of
 ports and not as a lattice of nested frames. How a tube fires its craft is in docs/FlightFeel.md.
 
+### 5.6 Mass launch test (US-T783)
+
+`sg.LaunchTest [game|real|here] [carriers=N] [tubes=N] [seconds=N] [quit]` lays out N carriers a side off Uranus (5: ten
+capitals, 18 squadron craft and 2 recon each, 200 craft), gives every carrier N launch tubes (20, so each craft has a tube
+of its own) for the run only, and starts the fight: every squadron goes out through the launch sequencer (US-T779), a wave
+every `FlightDecks::TubeCycleSeconds`. The camera sits off one carrier's starboard beam. The setting is put back as soon as
+the decks are built, and nothing else is changed, so the Bench is untouched. Once a second the log has a line
+(`sg.LaunchTest: t=...`) with the craft at the breech, in the tubes, out and on deck, and that second's mean and worst frame
+times; at the end (`seconds`, 40 by default) a summary: frames, mean ms and fps, worst ms, frames over 16.7 ms and over 33.3
+ms. `quit` exits after the summary.
+
+How to measure, one heavy process on the machine at a time, a Development build, the window at the resolution played:
+
+1. `stat unit` and `stat unitgraph`: Game, Draw, GPU and Frame through the launch. Game is the simulation and the views;
+   Draw the render thread; a launch should not move Draw much past the fight before it.
+2. `stat gpu`: the passes. Lumen and the translucency (glows, trails, line lists) are the ones the launch adds to.
+3. `stat scenerendering`: draw calls and mesh draws; the launch's craft models, glows and trails should add a few draws,
+   not one per craft.
+4. `sg.Lod`: the render budget's tiers and the ship pool's in use, parked, spawned and reused.
+5. An Insights trace: start the game with `-trace=cpu,gpu,frame,bookmark` (or `trace.start` in the console), run
+   `sg.LaunchTest seconds=30 quit`, and open the `.utrace` in Unreal Insights. Look at the worst frames in the first ten
+   seconds (the wing coming out), `FTSTicker` (the test and the game's own tick), `UnitySpaceApp` Update and the battle step.
+
+What the pass changed (render only):
+
+- Fighter views are built at most `FighterViews::MaxCreatesPerFrame` (8) a frame, so the launch's 200 craft models are
+  built over 25 frames rather than in one; the views' live and gone bookkeeping is a frame stamp, not two hash sets built
+  every frame.
+- Every launch tube's mouth is drawn into one line list (as the trails are, US-T822) instead of three line strips a tube:
+  ten carriers with 20 tubes each were 600 strips, now one draw.
+- The engine exhaust emitter's `FxHull` keeps its lists between hulls (`FxHull::Reset`), so the craft exhausts allocate
+  nothing a frame.
+
+Read and found already bounded: the render budget (sorted candidates in grow-only arrays), the ship view pool (parked
+views held to the drawn caps), the instanced glows and batched trails, and the sequencer's per-frame work (a few vector
+operations a craft). `FlightDecks::Catapult` counts the craft already launching from the carrier by walking the battle's
+units, once per craft launched: 200 craft is some 20 000 checks in the launch frame, a one-off, left as it is.
+
+Numbers (to be filled in by the owner; this machine, Development, 2560x1440, Epic unless noted):
+
+| Measure | Before the fight | Launch (first 10 s) | After (wings out) |
+|---|---|---|---|
+| Frame ms mean (`sg.LaunchTest` log) | | | |
+| Frame ms worst | | | |
+| Game ms (`stat unit`) | | | |
+| Draw ms (`stat unit`) | | | |
+| GPU ms (`stat unit`) | | | |
+| Draw calls (`stat scenerendering`) | | | |
+| Worst frame's top cost (Insights) | | | |
+
 ## Settings this plan introduces
 
 | Setting | Default | Where |

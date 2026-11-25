@@ -57,6 +57,24 @@ namespace SpaceGod::Views
 		cs::List<Core::DVec3> Vents;
 		cs::List<Vector3> VentOut;
 		bool Wreck = false;
+
+		/// <summary>Back to a blank hull, keeping its lists' storage (US-T783): one FxHull is refilled for every hull every
+		/// frame, so a hundred craft in a launch allocate nothing.</summary>
+		void Reset()
+		{
+			cs::List<FxJet> mains = std::move(Mains), rcs = std::move(Rcs);
+			cs::List<Core::DVec3> vents = std::move(Vents);
+			cs::List<Vector3> ventOut = std::move(VentOut);
+			*this = FxHull();
+			Mains = std::move(mains);
+			Rcs = std::move(rcs);
+			Vents = std::move(vents);
+			VentOut = std::move(ventOut);
+			Mains.Clear();
+			Rcs.Clear();
+			Vents.Clear();
+			VentOut.Clear();
+		}
 	};
 
 	class WorldFx final

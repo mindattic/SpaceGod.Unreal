@@ -116,7 +116,7 @@ namespace SpaceGod
 			Quaternion rot = t->localRotation;
 			float len = t->localScale.x;
 			if (!(len > 0)) continue;
-			h = Views::FxHull();
+			h.Reset();
 			h.Key = ship.get();
 			h.Scene = SpaceCamera->ScenePosition + D(rel);
 			h.Length = len;
@@ -171,7 +171,7 @@ namespace SpaceGod
 					if (ahead.LengthSquared() < 1e-30) continue;
 					ahead = ahead.Normalized();
 					Vector3 fwd(static_cast<float>(ahead.X), static_cast<float>(ahead.Y), static_cast<float>(ahead.Z));
-					h = Views::FxHull();
+					h.Reset();
 					h.Key = u.get();
 					h.Scene = scene;
 					h.Length = len;

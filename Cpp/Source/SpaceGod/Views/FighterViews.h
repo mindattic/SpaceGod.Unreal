@@ -42,6 +42,8 @@ namespace SpaceGod::Views
 			Vector3 EngineAt = Vector3(0, 0, -0.55f);
 			cs::List<Core::DVec3> History;
 			float NextSample = 0;
+			/// <summary>The last frame it was drawn in (US-T783): one not drawn this frame is gone.</summary>
+			int Seen = 0;
 		};
 
 		UnitySpaceApp* app;
@@ -61,7 +63,23 @@ namespace SpaceGod::Views
 		{
 		public:
 			cs::Ref<LineStrip> Stern, Bow, Path;
+			int Seen = 0;
 		};
+
+		/// <summary>Every launch tube's mouth (US-T843) as segments of one line list, one draw for the lot (US-T783): a wing of
+		/// carriers has hundreds of tubes. Staged in tubeSegments and tubeColors (grow-only).</summary>
+		cs::Ref<LineStrip> tubeMouths;
+		cs::List<Vector3> tubeSegments;
+		cs::List<Color> tubeColors;
+
+		/// <summary>This frame's number, and the views and decks found gone in it (reused, so a frame allocates nothing).</summary>
+		int frame = 0;
+		cs::List<cs::Ref<Core::BattleUnit>> gone;
+		cs::List<cs::Ref<Core::FlightDeck>> closed;
+
+		/// <summary>At most this many craft models built in one frame (US-T783): a mass launch puts a hundred craft in the
+		/// fight at once, and building every model in that frame is a hitch. The rest are built over the next frames.</summary>
+		static constexpr int MaxCreatesPerFrame = 8;
 
 		/// <summary>Screen-space minimum (US-T202): the spark shows from this many pixels of hull, at full size from MarkFullPx,
 		/// and fades out as the hull passes MarkFadePx (then its mesh is readable and only its engine halo stays).</summary>
@@ -99,10 +117,16 @@ namespace SpaceGod::Views
 		/// red once its hangar is shot away, and the glide path from the approach gate to the stern mouth while a craft is on
 		/// it. Drawn only while the hull is big enough on screen (<see cref="FlightDecks.Lod"/>).
 		/// </summary>
-		void DrawDecks(const cs::Ref<Core::Battle>& b, const cs::Ref<Core::BattleUnit>& carrier, double ppu, cs::HashSet<cs::Ref<Core::FlightDeck>>& liveDecks);
+		void DrawDecks(const cs::Ref<Core::Battle>& b, const cs::Ref<Core::BattleUnit>& carrier, double ppu);
 
 		/// <summary>The lit frame round a deck's mouth <paramref name="along"/> km down its axis.</summary>
 		void Frame(const cs::Ref<Core::Battle>& b, const cs::Ref<Core::FlightDeck>& d, double along, double w, double h, const cs::Ref<LineStrip>& strip, Color color);
+
+		/// <summary>A launch tube's mouth frame, added to <see cref="tubeMouths"/>' segments.</summary>
+		void TubeMouth(const cs::Ref<Core::Battle>& b, const cs::Ref<Core::FlightDeck>& d, double w, double h, Color color);
+
+		/// <summary>The four corners of the frame round a deck's mouth <paramref name="along"/> km down its axis, in framePoints[0..3].</summary>
+		void Corners(const cs::Ref<Core::Battle>& b, const cs::Ref<Core::FlightDeck>& d, double along, double w, double h);
 
 		cs::Ref<View> Create(const cs::Ref<Core::BattleUnit>& u);
 	};

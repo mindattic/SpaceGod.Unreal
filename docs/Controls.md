@@ -231,7 +231,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 ## Console
 
 Open with the console key; `sg.BigBattle sg.BioMass sg.CapitalRoll sg.Cheat sg.CheatMenu sg.Comms sg.CruiseRun sg.DogfightDemo
-sg.Drift sg.EdgeRun sg.EvaRepair sg.Ghost sg.Harvest sg.HullLighting sg.HyperspaceToll sg.LaneRide sg.Lighting sg.Race sg.Shine
+sg.Drift sg.EdgeRun sg.EvaRepair sg.Ghost sg.Harvest sg.HullLighting sg.HyperspaceToll sg.LaneRide sg.LaunchTest sg.Lighting sg.Race sg.Shine
 sg.Sky* sg.Squadron sg.StandDown sg.Tour sg.Tractor sg.VoidStation sg.WarpRun sg.WarpTunnel`. Every dev-menu entry is also reachable as a console
 command; the console is the only way to some tuning (`sg.Lighting`, `sg.Shine`, `sg.HullLighting`).
 

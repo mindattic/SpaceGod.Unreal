@@ -65,13 +65,16 @@ namespace SpaceGod::Views
 		trails = cs::New<LineStrip>("Trails", root);
 		trails->SetTint(Color::white());
 		trails->SetVisible(false);
+		tubeMouths = cs::New<LineStrip>("Tube mouths", root);
+		tubeMouths->SetTint(Color::white());
+		tubeMouths->SetVisible(false);
 	}
 
 	void FighterViews::Update()
 	{
 		float now = Time::unscaledTime;
-		cs::HashSet<cs::Ref<BattleUnit>> live;
-		cs::HashSet<cs::Ref<FlightDeck>> liveDecks;
+		frame++;
+		int creates = 0;
 		auto cam = app->UnityCamera->transform;
 		double ppu = app->PixelsPerUnitAtUnitDistance();
 		auto rootWorld = UnityCompat::WorldMatrix::Of(*root);
@@ -79,17 +82,24 @@ namespace SpaceGod::Views
 		glows->Clear();
 		trailSegments.Clear();
 		trailColors.Clear();
+		tubeSegments.Clear();
+		tubeColors.Clear();
 		for (const auto& b : app->World()->War->Battles)
 		{
 			for (const auto& u : b->Units)
 			{
-				if (u->Kind == UnitKind::Ship && u->Present()) DrawDecks(b, u, ppu, liveDecks);
+				if (u->Kind == UnitKind::Ship && u->Present()) DrawDecks(b, u, ppu);
 				// A craft down on a flight deck is drawn on it, inside its hull (U.SPC-T518).
 				bool onDeck = FlightDecks::OnDeck(u) && !u->Fighter->Deck->Deck->Carrier->Dead && u->Fighter->Deck->Deck->Carrier->Present();
 				if (u->Kind != UnitKind::Fighter || !(u->Present() || onDeck)) continue;
-				live.Add(u);
 				cs::Ref<View> v;
-				if (!views.TryGetValue(u, v)) views[u] = v = Create(u);
+				if (!views.TryGetValue(u, v))
+				{
+					if (creates >= MaxCreatesPerFrame) continue;
+					creates++;
+					views[u] = v = Create(u);
+				}
+				v->Seen = frame;
 				auto scene = app->BattleScene(b, u->Pos);
 				auto rel = app->Relative(scene);
 				// Its model while big enough, then a glow impostor, then nothing below a pixel (U.SPC-T415): a battle
@@ -151,18 +161,19 @@ namespace SpaceGod::Views
 		glows->Flush();
 		if (trailSegments.Count() > 0) trails->SetSegments(trailSegments, trailColors, trailSegments.Count());
 		trails->SetVisible(trailSegments.Count() > 0);
-		cs::List<cs::Ref<BattleUnit>> gone;
-		for (auto kv : views)
-			if (!live.Contains(kv.first)) gone.Add(kv.first);
+		if (tubeSegments.Count() > 0) tubeMouths->SetSegments(tubeSegments, tubeColors, tubeSegments.Count());
+		tubeMouths->SetVisible(tubeSegments.Count() > 0);
+		for (const auto& kv : views)
+			if (kv.second->Seen != frame) gone.Add(kv.first);
 		for (const auto& u : gone)
 		{
 			auto v = views.At(u);
 			Destroy(v->Hull);
 			views.Remove(u);
 		}
-		cs::List<cs::Ref<FlightDeck>> closed;
-		for (auto kv : deckViews)
-			if (!liveDecks.Contains(kv.first)) closed.Add(kv.first);
+		gone.Clear();
+		for (const auto& kv : deckViews)
+			if (kv.second->Seen != frame) closed.Add(kv.first);
 		for (const auto& d : closed)
 		{
 			auto dv = deckViews.At(d);
@@ -171,9 +182,10 @@ namespace SpaceGod::Views
 			dv->Path->Dispose();
 			deckViews.Remove(d);
 		}
+		closed.Clear();
 	}
 
-	void FighterViews::DrawDecks(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& carrier, double ppu, cs::HashSet<cs::Ref<FlightDeck>>& liveDecks)
+	void FighterViews::DrawDecks(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& carrier, double ppu)
 	{
 		const auto& decks = FlightDecks::Of(carrier);
 		if (decks.Count() == 0) return;
@@ -183,7 +195,15 @@ namespace SpaceGod::Views
 		double w = cs::Math::Max(MouthMinKm, carrier->LengthKm * MouthHalfWidth), h = cs::Math::Max(MouthMinKm * 0.5, carrier->LengthKm * MouthHalfHeight);
 		for (const auto& d : decks)
 		{
-			liveDecks.Add(d);
+			// A launch tube (US-T843) shows its mouth alone (dozens of breech frames buried in the hull only clutter the rows),
+			// in the one line list every tube's mouth is drawn by (US-T783).
+			if (d->LaunchOnly())
+			{
+				if (shown)
+					TubeMouth(b, d, d->MouthHalfWidthKm > 0 ? d->MouthHalfWidthKm : w, d->MouthHalfHeightKm > 0 ? d->MouthHalfHeightKm : h,
+						d->Open() ? DeckOpen : DeckClosed);
+				continue;
+			}
 			cs::Ref<DeckView> dv;
 			if (!deckViews.TryGetValue(d, dv))
 			{
@@ -193,6 +213,7 @@ namespace SpaceGod::Views
 				dv->Path = cs::New<LineStrip>("Glide path", root);
 				deckViews[d] = dv;
 			}
+			dv->Seen = frame;
 			dv->Bow->SetVisible(shown);
 			dv->Stern->SetVisible(shown);
 			dv->Path->SetVisible(false);
@@ -213,13 +234,30 @@ namespace SpaceGod::Views
 
 	void FighterViews::Frame(const cs::Ref<Battle>& b, const cs::Ref<FlightDeck>& d, double along, double w, double h, const cs::Ref<LineStrip>& strip, Color color)
 	{
+		Corners(b, d, along, w, h);
+		framePoints[4] = framePoints[0];
+		strip->SetPoints(framePoints, 5, color);
+		strip->Root->transform->localPosition = Vector3::zero();
+	}
+
+	void FighterViews::TubeMouth(const cs::Ref<Battle>& b, const cs::Ref<FlightDeck>& d, double w, double h, Color color)
+	{
+		Corners(b, d, d->BowAlong, w, h);
+		for (int i = 0; i < 4; i++)
+		{
+			tubeSegments.Add(framePoints[i]);
+			tubeColors.Add(color);
+			tubeSegments.Add(framePoints[(i + 1) % 4]);
+			tubeColors.Add(color);
+		}
+	}
+
+	void FighterViews::Corners(const cs::Ref<Battle>& b, const cs::Ref<FlightDeck>& d, double along, double w, double h)
+	{
 		framePoints[0] = app->Relative(app->BattleScene(b, d->At(along, DVec3(-w, -h, 0))));
 		framePoints[1] = app->Relative(app->BattleScene(b, d->At(along, DVec3(w, -h, 0))));
 		framePoints[2] = app->Relative(app->BattleScene(b, d->At(along, DVec3(w, h, 0))));
 		framePoints[3] = app->Relative(app->BattleScene(b, d->At(along, DVec3(-w, h, 0))));
-		framePoints[4] = framePoints[0];
-		strip->SetPoints(framePoints, 5, color);
-		strip->Root->transform->localPosition = Vector3::zero();
 	}
 
 	cs::Ref<Transform> FighterViews::ModelOf(const cs::Ref<Core::BattleUnit>& u) const
