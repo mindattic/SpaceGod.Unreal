@@ -319,7 +319,28 @@ namespace SpaceGod::Core
 		/// <paramref name="family"/>; 0: the hull's own torque.</summary>
 		static double SpinUpS(FlightFamily family);
 
+		/// <summary>The light families' boost kick (US-T820): with assist on, the push along the nose while the boost fires
+		/// is at least enough to make <see cref="BoostKickShare"/> of boost speed from rest within this, s. The heavy
+		/// fighter keeps its own (<see cref="HeavyFighterFeel.BoostKickS"/>).</summary>
+		static const cs::Ref<RangeSetting>& BoostKick();
+
+		/// <summary>The share of boost speed <see cref="BoostKick"/> times.</summary>
+		static const cs::Ref<RangeSetting>& BoostKickShare();
+
+		/// <summary>The light families' boost bleed (US-T820): once the boost is let go, the speed over top speed bleeds off
+		/// at the boost's extra speed over this, s, rather than at assist's full braking push.</summary>
+		static const cs::Ref<RangeSetting>& BoostBleed();
+
+		/// <summary>Seconds to <see cref="BoostKickShare"/> of boost speed for <paramref name="family"/>; 0 outside the
+		/// light families: the hull's own drive.</summary>
+		static double BoostKickS(FlightFamily family);
+
+		/// <summary>Seconds the boost's extra speed bleeds off over for <paramref name="family"/>; 0 outside the light
+		/// families: assist's own braking.</summary>
+		static double BoostBleedS(FlightFamily family);
+
 	private:
+		static bool LightFamily(FlightFamily family);
 		static cs::Ref<RangeSetting> Seconds(const char* key, const char* label, double seconds, const char* what);
 		static cs::Ref<RangeSetting> SpinUpSeconds(const char* key, const char* label, double seconds);
 	};

@@ -128,8 +128,8 @@ Speeds stay true scale: the targets are times, which is what the hand feels. Eve
 |---|---|---|
 | Boost charge, small craft | 5 s at the even share (runner 10 s) | 12 to 45 s |
 | Boost refill from empty | 6 s at two engine pips, 4 s at four, 8 s at one | 2x the charge (24 to 90 s) |
-| Boost kick | 90% of boost speed in 1.0 s (light), 1.4 s (heavy) | thrust-bound; heavy 0.12 s constant |
-| Boost let go | the extra speed bleeds off over 2 s (light), 3.5 s (heavy, kept) | light: braked at assist's push |
+| Boost kick | 90% of boost speed in 1.0 s (light), 1.4 s (heavy) | light: a floor on assist's push while the boost fires (`AssistThrottle::BoostKick`, US-T820); heavy 0.12 s constant |
+| Boost let go | the extra speed bleeds off over 2 s (light), 3.5 s (heavy, kept) | light: braked at no more than the extra over `AssistThrottle::BoostBleed` (US-T820) |
 | Engine pips | top speed x0.8 .. x1.2, accel and boost refill x0.5 .. x1.5 | all three x0.5 .. x1.5 |
 | Pip change | takes hold on the next frame, with an audible and visual cue | no dedicated cue |
 

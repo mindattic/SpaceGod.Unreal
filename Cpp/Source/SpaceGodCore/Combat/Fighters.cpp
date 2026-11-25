@@ -743,6 +743,10 @@ namespace SpaceGod::Core
 		input.ToTopS = AssistThrottle::ToTopS(craft->Family());
 		input.ToStopS = AssistThrottle::ToStopS(craft->Family());
 		input.RollRateDegS = AssistThrottle::RollDegS(craft->Family());
+		// The light families' boost kick and bleed (US-T820).
+		input.BoostKickS = AssistThrottle::BoostKickS(craft->Family());
+		input.BoostKickShare = AssistThrottle::BoostKickShare()->Value;
+		input.BoostBleedS = AssistThrottle::BoostBleedS(craft->Family());
 		// Assist off keeps the turn rate-held on the assist-on spin-up (US-T828); only the thrust goes Newtonian.
 		input.AssistOffRateHeld = true;
 		input.AssistOffSpinUpS = AssistThrottle::SpinUpS(craft->Family());

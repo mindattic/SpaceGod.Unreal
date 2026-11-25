@@ -99,6 +99,17 @@ namespace SpaceGod::Core
 		/// 0 for every crew, which keeps the hull's own thrust.</summary>
 		double BoostOutReachS = 0, BoostOutReachShare = 0;
 
+		/// <summary>The light families' boost kick (US-T820, <see cref="AssistThrottle.BoostKick"/>): with assist on and the
+		/// boost firing, the push along the nose is at least enough to make <see cref="BoostKickShare"/> of boost speed from
+		/// rest within <see cref="BoostKickS"/>, s. Set only with <see cref="Piloted"/>; 0 for every crew and the heavy
+		/// fighter, which keeps its own kick.</summary>
+		double BoostKickS = 0, BoostKickShare = 0;
+
+		/// <summary>The light families' boost bleed (US-T820, <see cref="AssistThrottle.BoostBleed"/>): with assist on, the
+		/// boost let go and the throttle not reversed, speed over the set point brakes at no more than the boost's extra
+		/// speed over this, s. Set only with <see cref="Piloted"/>; 0 for every crew, which brakes at assist's full push.</summary>
+		double BoostBleedS = 0;
+
 		/// <summary>Drift (US-T165, Chorus style; <see cref="Drift"/>): the dogfight model is suspended, the hull coasts on
 		/// the way it has and its attitude thrusters swing it freely onto <see cref="DesiredForward"/>. Only
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI

@@ -558,6 +558,40 @@ namespace SpaceGod::Core
 		return s != nullptr ? s->Value : 0;
 	}
 
+	const cs::Ref<RangeSetting>& AssistThrottle::BoostKick()
+	{
+		static const cs::Ref<RangeSetting> setting = Seconds("flight.light.boostKick", "Light craft: boost kick", 1,
+			"reach most of boost speed once the boost fires (light fighters, interceptors and couriers; the heavy fighter has its own kick)");
+		return setting;
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::BoostKickShare()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("flight.light.boostKickShare", SettingGroups::Dogfighting,
+			"Light craft: boost kick share", 0.9, 0.5, 1, 0.05,
+			"The share of boost speed the boost kick reaches in its time.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v * 100, "0"), "%"); }), "flight model handling boost kick");
+		return setting;
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::BoostBleed()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("flight.light.boostBleed", SettingGroups::Dogfighting,
+			"Light craft: boost bleed", 2, 0.5, 20, 0.1,
+			"With flight assist on, how long the boost's extra speed takes to bleed back to top speed once you let go of boost, so a boosted run carries through (light fighters, interceptors and couriers). Pulling the throttle back still brakes at full push. Crews brake at once.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "flight model handling boost bleed");
+		return setting;
+	}
+
+	bool AssistThrottle::LightFamily(FlightFamily family)
+	{
+		return family == FlightFamily::LightFighter || family == FlightFamily::Interceptor || family == FlightFamily::Runner;
+	}
+
+	double AssistThrottle::BoostKickS(FlightFamily family) { return LightFamily(family) ? BoostKick()->Value : 0; }
+
+	double AssistThrottle::BoostBleedS(FlightFamily family) { return LightFamily(family) ? BoostBleed()->Value : 0; }
+
 	// ---------------------------------------------------------------- countermeasures
 
 	const cs::Ref<RangeSetting>& Countermeasures::Effectiveness()

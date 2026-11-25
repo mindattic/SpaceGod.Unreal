@@ -99,6 +99,13 @@ namespace SpaceGod::Core
 		if (input.ToStopS > 0) retro = Max(retro, tuning.MaxSpeed / input.ToStopS);
 		if (input.BoostOutReachS > 0) main = Max(main, (input.BoostOutReachShare * tuning.MaxSpeed - DVec3::Dot(s.Vel, f)) / input.BoostOutReachS);
 		double setPoint = tuning.MaxSpeed * driveMult;
+		bool boosting = input.Boost && driveMult > 1;
+		if (input.BoostKickS > 0 && boosting) main = Max(main, input.BoostKickShare * setPoint / input.BoostKickS);
+		if (input.BoostBleedS > 0 && !boosting && throttle >= 0 && DVec3::Dot(s.Vel, f) > setPoint)
+		{
+			double extra = tuning.MaxSpeed * (Max(1.0, tuning.BoostSpeedMultiplier) - 1);
+			if (extra > 0) retro = Min(retro, extra / input.BoostBleedS);
+		}
 		auto commanded = f * (throttle * setPoint)
 			+ r * (strafeR * setPoint * strafeSpeedFraction)
 			+ u * (strafeU * setPoint * strafeSpeedFraction);
