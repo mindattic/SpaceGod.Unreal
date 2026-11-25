@@ -57,5 +57,14 @@ private:
 	/// <summary>The active system RadioTick last saw and its index in the galaxy (looked up only when it changes).</summary>
 	cs::Ref<Core::StarSystem> radioSystem;
 	int radioSystemIndex = -1;
+	/// <summary>
+	/// US-T651: the frame budget. The game-thread radio work (TTS tick, arbiter, host tick, sampler, events, digest) is held
+	/// to RadioBudgetMs a frame, measured with Cycles64; past it the sampler, event pump and digest wait for a later frame,
+	/// round-robin from radioBudgetTurn (that stage always runs, so none waits more than two frames). Advance always runs.
+	/// </summary>
+	static constexpr double RadioBudgetMs = 0.25;
+	/// <summary>US-T651: above this warp ambient sampling pauses (only events and digests run); speech quiets above VoiceArbiter::WarpQuiet.</summary>
+	static constexpr double RadioAmbientPauseWarp = 1000.0;
+	int radioBudgetTurn = 0;
 	/// <summary>US-T674: a sink on radio, so declared after it (gone first); the HUD only reads it.</summary>
 	SpaceGod::Radio::RadioHeard radioHeard{*this};

@@ -48,6 +48,8 @@ namespace SpaceGod::Voice
 			int RadioPlaying = 0;
 			/// Whether the radio line playing is urgent (an urgent line does not cut another).
 			bool PlayingUrgent = false;
+			/// US-T651: the warp at the last Tick (above WarpQuiet nothing ambient is spoken).
+			float Warp = 1.0f;
 			std::function<void(const RadioLine&)> Digest;
 		};
 
@@ -159,6 +161,7 @@ namespace SpaceGod::Voice
 	{
 		if (!Audio::GameAudio::Enabled() || !Audio::GameAudio::SpokenComms() || line.Line.Text.empty()) return;
 		Arbiter& s = A();
+		if (s.Warp > WarpQuiet && !line.Urgent) return; // US-T651: under warp only urgent lines are spoken
 		if (s.Count >= Capacity)
 		{
 			// Full: the worst of the waiting lines and the new one goes to the digest.
@@ -207,6 +210,17 @@ namespace SpaceGod::Voice
 
 		const double now = FPlatformTime::Seconds();
 		const bool quiet = warpRate > WarpQuiet;
+		s.Warp = warpRate;
+		if (quiet)
+		{
+			// US-T651: nothing ambient is spoken above WarpQuiet: a non-urgent radio line playing is cut too.
+			if (s.RadioPlaying > 0 && !s.PlayingUrgent)
+			{
+				CommsVoice::Cut();
+				s.RadioPlaying = 0;
+			}
+			CutLanes(s, false);
+		}
 		for (int i = s.Count - 1; i >= 0; --i)
 		{
 			const Slot& slot = s.Slots[i];

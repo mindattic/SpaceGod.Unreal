@@ -20,6 +20,13 @@
 
 namespace SpaceGod::Voice
 {
+	// US-T651: the TTS caps of the radio budget (US-T580), confirmed here so a change has to be made on purpose: the queue
+	// holds at most 16 (Enqueue evicts the lowest), the memory LRU 32 MB (VoiceCache::Put), the disk cache 256 MB
+	// (VoiceCache::Store/Prune), and the worker runs at TPri_BelowNormal (Started).
+	static_assert(TtsService::Capacity == 16, "US-T580: the TTS queue holds at most 16 requests");
+	static_assert(VoiceCache::MemoryBytes == 32ll * 1024 * 1024, "US-T580: the clip cache holds at most 32 MB in memory");
+	static_assert(VoiceCache::DiskBytes == 256ll * 1024 * 1024, "US-T580: the clip cache holds at most 256 MB on disk");
+
 	namespace
 	{
 		/// US-T649: the Voice engine setting (0 Auto, 1 Piper, 2 Windows), set on the game thread, read by the worker.

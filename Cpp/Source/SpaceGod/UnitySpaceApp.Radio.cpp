@@ -25,8 +25,39 @@ namespace SpaceGod
 	void UnitySpaceApp::RadioTick()
 	{
 		if (Clock == nullptr) return;
+		// US-T651: the frame budget counts this frame's TtsService::Tick (run before this, still in Cycles) and the rest of
+		// this function; the previous frame's host tick is reserved before the sampler and event pump.
+		const uint64_t budgetStart = FPlatformTime::Cycles64();
+		const uint64_t ttsCycles = Radio::RadioStats::Get().Cycles[static_cast<size_t>(Radio::RadioStage::TtsTick)];
 		// US-T650: every stage below is timed (stat SpaceGodRadio, Insights, sg.Radio stats); the counters go out on return.
 		Radio::RadioStats::Get().BeginFrame();
+		const double reserveMs = Radio::RadioStats::Get().LastMs(Radio::RadioStage::HostTick);
+		auto spentMs = [&]() { return FPlatformTime::ToMilliseconds64(ttsCycles + (FPlatformTime::Cycles64() - budgetStart)); };
+		enum : int { StageSampler, StageEvents, StageDigest, StageCount };
+		bool deferred[StageCount] = {};
+		// Whether a deferrable stage runs now: its turn always does, the others while the budget (less the reserve) lasts.
+		auto mayRun = [&](int stage, double reserve)
+		{
+			if (stage == radioBudgetTurn || spentMs() + reserve < RadioBudgetMs) return true;
+			deferred[stage] = true;
+			return false;
+		};
+		struct NextTurn
+		{
+			int& Turn;
+			const bool* Deferred;
+			~NextTurn()
+			{
+				// Round-robin: the first stage deferred after this frame's turn takes the next one.
+				for (int i = 1; i <= StageCount; i++)
+					if (Deferred[(Turn + i) % StageCount])
+					{
+						Turn = (Turn + i) % StageCount;
+						return;
+					}
+			}
+		} nextTurn { radioBudgetTurn, deferred };
+		const double warp = Clock->Paused() ? 0.0 : Clock->Warp().SimSecondsPerSecond * Clock->Speed;
 		struct PublishOnReturn
 		{
 			const Radio::RadioHost& Host;
@@ -43,7 +74,7 @@ namespace SpaceGod
 		{
 			// US-T685: the spoken radio lines take their turns on the one voice; under high warp only urgent ones are kept.
 			SG_RADIO_SCOPE(Arbiter);
-			Voice::VoiceArbiter::Tick(Clock->Paused() ? 0.0f : static_cast<float>(Clock->Warp().SimSecondsPerSecond * Clock->Speed));
+			Voice::VoiceArbiter::Tick(static_cast<float>(warp));
 		}
 		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
 		cs::Ref<Newswire> news = Galaxy != nullptr && Galaxy->Traffic != nullptr ? Galaxy->Traffic->News : nullptr;
@@ -85,10 +116,11 @@ namespace SpaceGod
 		if (ActiveSystem == nullptr)
 		{
 			radio.Tick(-1, DVec3(), Clock->Jd);
-			takeDigest();
+			if (mayRun(StageDigest, 0.0)) takeDigest();
 			return;
 		}
-		if (radioSystemIndex >= 0 && radio.SystemId() == radioSystemIndex && !PlayerOptions::ScriptedRun() && SpaceGod::Audio::GameAudio::Enabled())
+		if (radioSystemIndex >= 0 && radio.SystemId() == radioSystemIndex && !PlayerOptions::ScriptedRun() && SpaceGod::Audio::GameAudio::Enabled()
+			&& warp <= RadioAmbientPauseWarp && mayRun(StageSampler, reserveMs)) // US-T651: paused above 1000x, else budgeted
 		{
 			// US-T681: ambient talk (read-only, view-local, its own random stream). A new system or a rebase back-fills what is
 			// already in flight first: the log clamps a SentJd earlier than its newest, so nothing newer may go out before it.
@@ -113,7 +145,7 @@ namespace SpaceGod
 			radioAmbient.Tick(ActiveSystem, radioSystemIndex, hereKm, marginKm, Clock->Jd, radioAmbientOut);
 			for (const auto& m : radioAmbientOut) radio.Emit(m);
 		}
-		if (radioSystemIndex >= 0 && !PlayerOptions::ScriptedRun())
+		if (radioSystemIndex >= 0 && !PlayerOptions::ScriptedRun() && mayRun(StageEvents, reserveMs)) // US-T651: budgeted
 		{
 			// US-T682: the world's events in this system go out as chatter (read-only, view-local).
 			SG_RADIO_SCOPE(Events);
@@ -125,8 +157,8 @@ namespace SpaceGod
 				else radio.EmitText(m.Message, m.Text);
 			}
 		}
-		radio.Tick(radioSystemIndex, CommsHere().HelioKm, Clock->Jd);
-		takeDigest();
+		radio.Tick(radioSystemIndex, CommsHere().HelioKm, Clock->Jd); // always: Advance pops at most RadioReceiver::MaxPopsPerFrame
+		if (mayRun(StageDigest, 0.0)) takeDigest();
 	}
 
 	void UnitySpaceApp::RadioReset()
