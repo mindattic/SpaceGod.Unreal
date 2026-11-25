@@ -7,5 +7,6 @@
 
 namespace SpaceGod::Views
 {
+	class DustField;
 	class WorldFx;
 }

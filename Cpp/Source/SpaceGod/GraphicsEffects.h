@@ -43,6 +43,9 @@ namespace SpaceGod
 		/// What the backend multiplies its bloom intensity by, and the vignette intensity it sets (1 and 0 in a scripted run).
 		static float BloomScale();
 		static float VignetteIntensity();
+		/// US-T729: the density of the space dust drawn round a held seat (Views::DustField), 0 to 1 (0 in a scripted run).
+		static const cs::Ref<Core::RangeSetting>& SpaceDust();
+		static double DustDensity();
 
 		/// Builds every row in menu order (the settings source GameSettingsHost adds).
 		static void Declare();

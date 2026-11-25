@@ -15,6 +15,8 @@ public:
 private:
 	cs::Ref<Views::WorldFx> worldFx;
 	cs::Ref<Transform> worldFxRoot;
+	/// <summary>US-T729: the space dust round a held seat, made with the effects for this system.</summary>
+	cs::Ref<Views::DustField> dustField;
 
 	/// <summary>Each ship as last drawn (by its index in the fleet): where a gate took it from, and whether it is new here.</summary>
 	struct FxShipSeen

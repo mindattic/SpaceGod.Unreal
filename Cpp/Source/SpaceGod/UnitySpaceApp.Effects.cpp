@@ -4,6 +4,7 @@
 #include "UnitySpaceApp.h"
 
 #include "Camera/SpaceCamera.h"
+#include "Views/DustField.h"
 #include "Views/EffectsTune.h"
 #include "Views/GateView.h"
 #include "Views/HullThrusters.h"
@@ -47,6 +48,7 @@ namespace SpaceGod
 		if (worldFx == nullptr || worldFxRoot != systemRoot)
 		{
 			worldFx = cs::New<Views::WorldFx>(this, systemRoot);
+			dustField = cs::New<Views::DustField>(this, systemRoot);
 			worldFxRoot = systemRoot;
 			fxShipsSeen.Clear();
 			fxShipCount = -1;
@@ -204,5 +206,6 @@ namespace SpaceGod
 		fxFtlWas = ftl;
 
 		worldFx->Draw();
+		if (dustField != nullptr) dustField->Update();
 	}
 }

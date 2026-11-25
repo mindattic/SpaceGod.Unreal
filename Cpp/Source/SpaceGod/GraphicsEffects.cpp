@@ -342,11 +342,35 @@ namespace SpaceGod
 		return value;
 	}
 
+	namespace
+	{
+		double dustPercent = 50; // US-T729: as last put into effect
+	}
+
+	double GraphicsEffects::DustDensity()
+	{
+		return PlayerOptions::ScriptedRun() ? 0.0 : dustPercent / 100.0;
+	}
+
+	const cs::Ref<RangeSetting>& GraphicsEffects::SpaceDust()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("graphics.spaceDust", SettingGroups::Graphics,
+			"Space dust", 50, 0, 100, 5,
+			"Specks of dust drifting round the cockpit or the held seat, streaming past as you fly, so speed and a big hull's size read.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::Fmt(v, "0"), "%"); }),
+			"space dust motes particles speed parallax scale cockpit")->Applying([](double v)
+			{
+				dustPercent = v > 0 ? v : 0;
+			});
+		return value;
+	}
+
 	void GraphicsEffects::Declare()
 	{
 		MotionBlur(); AmbientOcclusion(); AnisotropicFiltering(); Sharpening();
 		DepthOfField(); FilmGrain(); ChromaticAberration(); LensFlares(); // US-T700
 		Bloom(); Vignette(); // US-T596
+		SpaceDust(); // US-T729
 		if (RayTracingAvailable()) HardwareRayTracing(); // hidden where the GPU or project has no ray tracing
 	}
 }
