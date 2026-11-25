@@ -152,6 +152,8 @@ def main():
         handling(rows)
     if 'pool' in rows[0]:
         boost(rows)
+    if 'drift' in rows[0]:
+        drift(rows)
     return 0
 
 
@@ -353,6 +355,86 @@ def boost(rows):
         report(name, family, what, got, want)
         print(f'  {"":24s} {"":13s} split {split(f0)} (weapons/shields/engines), engines x{f0["engines"]:.2f},'
               f' seat reads pool {f0["poolS"]:g} s, refill {f0["refillS"]:g} s')
+
+
+
+# US-T831: docs/FlightFeel.md's assist-off and drift targets: velocity kept to 0.1% with no thrust (gravity aside), the
+# drift flip's 180 deg in 0.75 s and the boost-out's 90% of top speed on the new facing within 0.8 s of letting go.
+KEPT = 0.001
+DRIFT_TARGETS = {
+    'LightFighter': dict(flip=0.75, out=0.8),
+}
+
+
+def drift(rows):
+    """Assist off and drift, from the run's assist and drift steps (US-T831): velocity kept across the no-thrust frames of
+    the assist-off coast and of the drift (the change in the velocity vector over its start), the flip (drift on and the
+    mouse moving, until the nose has turned 179 deg from where it started), and the boost-out (drift let go, until the
+    velocity along the nose is 90% of the top speed the hull held just before the flip)."""
+    fr = []
+    t = 0.0
+    for i, r in enumerate(rows):
+        t += float(rows[i - 1]['dt']) if i > 0 else 0.0
+        fr.append(dict(step=r['step'], t=t, family=r['family'], hf=vec(r, 'hfx', 'hfy', 'hfz'), v=vec(r, 'vx', 'vy', 'vz'),
+                       assist=r['assist'] == '1', drift=r['drift'] == '1', mouse=float(r['mx']) != 0 or float(r['my']) != 0,
+                       thrust=any(float(r[c]) != 0 for c in ('throttle', 'strafeR', 'strafeU', 'boost'))))
+    steps = {}
+    for k, f in enumerate(fr):
+        if f['family'] != 'none':
+            steps.setdefault(f['step'], []).append(k)
+    if 'fighter assist coast' not in steps and 'fighter drift flip' not in steps:
+        return
+
+    print()
+    print('assist off and drift (US-T831), against docs/FlightFeel.md; ! marks a miss by more than 10%')
+
+    def report(step, family, what, got, want, unit='s', note=''):
+        tail = f'   target {want:g} {unit}' if want is not None else ''
+        if got is None:
+            print(f'  {step:24s} {family:13s} {what:7s} not reached{tail}{note}')
+            return
+        flag = ' !' if want is not None and got > want * 1.1 else ''
+        print(f'  {step:24s} {family:13s} {what:7s} {got:7.3f} {unit}{tail}{flag}{note}')
+
+    for name, ks in (('fighter assist coast', [k for k in steps.get('fighter assist coast', []) if not fr[k]['assist']]),
+                     ('fighter drift', [k for k in steps.get('fighter drift flip', []) + steps.get('fighter drift hold', [])
+                                        if fr[k]['drift']])):
+        ks = [k for k in ks if not fr[k]['thrust']]
+        if len(ks) < 2:
+            continue
+        a, b = fr[ks[0]], fr[ks[-1]]
+        v0 = norm(a['v'])
+        if v0 <= 0:
+            report(name, a['family'], 'kept', None, KEPT * 100, '%', '   (no velocity to keep)')
+            continue
+        kept = norm(sub(b['v'], a['v'])) / v0
+        report(name, a['family'], 'kept', kept * 100, KEPT * 100, '%',
+               f'   over {b["t"] - a["t"]:.2f} s: speed {(norm(b["v"]) / v0 - 1) * 100:+.3f}%, direction {angle(a["v"], b["v"]):.3f} deg')
+
+    flip = steps.get('fighter drift flip', [])
+    start = next((k for k in flip if fr[k]['drift'] and fr[k]['mouse']), None)
+    if start is not None:
+        family = fr[start]['family']
+        ks = [k for k in flip + steps.get('fighter drift hold', []) if k >= start]
+        f0 = fr[start]['hf']
+        hit = next((k for k in ks if angle(f0, fr[k]['hf']) >= 179.0), None)
+        peak = max(angle(f0, fr[k]['hf']) for k in ks)
+        report('fighter drift flip', family, 'flip', fr[hit]['t'] - fr[start]['t'] if hit is not None else None,
+               DRIFT_TARGETS.get(family, {}).get('flip'), note='' if hit is not None else f'   (turned {peak:.1f} deg)')
+
+    ready, out = steps.get('fighter drift ready', []), steps.get('fighter drift out', [])
+    off = next((k for k in out if not fr[k]['drift']), None)
+    if ready and off is not None:
+        family = fr[off]['family']
+        top = max(norm(fr[k]['v']) for k in ready if fr[k]['t'] >= fr[ready[-1]]['t'] - 0.5)
+
+        def along(f):
+            n = norm(f['hf'])
+            return dot(f['v'], f['hf']) / n if n > 0 else 0.0
+
+        hit = next((k for k in out if k >= off and along(fr[k]) >= 0.9 * top), None) if top > 0 else None
+        report('fighter drift out', family, 'out', fr[hit]['t'] - fr[off]['t'] if hit is not None else None,
+               DRIFT_TARGETS.get(family, {}).get('out'), note=f'   (top {top:g} km/s)')
 
 
 if __name__ == '__main__':

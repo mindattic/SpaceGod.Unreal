@@ -1,11 +1,12 @@
 // US-T463: sg.Feel, the flow between the god's view and the helm, measured frame by frame. A fighter and a battleship are
 // put just ahead of the free camera; then, on scripted keys and mouse: the god focuses the fighter and orbits it; takes
-// its helm (the fly-in); flies it (thrust, a mouse turn, a roll, a boost); lets go; swims the free camera and stops;
-// takes the battleship's helm and turns it on the keys; goes straight from that seat to the fighter's; lets go again.
-// Every frame writes one CSV row: the step, dt, the camera's mode, its scene position and its forward and up, the field
-// of view, what is held, the show, both hulls' scene positions and radii, the flown hull's handling and the scripted hand
-// (US-T819). tools/feel-report.py reads the rows and names every jolt (a frame whose turn, move or zoom breaks from its
-// neighbours), with the step it fell in, and measures the handling against docs/FlightFeel.md's targets.
+// its helm (the fly-in); flies it (thrust, a mouse turn, a roll, a boost, assist off, a drift flip); lets go; swims the
+// free camera and stops; takes the battleship's helm and turns it on the keys; goes straight from that seat to the
+// fighter's; lets go again. Every frame writes one CSV row: the step, dt, the camera's mode, its scene position and its
+// forward and up, the field of view, what is held, the show, both hulls' scene positions and radii, the flown hull's
+// handling and the scripted hand (US-T819). tools/feel-report.py reads the rows and names every jolt (a frame whose turn,
+// move or zoom breaks from its neighbours), with the step it fell in, and measures the handling against
+// docs/FlightFeel.md's targets.
 //   sg.Feel [game|real] [csv <file>] [quit]   (csv default Saved/Logs/feel-<scale>.csv)
 
 #include "UnitySpaceApp.h"
@@ -143,7 +144,7 @@ namespace
 		void RecordRaw()
 		{
 			static const std::pair<Key, const TCHAR*> named[] = { { Key::W, TEXT("W") }, { Key::S, TEXT("S") }, { Key::A, TEXT("A") },
-				{ Key::D, TEXT("D") }, { Key::LeftCtrl, TEXT("Ctrl") }, { Key::LeftShift, TEXT("Shift") } };
+				{ Key::D, TEXT("D") }, { Key::R, TEXT("R") }, { Key::LeftCtrl, TEXT("Ctrl") }, { Key::LeftShift, TEXT("Shift") } };
 			FString keys;
 			for (const auto& [k, name] : named)
 				if (Keys.held.count(k) > 0) keys += keys.IsEmpty() ? FString(name) : FString(TEXT("+")) + name;
@@ -316,6 +317,25 @@ namespace
 		push(TEXT("fighter boost bleed"), hold({ Key::W }, 5.0));
 		push(TEXT("fighter boost drain"), holdUntil({ Key::W, Key::LeftShift }, 0.5, 80.0, [pool](UnitySpaceApp& app) { return pool(app) <= 0; }));
 		push(TEXT("fighter boost refill"), holdUntil({ Key::W }, 0.5, 80.0, [pool](UnitySpaceApp& app) { return pool(app) >= 0.999; }));
+		// US-T831: assist off and drift against docs/FlightFeel.md: F off at top speed and a 10 s coast with no thrust (velocity
+		// kept), F on and back to top; then R held and the mouse swung until the nose faces back along the track (the flip),
+		// a second's drift with no thrust (velocity kept), and R let go on full throttle (the boost-out on the new facing).
+		auto tap = [r](Key k) { return [r, k](UnitySpaceApp&, double) { r->Keys.Tap(k); return true; }; };
+		push(TEXT("fighter assist off"), tap(Key::F));
+		push(TEXT("fighter assist coast"), wait(10.0));
+		push(TEXT("fighter assist on"), tap(Key::F));
+		push(TEXT("fighter drift ready"), hold({ Key::W }, 3.0));
+		auto flipFrom = std::make_shared<DVec3>();
+		push(TEXT("fighter drift flip"), [r, flipFrom](UnitySpaceApp& app, double t)
+		{
+			if (t == 0) *flipFrom = app.PilotForward();
+			bool done = t >= 3.0 || (t > 0 && DVec3::Dot(app.PilotForward(), *flipFrom) <= -0.995);
+			r->Keys.Hold(Key::R);
+			if (!done) r->Keys.mouseDelta = SpaceGod::Vector2(12, 0);
+			return done;
+		});
+		push(TEXT("fighter drift hold"), hold({ Key::R }, 1.0));
+		push(TEXT("fighter drift out"), hold({ Key::W }, 2.0));
 
 		// ---- let go: back to the god's free camera, then a swim and a stop
 		push(TEXT("let go fighter"), [](UnitySpaceApp& app, double)
