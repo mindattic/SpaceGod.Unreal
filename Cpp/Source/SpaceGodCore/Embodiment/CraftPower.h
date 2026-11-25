@@ -18,6 +18,25 @@ namespace SpaceGod::Core
 		AllWeapons = 3, AllShields = 4, AllEngines = 5, Balance = 6,
 	};
 
+	/// <summary>What a HUD shows of the reactor and the boost of whatever the player embodies (US-T738), read each frame.</summary>
+	struct PowerReadout
+	{
+		/// <summary>False for a seat with no reactor to share (a satellite): nothing else here means anything.</summary>
+		bool Shares = false;
+		int Weapons = 2, Shields = 2, Engines = 2;
+		/// <summary>Moves on every change of the split (<see cref="PowerDistribution.Revision"/>): a HUD that saw another
+		/// last time flashes the bars and clicks.</summary>
+		int Revision = 0;
+		/// <summary>Rate of fire and gun cooling, shield regrowth, thrust and boost refill: x0.5 .. x1.5.</summary>
+		double WeaponsFactor = 1, ShieldsFactor = 1, EnginesFactor = 1;
+		/// <summary>Top speed times the design's (<see cref="BoostPool.TopSpeedFactor"/>) and the shields' cap (x0.75 .. x1.25).</summary>
+		double TopSpeedFactor = 1, ShieldCapacity = 1;
+		/// <summary>The boost pool, 0-1, and, for a small craft, how long it lasts full and refills empty at this split, s.</summary>
+		double Boost = 0, BoostPoolS = 0, BoostRefillS = 0;
+		/// <summary>"BALANCED", "ALL WEAPONS" and so on, else empty.</summary>
+		cs::String Preset;
+	};
+
 	/// <summary>
 	/// The reactor split of whatever the player embodies (US-T94), the classic three-way pips (<see cref="PowerDistribution"/>:
 	/// six pips, at most four to one system, two each at an even share):
@@ -51,5 +70,8 @@ namespace SpaceGod::Core
 
 		/// <summary>Sets <paramref name="seat"/>'s split to <paramref name="code"/> (no change for -1 or an illegal code).</summary>
 		static void Apply(const cs::Ref<IEmbodiable>& seat, int code);
+
+		/// <summary>The HUD's view of <paramref name="seat"/>'s split and boost (US-T738); an even split when none is set yet.</summary>
+		static PowerReadout Read(const cs::Ref<IEmbodiable>& seat);
 	};
 }

@@ -69,10 +69,11 @@ namespace SpaceGod::Core
 		bool boosting = wantsBoost && combat->BoostFraction > 0;
 		if (tuning.BoostDurationS > 0)
 		{
-			double rate = 1 / tuning.BoostDurationS;
+			double rate = 1 / (input.BoostPoolS > 0 ? input.BoostPoolS : tuning.BoostDurationS);
+			double refill = input.BoostRefillS > 0 ? 1 / input.BoostRefillS : rate * RechargeFraction * input.BoostRecharge; // US-T94: x1 for crews
 			combat->BoostFraction = wantsBoost
 				? Max(0.0, combat->BoostFraction - rate * dt)
-				: Min(1.0, combat->BoostFraction + rate * RechargeFraction * input.BoostRecharge * dt); // US-T94: x1 for crews
+				: Min(1.0, combat->BoostFraction + refill * dt);
 		}
 		return (boosting ? tuning.BoostSpeedMultiplier : 1)
 			* StepCruise(s.Cruise, input, forwardBeforeTurn, combat, tuning, dt);

@@ -725,14 +725,17 @@ namespace SpaceGod::Core
 		// The player's own hands (US-T87): the player-facing handling, never a crew's. With assist off W and S are raw
 		// thrust on the main drive and the retros, and the flip key swings the nose onto the retrograde.
 		input.Piloted = true;
-		// Power to the engines refills the boost faster too (US-T94); speed and thrust already scale with it above.
+		// Power to the engines refills the boost faster too (US-T94); thrust already scales with it above. The boost is a
+		// pool the pips refill (US-T738).
 		input.BoostRecharge = engines;
+		input.BoostPoolS = BoostPool::PoolSeconds(craft->Family());
+		input.BoostRefillS = BoostPool::RefillSecondsAt(engines);
 		if (stick->FlightAssistOff) input.Throttle = Max(-1.0, Min(1.0, stick->Burn));
 		// Drift (US-T165): held, the craft coasts and turns free onto the aim; let go, a boost-out along the new facing.
 		stick->Drift.Update(stick->DriftHeld, dt);
 		stick->Drift.Apply(input);
 		if (stick->Flip && !input.Drift) input.DesiredForward = PilotFlight::FlipAim(state);
-		auto tuning = craft->Tuning(engines);
+		auto tuning = craft->Tuning(BoostPool::TopSpeedFactor(engines));
 		Drift::Fly(craft->Model(), state, u->Combat, hull, tuning, input, DVec3::Zero, dt);
 		stick->Note = stick->FlightAssistOff ? PilotFlight::Brake(state, hull, tuning.TurnRateDegS).Text() : cs::String();
 		if (input.Drift) stick->Note = "DRIFT: coasting on your way, the craft turns free on its thrusters; let go of R (toggle mode: R again) to boost out along the nose";

@@ -211,9 +211,16 @@ namespace SpaceGod::Core
 
 	private:
 		cs::List<int> pips = { EvenPips, EvenPips, EvenPips };
+		int revision = 0;
+
+		void Touched(int before) { if (Code() != before) revision++; }
 
 	public:
 		int operator[](PowerSystem s) const { return pips[static_cast<int>(s)]; }
+
+		/// <summary>Counts every change of the split (US-T738), not saved: a HUD that remembers the last one it saw flashes
+		/// the bars and clicks when it moves.</summary>
+		int Revision() const { return revision; }
 
 		/// <summary>How hard <paramref name="s"/> runs: 1 at an even share, 0.5 with none, 1.5 at the most.</summary>
 		double Factor(PowerSystem s) const { return 1 + (pips[static_cast<int>(s)] - EvenPips) * PerPip; }
@@ -250,6 +257,32 @@ namespace SpaceGod::Core
 
 		cs::String ToString() const;
 		SG_SERIALIZABLE(PowerDistribution); // ObjectGraph registration (Persistence/Registrations)
+	};
+
+	/// <summary>
+	/// The boost as an energy pool under the player's hands (US-T738, Squadrons style; docs/FlightFeel.md): a small craft's
+	/// full pool lasts <see cref="ChargeSeconds"/> (a runner's <see cref="RunnerChargeSeconds"/>) and refills from empty in
+	/// <see cref="RefillSeconds"/> at an even share, faster or slower with the engines' pips. The engines' pips also move
+	/// top speed, narrowed by <see cref="TopSpeedSway"/> so a craft starved of engine power is not left crawling; thrust and
+	/// refill keep the full swing. Crews fly on the design's boost as before.
+	/// </summary>
+	// [SettingsSource]
+	class SPACEGODCORE_API BoostPool
+	{
+	public:
+		static const cs::Ref<RangeSetting>& ChargeSeconds();
+		static const cs::Ref<RangeSetting>& RunnerChargeSeconds();
+		static const cs::Ref<RangeSetting>& RefillSeconds();
+		static const cs::Ref<RangeSetting>& TopSpeedSway();
+
+		/// <summary>How long a full pool boosts a craft of <paramref name="family"/>, s.</summary>
+		static double PoolSeconds(FlightFamily family);
+
+		/// <summary>How long the pool takes to refill from empty at <paramref name="engines"/> (the engines' power factor), s.</summary>
+		static double RefillSecondsAt(double engines);
+
+		/// <summary>Top speed times the design's at <paramref name="engines"/> (x0.8 .. x1.2 at the default sway).</summary>
+		static double TopSpeedFactor(double engines);
 	};
 
 	// ---------------------------------------------------------------- countermeasures

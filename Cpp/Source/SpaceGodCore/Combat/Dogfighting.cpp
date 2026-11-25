@@ -358,28 +358,35 @@ namespace SpaceGod::Core
 		if (from < 0) return false;
 		pips[from]--;
 		pips[i]++;
+		revision++;
 		return true;
 	}
 
 	void PowerDistribution::Balance()
 	{
+		int before = Code();
 		for (int k = 0; k < pips.Count(); k++) pips[k] = EvenPips;
+		Touched(before);
 	}
 
 	bool PowerDistribution::Set(int weapons, int shields, int engines)
 	{
 		if (weapons + shields + engines != TotalPips || Max(weapons, Max(shields, engines)) > MaxPips || Min(weapons, Min(shields, engines)) < 0)
 			return false;
+		int before = Code();
 		pips[0] = weapons;
 		pips[1] = shields;
 		pips[2] = engines;
+		Touched(before);
 		return true;
 	}
 
 	void PowerDistribution::AllTo(PowerSystem s)
 	{
+		int before = Code();
 		for (int k = 0; k < pips.Count(); k++) pips[k] = 1;
 		pips[static_cast<int>(s)] = MaxPips;
+		Touched(before);
 	}
 
 	bool PowerDistribution::SetCode(int code)
@@ -404,6 +411,51 @@ namespace SpaceGod::Core
 	double PowerDistribution::FactorOf(const cs::Ref<BattleUnit>& u, PowerSystem s) { return u->Power ? u->Power->Factor(s) : 1; }
 
 	cs::String PowerDistribution::ToString() const { return cs::Cat("W", pips[0], " S", pips[1], " E", pips[2]); }
+
+	const cs::Ref<RangeSetting>& BoostPool::ChargeSeconds()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("dogfight.boost-charge", SettingGroups::Dogfighting,
+			"Boost charge", 5, 2, 30, 0.5,
+			"How long a full boost pool lasts a small craft under your hands, at an even share of power.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "boost afterburner energy pool dogfight");
+		return setting;
+	}
+
+	const cs::Ref<RangeSetting>& BoostPool::RunnerChargeSeconds()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("dogfight.boost-charge-runner", SettingGroups::Dogfighting,
+			"Boost charge (runner)", 10, 2, 60, 0.5,
+			"How long a full boost pool lasts a blockade runner (the Courier) under your hands, at an even share of power.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "boost afterburner energy pool runner courier");
+		return setting;
+	}
+
+	const cs::Ref<RangeSetting>& BoostPool::RefillSeconds()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("dogfight.boost-refill", SettingGroups::Dogfighting,
+			"Boost refill", 6, 1, 60, 0.5,
+			"How long an empty boost pool takes to refill at an even share of power; power to the engines refills it faster, power taken off them slower.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "boost afterburner energy pool recharge pips engines");
+		return setting;
+	}
+
+	const cs::Ref<RangeSetting>& BoostPool::TopSpeedSway()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("dogfight.engine-pips-speed", SettingGroups::Dogfighting,
+			"Engine power on top speed", 0.4, 0, 1, 0.05,
+			"How much of the engines' power swing reaches top speed under your hands: at 40% the most power is +20% speed and none is -20%; thrust and boost refill always take the full swing.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v * 100, "0"), "%"); }), "power pips engines speed distribution");
+		return setting;
+	}
+
+	double BoostPool::PoolSeconds(FlightFamily family)
+	{
+		return family == FlightFamily::Runner ? RunnerChargeSeconds()->Value : ChargeSeconds()->Value;
+	}
+
+	double BoostPool::RefillSecondsAt(double engines) { return RefillSeconds()->Value / Max(0.1, engines); }
+
+	double BoostPool::TopSpeedFactor(double engines) { return 1 + (engines - 1) * TopSpeedSway()->Value; }
 
 	// ---------------------------------------------------------------- countermeasures
 

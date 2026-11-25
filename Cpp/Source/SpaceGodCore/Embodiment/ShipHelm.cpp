@@ -194,7 +194,7 @@ namespace SpaceGod::Core
 		double engines = reactor != nullptr ? reactor->Factor(PowerSystem::Engines) : 1;
 		if (engines != 1)
 		{
-			tuning.MaxSpeed *= engines;
+			tuning.MaxSpeed *= BoostPool::TopSpeedFactor(engines); // US-T738: narrowed, thrust keeps the full swing
 			hull = HullDynamics(hull.MassKt, hull.MainAccel * engines, hull.RetroAccel * engines, hull.LateralAccel * engines,
 				hull.VerticalAccel * engines, hull.PitchYawAngularAccel, hull.RollAngularAccel);
 			input.BoostRecharge = engines;

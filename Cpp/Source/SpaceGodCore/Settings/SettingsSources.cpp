@@ -91,6 +91,7 @@ namespace SpaceGod::Core
 		CombatTuning::WeaponDamage(); CombatTuning::WeaponRange(); CombatTuning::RateOfFire(); CombatTuning::ProjectileSpeed();
 		CombatTuning::ShieldStrength(); CombatTuning::ShieldRegen(); CombatTuning::HullStrength(); found++; // US-T539 (not a C# source)
 		Corvettes::PerNavy(); found++;
+		BoostPool::ChargeSeconds(); BoostPool::RunnerChargeSeconds(); BoostPool::RefillSeconds(); BoostPool::TopSpeedSway(); found++; // US-T738 (not a C# source)
 		Countermeasures::Effectiveness(); found++;                         // Combat/Dogfighting.cs
 		WeakPoints::Damage(); WeakPoints::AiGoesForThem(); found++;          // Combat/Dogfighting.cs
 		StrikeTorpedoes::BareHullDamage(); found++;                         // Combat/Dogfighting.cs

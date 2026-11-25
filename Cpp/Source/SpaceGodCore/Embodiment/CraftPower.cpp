@@ -5,6 +5,7 @@
 #include "Combat/Battle.h"
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
+#include "Combat/Fighters.h"
 #include "Embodiment/FighterSeat.h"
 #include "Embodiment/MountedTurret.h"
 #include "Embodiment/ShipHelm.h"
@@ -30,6 +31,16 @@ namespace SpaceGod::Core
 			// A gun draws on the hull (or station) it is mounted on.
 			if (auto t = cs::As<MountedTurret>(seat)) return SlotOfUnit(t->Unit);
 			if (auto st = cs::As<StationSeat>(seat)) return st->Combat != nullptr ? &st->Combat->Reactor : nullptr;
+			return nullptr;
+		}
+
+		/// The hull whose boost <paramref name="seat"/> draws on, or null.
+		cs::Ref<ShipCombat> CombatOf(const cs::Ref<IEmbodiable>& seat)
+		{
+			if (auto f = cs::As<FighterSeat>(seat)) return f->Unit != nullptr ? f->Unit->Combat : nullptr;
+			if (auto h = cs::As<ShipHelm>(seat)) return h->Ship != nullptr ? h->Ship->Combat : nullptr;
+			if (auto t = cs::As<MountedTurret>(seat)) return t->Unit != nullptr ? t->Unit->Combat : nullptr;
+			if (auto st = cs::As<StationSeat>(seat)) return st->Combat;
 			return nullptr;
 		}
 	}
@@ -70,5 +81,34 @@ namespace SpaceGod::Core
 		if (code < 0) return;
 		auto p = Of(seat, true);
 		if (p != nullptr) p->SetCode(code);
+	}
+
+	PowerReadout CraftPower::Read(const cs::Ref<IEmbodiable>& seat)
+	{
+		PowerReadout r;
+		auto slot = SlotOf(seat);
+		if (slot == nullptr) return r;
+		r.Shares = true;
+		PowerDistribution even;
+		const PowerDistribution& p = *slot != nullptr ? **slot : even;
+		r.Weapons = p[PowerSystem::Weapons];
+		r.Shields = p[PowerSystem::Shields];
+		r.Engines = p[PowerSystem::Engines];
+		r.Revision = p.Revision();
+		r.WeaponsFactor = p.Factor(PowerSystem::Weapons);
+		r.ShieldsFactor = p.Factor(PowerSystem::Shields);
+		r.EnginesFactor = p.Factor(PowerSystem::Engines);
+		r.TopSpeedFactor = BoostPool::TopSpeedFactor(r.EnginesFactor);
+		r.ShieldCapacity = p.ShieldCapacity();
+		r.Preset = p.PresetName();
+		auto c = CombatOf(seat);
+		if (c != nullptr) r.Boost = c->BoostFraction;
+		if (auto f = cs::As<FighterSeat>(seat); f != nullptr && f->Unit != nullptr)
+		{
+			auto craft = f->Unit->Fighter != nullptr ? FighterCraft::Of(f->Unit->Fighter->Role) : FighterCraft::Interceptor();
+			r.BoostPoolS = BoostPool::PoolSeconds(craft->Family());
+			r.BoostRefillS = BoostPool::RefillSecondsAt(r.EnginesFactor);
+		}
+		return r;
 	}
 }

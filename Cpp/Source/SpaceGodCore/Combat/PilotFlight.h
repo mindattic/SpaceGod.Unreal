@@ -70,6 +70,11 @@ namespace SpaceGod::Core
 		/// the player's hands (<see cref="CraftPower"/>). Set only with <see cref="Piloted"/>; 1 for every crew.</summary>
 		double BoostRecharge = 1;
 
+		/// <summary>The boost as an energy pool (US-T738, <see cref="BoostPool"/>): how long a full charge lasts and how long an
+		/// empty one takes to refill (the engines' pips already in it), s. Set only with <see cref="Piloted"/>; 0 for every
+		/// crew, which boosts on the design's <see cref="PilotTuning.BoostDurationS"/> and refills at half that pace.</summary>
+		double BoostPoolS = 0, BoostRefillS = 0;
+
 		/// <summary>Drift (US-T165, Chorus style; <see cref="Drift"/>): the dogfight model is suspended, the hull coasts on
 		/// the way it has and its attitude thrusters swing it freely onto <see cref="DesiredForward"/>. Only
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI
