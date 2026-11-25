@@ -205,15 +205,15 @@ namespace SpaceGod::Rendering
 	void UnrealRenderBackend::SetupCamera(Camera* camera, CameraRole role)
 	{
 		NeutralRenderBackend::SetupCamera(camera, role);
-		// US-T45/T55, the C# track's UnrealRenderBackend.SetCvars: the original's 4x MSAA (the forward renderer's), not the
-		// engine's default TSR, which smeared the one-pixel stars into soft blobs; the rest of the engine-wide look the C#
-		// track sets is the post-process volume's below.
+		// US-T45/T55 set the original's 4x MSAA here; the deferred renderer (US-T790) has none, so the game starts on TSR,
+		// the anti-aliasing row's default (US-T851), until GraphicsSettings applies the row. The rest of the engine-wide
+		// look the C# track sets is the post-process volume's below.
 		static bool cvarsSet = false;
 		if (!cvarsSet)
 		{
 			cvarsSet = true;
-			SetCVar(TEXT("r.MSAACount"), 4);
-			SetCVar(TEXT("r.AntiAliasingMethod"), 3);
+			SetCVar(TEXT("r.MSAACount"), 1);
+			SetCVar(TEXT("r.AntiAliasingMethod"), 4);
 		}
 		if (role != CameraRole::Main) return;
 		mainSetUp = true;
@@ -222,19 +222,20 @@ namespace SpaceGod::Rendering
 
 	void UnrealRenderBackend::SetMsaa(Camera* camera, bool on)
 	{
-		SetAntiAliasing(camera, on ? 3 : 0);
+		SetAntiAliasing(camera, on ? 4 : 0);
 	}
 
 	void UnrealRenderBackend::SetAntiAliasing(Camera* camera, int method)
 	{
-		NeutralRenderBackend::SetMsaa(camera, method == 3);
-		// US-T55: as the original's URP asset (m_MSAA: 4) with the camera's allowMSAA: 4x MSAA on, none off (MSAA is the
-		// forward renderer's: Config/DefaultEngine.ini r.ForwardShading). Unity's hardware lines are 1.4-pixel quads under
-		// MSAA, one pixel without (ShaderBinding::SetLineWidthPx); its points stay 1x1. US-T251: or TSR, TAA or FXAA.
-		bool msaa = method == 3;
-		SetCVar(TEXT("r.MSAACount"), msaa ? 4 : 1);
+		// US-T851: the deferred renderer (US-T790) has no MSAA, so a method of 3 is taken as TSR. Unity's hardware lines
+		// were 1.4-pixel quads under the original's MSAA and one pixel without (ShaderBinding::SetLineWidthPx); any
+		// anti-aliasing keeps the 1.4-pixel lines the original drew by default, none draws one pixel. Points stay 1x1.
+		if (method == 3) method = 4;
+		bool smoothed = method != 0;
+		NeutralRenderBackend::SetMsaa(camera, smoothed);
+		SetCVar(TEXT("r.MSAACount"), 1);
 		SetCVar(TEXT("r.AntiAliasingMethod"), method);
-		UnityCompat::ShaderBinding::SetLineWidthPx(msaa ? 1.4f : 1.0f);
+		UnityCompat::ShaderBinding::SetLineWidthPx(smoothed ? 1.4f : 1.0f);
 	}
 
 	void UnrealRenderBackend::SetPostProcessing(Camera* camera, const PostProcessLook& value)

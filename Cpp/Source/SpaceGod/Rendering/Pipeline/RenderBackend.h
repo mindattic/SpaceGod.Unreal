@@ -224,10 +224,11 @@ namespace SpaceGod::Rendering
 		void SetupCamera(Camera* camera, CameraRole role) override;
 		void SetPostProcessing(Camera* camera, const PostProcessLook& look) override;
 		void SetSystemGrade(const SystemGrade& value) override;
-		/// The C# track's UnrealRenderBackend.SetMsaa (US-T55): 4x MSAA on the forward renderer, or none, with Unity's
-		/// MSAA line width.
+		/// The C# track's UnrealRenderBackend.SetMsaa (US-T55): anti-aliasing on (TSR under the deferred renderer, US-T851)
+		/// or off, with Unity's line width for each.
 		void SetMsaa(Camera* camera, bool on) override;
-		/// US-T251: any of Unreal's methods (Settings > Graphics > Anti-aliasing); MSAA keeps Unity's 1.4-pixel lines.
+		/// US-T251: any of Unreal's deferred methods (Settings > Graphics > Anti-aliasing); MSAA (3) is taken as TSR, and
+		/// any method keeps Unity's 1.4-pixel MSAA lines (US-T851).
 		void SetAntiAliasing(Camera* camera, int method) override;
 
 		/// <summary>Puts <paramref name="value"/> into effect on the game's own camera (the settings menu's choice).</summary>

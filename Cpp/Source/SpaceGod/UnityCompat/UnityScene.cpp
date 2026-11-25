@@ -1113,6 +1113,7 @@ namespace SpaceGod::UnityCompat
 		for (int i = 0; i < c->GetNumMaterials(); i++)
 			if (c->GetMaterial(i) != bind) c->SetMaterial(i, bind);
 		c->TranslucencySortPriority = ShaderBinding::SortPriority(material->shader.get());
+		if (c->bEmissiveLightSource != EmissiveLightSource) c->SetEmissiveLightSource(EmissiveLightSource);
 
 		// Each copy's Unity world matrix (the parent's times its own TRS), to Unreal as a renderer's transform is.
 		// An imported mesh is drawn in its import's frame: corrected to the Unity mesh first, as a renderer's is.

@@ -2,6 +2,7 @@
 #include "Rendering/HullLighting.h"
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
+#include "Rendering/SpaceLighting.h"
 #include "Settings/GameSetting.h"
 #include "UnityCompat/UnityScene.h"
 #include "UnitySpaceApp.h"
@@ -658,6 +659,7 @@ namespace SpaceGod::Rendering
 				b.Host->layer = layer & 31;
 				b.Running = cs::New<UnityCompat::InstancedBatch>(b.Host->transform, NavQuad(), ScaleMaterial(false));
 				b.Windows = cs::New<UnityCompat::InstancedBatch>(b.Host->transform, NavQuad(), ScaleMaterial(true));
+				b.Windows->EmissiveLightSource = true; // US-T851: lit windows light nearby craft under Lumen
 			}
 			return b;
 		}
@@ -1023,7 +1025,7 @@ namespace SpaceGod::Rendering
 
 	cs::String HullLighting::Describe()
 	{
-		if (!Enabled()) return "legacy self-lit hulls (no Unreal lights)";
+		if (!Enabled()) return cs::Cat("legacy self-lit hulls (no Unreal lights); ", SpaceLighting::Describe());
 		Rig* rig = Ensure();
 		if (!rig) return "no scene";
 		auto f = [](float v) { return cs::Fmt(static_cast<double>(v), "0.###"); };
@@ -1034,6 +1036,6 @@ namespace SpaceGod::Rendering
 		return cs::Cat("key ", f(key ? key->Intensity : 0), " lux (eclipse ", f(Eclipse), "), fill ", f(fill ? fill->Intensity : 0), ", planetshine ",
 			f(shine ? shine->Intensity : 0), ", sky ", f(sky ? sky->Intensity : 0), Overridden ? " (override)" : "", "; shadows ",
 			key && key->CastShadows ? cs::Cat(ShadowCasting, " casters to ", f(ShadowReach), " cm") : cs::String("off"), "; nav lights ", NavShown, ", scale lights ", ScaleShown,
-			", headlights ", LampsLit, ", Ember lamps ", EmbersLit);
+			", headlights ", LampsLit, ", Ember lamps ", EmbersLit, "; ", SpaceLighting::Describe());
 	}
 }

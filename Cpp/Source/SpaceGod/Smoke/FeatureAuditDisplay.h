@@ -1,7 +1,7 @@
 #pragma once
 
-// FeatureAudit's display probes (US-T55, US-T56): render.msaa as the original's 4x MSAA on the forward renderer (and
-// Direct3D's MSAA line width), the Display page's modes at their real refresh rates, and the exclusive-fullscreen rate
+// FeatureAudit's display probes (US-T55, US-T56): render.msaa as the anti-aliasing row on the deferred renderer (TSR by
+// default since US-T851, with Direct3D's MSAA line width), the Display page's modes at their real refresh rates, and the exclusive-fullscreen rate
 // asked for as the original's DisplayOptions.Apply does. The C# track's Runtime/Audit/DisplayAudit.cs runs the same
 // probes with the same ids and detail text.
 

@@ -112,6 +112,10 @@ namespace SpaceGod::UnityCompat
 		/// The copies added since the last Clear.
 		int Count() const { return count; }
 
+		/// US-T851: whether Lumen treats the copies' emissive as a light source, so they light what is near them (Unreal's
+		/// bEmissiveLightSource). Taken at the next Flush.
+		bool EmissiveLightSource = false;
+
 	private:
 		struct Item
 		{

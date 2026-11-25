@@ -43,15 +43,18 @@ namespace SpaceGod
 		/// touching a knob.
 		int quiet = 0;
 
-		// The anti-aliasing row's options and the r.AntiAliasingMethod each stands for (MSAA first: the original's 4x MSAA
-		// on the forward renderer stays the default, US-T55).
+		// The anti-aliasing row's options and the r.AntiAliasingMethod each stands for (TSR first: the game renders deferred
+		// since US-T790, where US-T55's 4x MSAA does not exist).
 		const cs::List<cs::String>& AaOptions()
 		{
-			static const cs::List<cs::String> value{ "MSAA 4x", "TSR", "TAA", "FXAA", "Off" };
+			static const cs::List<cs::String> value{ "TSR", "TAA", "FXAA", "Off" };
 			return value;
 		}
-		constexpr int AaMethods[] = { 3, 4, 2, 1, 0 };
-		constexpr int AaOff = 4;
+		constexpr int AaMethods[] = { 4, 2, 1, 0 };
+		constexpr int AaTsr = 0;
+		constexpr int AaOff = 3;
+		/// The option a profile saved before US-T851 may still hold; it loads as TSR.
+		const char* const AaRetiredMsaa = "MSAA 4x";
 		constexpr int UpscalerTsr = 1;
 
 		// What each preset puts the game's own budgets at (Epic: their defaults, as the game always drew).
@@ -317,7 +320,7 @@ namespace SpaceGod
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("graphics.antiAliasing", SettingGroups::Graphics,
 			"Anti-aliasing", AaOptions(), 0,
-			"How the edges of hulls, rings and orbit lines are smoothed. MSAA 4x keeps the one-pixel stars sharp; TSR and TAA smooth more but soften fine detail; FXAA is the cheapest.",
+			"How the edges of hulls, rings and orbit lines are smoothed. TSR is the sharpest of the temporal methods; TAA is cheaper but softer; FXAA is the cheapest.",
 			"antialiasing jaggies edges msaa multisample tsr taa fxaa temporal quality")->Applying([](int i)
 			{
 				aaIndex = i;
@@ -465,8 +468,14 @@ namespace SpaceGod
 		if (store == nullptr) return;
 		try
 		{
-			// render.msaa (US-T55) became the anti-aliasing row: a profile that had it off keeps it off.
-			if (!store->ReadSetting(AntiAliasing()->Key).has_value())
+			// render.msaa (US-T55) became the anti-aliasing row: a profile that had it off keeps it off. A saved "MSAA 4x"
+			// (gone with the forward renderer, US-T851) becomes TSR.
+			auto savedAa = store->ReadSetting(AntiAliasing()->Key);
+			if (savedAa.has_value())
+			{
+				if (cs::Strings::EqualsOrdinalIgnoreCase(cs::Strings::Trim(*savedAa), AaRetiredMsaa)) AntiAliasing()->Set(AaTsr);
+			}
+			else
 			{
 				auto msaa = store->ReadSetting("render.msaa");
 				if (msaa.has_value() && cs::Strings::EqualsOrdinalIgnoreCase(cs::Strings::Trim(*msaa), "false")) AntiAliasing()->Set(AaOff);
