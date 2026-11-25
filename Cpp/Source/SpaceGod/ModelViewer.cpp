@@ -161,11 +161,27 @@ namespace SpaceGod
 		}
 	}
 
+	bool ModelViewer::ShowBuilt(const cs::Ref<GameObject>& model, const cs::String& name)
+	{
+		const cs::Ref<ModelViewer> viewer = Instance();
+		if (!viewer || !model) return false;
+		viewer->OpenView();
+		viewer->selectedIndex = -1;
+		viewer->Show(model);
+		viewer->builtName = name;
+		return true;
+	}
+
 	void ModelViewer::Open(int index)
 	{
 		if (modelNames.Count() == 0) return;
 		index = Mathf::Clamp(index, 0, modelNames.Count() - 1);
+		OpenView();
+		SelectModel(index);
+	}
 
+	void ModelViewer::OpenView()
+	{
 		if (viewCamera == nullptr)
 		{
 			auto camGo = NewGameObject("ModelViewerCamera");
@@ -196,8 +212,6 @@ namespace SpaceGod
 		}
 		viewCameraObject->SetActive(true);
 		viewCamera->enabled = true;
-
-		SelectModel(index);
 		open = isOpen = true;
 	}
 
@@ -215,10 +229,19 @@ namespace SpaceGod
 	void ModelViewer::SelectModel(int index)
 	{
 		selectedIndex = index;
+		builtName.clear();
 		if (instance != nullptr) Destroy(instance);
+		instance = nullptr;
 
 		auto prefab = Resources::LoadModel(cs::Cat("Ships/", modelNames[index]));
-		instance = Instantiate(prefab, gameObject->transform);
+		Show(Instantiate(prefab, gameObject->transform));
+	}
+
+	void ModelViewer::Show(const cs::Ref<GameObject>& model)
+	{
+		if (instance != nullptr && instance != model) Destroy(instance);
+		instance = model;
+		instance->transform->SetParent(gameObject->transform, false);
 		instance->transform->localPosition = Vector3::zero();
 		SetLayerRecursively(instance, ModelViewerLayer());
 
@@ -259,7 +282,7 @@ namespace SpaceGod
 
 		constexpr float panelWidth = 220.0f;
 		GUI::Box(Rect(12, 12, panelWidth, static_cast<float>(Screen::height - 24)), cs::String(), panelStyle);
-		GUI::Label(Rect(24, 20, panelWidth - 24, 24), "MODEL VIEWER", titleStyle);
+		GUI::Label(Rect(24, 20, panelWidth - 24, 24), builtName.empty() ? cs::String("MODEL VIEWER") : builtName, titleStyle);
 		GUI::Label(Rect(24, 46, panelWidth - 24, 40),
 			"Right-drag: orbit\nScroll: zoom\nF9 / Esc: close", buttonStyle);
 

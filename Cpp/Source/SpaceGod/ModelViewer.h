@@ -80,6 +80,10 @@ namespace SpaceGod
 		/// Each renderer of the model shown: its GameObject's name and layer, active, enabled, mesh, material.
 		static cs::String CheckDescribe();
 
+		/// US-T765: opens the viewer (as F9 does) on a model built elsewhere (sg.Assemble's design) under <paramref name="name"/>;
+		/// the viewer owns it from then on and destroys it on closing or on picking another. False without a viewer.
+		static bool ShowBuilt(const cs::Ref<GameObject>& model, const cs::String& name);
+
 		// ---- Unity messages (private in C#; public here for the host).
 		void Awake();
 		void Start();
@@ -126,11 +130,17 @@ namespace SpaceGod
 		float orbitYaw = 30.0f, orbitPitch = 15.0f, zoom = 3.0f;
 		Bounds instanceBounds;
 		Vector2 scroll;
+		/// The built model shown (ShowBuilt), or empty.
+		cs::String builtName;
 
 		cs::Ref<GUIStyle> panelStyle, titleStyle, buttonStyle, buttonActiveStyle;
 		bool stylesReady = false;
 
 		void Open(int index);
+		/// The view camera on, every other off: Open without picking a model.
+		void OpenView();
+		/// Puts <paramref name="model"/> in front of the camera in place of the one shown.
+		void Show(const cs::Ref<GameObject>& model);
 		void Close();
 		void SelectModel(int index);
 		static void SetLayerRecursively(const cs::Ref<GameObject>& go, int layer);

@@ -228,6 +228,19 @@ own pivot, which is where the pack's own creator attaches it (an antenna's foot,
   the pivot) and `muzzle`, along their longest extent; turret mounts `base` and `top`; antennas `base` and `tip`.
   Two parts mate by turning one socket's normal onto the reverse of the other's and bringing their positions together.
 
+**The seeded hull assembler (US-T765).** `SpaceGodCore/Assembly/ModularAssembler` (no engine types) reads the catalogue
+(`KitCatalogue::Load`) and turns a ship class, a seed and a `FactionStyle` (packs, kit sets, imported meshes only, and
+0..1 weights for length, wings, armament and variety; US-T770's faction profiles fill it) into a `ModularDesign`: one
+kit set picked for the class's scale, a spine of core sections fore to aft (one or two on small craft, two to six on
+capitals by length, one or two hangar sections in it on a carrier), a bow on the first section's fore socket, a stern
+and then one to four engines on the aft-most, wings in mirrored pairs on the sections' starboard faces, a fin on a
+small craft, a gun pair under its nose, turrets along a capital's top and a bridge tower over it. Each part mates by its
+sockets, a section scaled so its socket matches the one it mates to, an attachment as a share of its parent; the port
+copies are reflections of the starboard parts. The whole is then scaled to the class's true length
+(`ScaleModel::TrueLengthM`, docs/TrueScale.md) and centred on its box. The same class, seed and style always give the
+same hull (its own SplitMix64, nothing from the library). `sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>]
+[imported]` shows the design in the model viewer: imported parts as their own meshes, the rest as boxes of their bounds.
+
 ## Lighting the prebuilt hulls (US-T172)
 
 `M_USCShip`, `M_SSCStation` and `M_StarSparrowShip` are self-lit (Unlit materials lighting themselves from the star in
