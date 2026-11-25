@@ -503,6 +503,7 @@ namespace SpaceGod::UI
 			{
 				if (fx.Kind != FxKind::ShieldHit && !(fx.Kind == FxKind::Impact && fx.Size > 0)) continue;
 				bool shield = fx.Kind == FxKind::ShieldHit;
+				if (shield) shieldHitAt = now; // US-T866
 				(shield ? hitTally.TakenShield : hitTally.TakenHull)++;
 				if (hitTally.TakenShield + hitTally.TakenHull == 1) // US-T364
 					AddMoment(fx.By != nullptr && fx.By != me ? cs::Cat("First fire taken, from the ", fx.By->Name()) : cs::String("First fire taken"), HullArcColor);
@@ -680,7 +681,7 @@ namespace SpaceGod::UI
 			hitStruck.Clear();
 			hitDisabled.Clear();
 			hitClaimed.Clear(); // US-T364
-			hitMarkAt = killMarkAt = shieldDownAt = hullCriticalAt = -100.0f;
+			hitMarkAt = killMarkAt = shieldDownAt = shieldHitAt = hullCriticalAt = -100.0f;
 			hadShield = ShieldShare(me) > 0.1;
 			hullWasCritical = HullShare(me) < HullCritical;
 		}
@@ -736,6 +737,10 @@ namespace SpaceGod::UI
 		if (hullAge < 1.2f) DrawEdgePulse(HullArcColor, 0.45f * (1.0f - hullAge / 1.2f));
 		// Gently, for as long as the hull stays critical.
 		else if (hullWasCritical && me->Present()) DrawEdgePulse(HullArcColor, 0.07f * (0.5f + 0.5f * Mathf::Sin(now * 3.0f)));
+		// US-T866: each hit the shield takes, a short flickering shimmer.
+		float shimmerAge = now - shieldHitAt;
+		if (shimmerAge < 0.35f)
+			DrawEdgePulse(ShieldArcColor, 0.16f * (1.0f - shimmerAge / 0.35f) * (0.7f + 0.3f * Mathf::Sin(now * 40.0f)));
 
 		auto at = HitReticle();
 
