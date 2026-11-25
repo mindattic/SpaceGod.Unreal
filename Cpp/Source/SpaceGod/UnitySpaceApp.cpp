@@ -46,6 +46,7 @@
 #include "Views/EmbodiedShine.h" // US-T136
 #include "Views/SatelliteSwarm.h"
 #include "Views/ShipView.h"
+#include "Views/ShipViewPool.h" // US-T720
 #include "Views/SkyView.h"
 #include "Views/Starfield.h"
 #include "Views/StructureViews.h"
@@ -451,6 +452,7 @@ namespace SpaceGod
 			Rendering::Materials::DestroyOwned(v->Root->transform);
 			GameObject::Destroy(v->Root);
 		}
+		Views::ShipViewPool::Ships().Reset(); // US-T720
 		const auto& ships = Fleet()->Ships();
 		shipViews = cs::NewArray<cs::Ref<Views::ShipView>>(ships.Count());
 		shipScene = cs::NewArray<DVec3>(ships.Count());

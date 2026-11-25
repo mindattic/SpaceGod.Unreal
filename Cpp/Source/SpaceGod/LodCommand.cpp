@@ -3,6 +3,7 @@
 
 #include "RenderBudget.h"
 #include "SpaceGodLog.h"
+#include "Views/ShipViewPool.h"
 
 #include "HAL/IConsoleManager.h"
 
@@ -10,10 +11,11 @@ namespace
 {
 	FAutoConsoleCommand GLodCommand(
 		TEXT("sg.Lod"),
-		TEXT("US-T719: the render budget's latest frame: ships per tier (Full, Simplified, Icon, Culled) against each cap, those a cap demoted, and the game-thread cost of ranking them."),
+		TEXT("US-T719: the render budget's latest frame: ships per tier (Full, Simplified, Icon, Culled) against each cap, those a cap demoted, and the game-thread cost of ranking them; US-T720: the ship model pool (in use, parked, and spawns over the last second, 0 in steady state)."),
 		FConsoleCommandDelegate::CreateLambda([]
 		{
 			const auto& budget = SpaceGod::Core::RenderBudget::Ships();
 			UE_LOG(LogSpaceGod, Display, TEXT("sg.Lod: ships: %s"), UTF8_TO_TCHAR(budget.Describe().c_str()));
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Lod: ship pool: %s"), UTF8_TO_TCHAR(SpaceGod::Views::ShipViewPool::Ships().Describe().c_str()));
 		}));
 }

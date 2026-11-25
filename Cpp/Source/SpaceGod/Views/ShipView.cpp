@@ -127,6 +127,32 @@ namespace SpaceGod::Views
 		}
 	}
 
+	bool ShipView::Rebind(const cs::Ref<Core::Ship>& ship)
+	{
+		if (ship == Ship) return true;
+		if (!ship || !ship->Combat || !Ship || !Ship->Combat) return false;
+		if (bowLostAt >= 0 || sternLostAt >= 0 || wreckSpin != 0 || interiorShown > 0 || interiorWire) return false;
+		const auto& subs = ship->Combat->Subsystems;
+		if (parts.Count() > 0 && parts.Count() != subs.Count()) return false;
+		for (int i = 0; i < parts.Count(); i++)
+			if (parts[i]->Sub->Def != subs[i]->Def) return false;
+		cs::List<cs::Ref<Subsystem>> shields;
+		for (const auto& s : subs)
+			if (s->Kind() == SubsystemKind::ShieldGenerator) shields.Add(s);
+		if (shields.Count() != shieldGenerators.Count()) return false;
+
+		for (int i = 0; i < parts.Count(); i++) parts[i]->Sub = subs[i];
+		shieldGenerators = shields;
+		Ship = ship;
+		BuiltFor = ship->Combat;
+		Root->name = ship->Name;
+		sectionsSeen = false;
+		hasSpeed = false;
+		lastSpeed = 0;
+		speedRate = 0;
+		return true;
+	}
+
 	void ShipView::EnsureStatics()
 	{
 		if (!Alive(plumeMesh)) plumeMesh = MeshFactory::Plume();

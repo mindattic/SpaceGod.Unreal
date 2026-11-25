@@ -32,6 +32,7 @@
 #include "Streaming/AreaStreaming.h"
 #include "Views/GateView.h"
 #include "Views/ShipView.h"
+#include "Views/ShipViewPool.h" // US-T720
 
 using namespace SpaceGod::Core;
 
@@ -151,7 +152,8 @@ namespace SpaceGod
 		{
 			if (shipViews[i] != nullptr) continue;
 			double px = ShipLod::ApparentPx(shipLength[i] * ShipLod::ExtentFactor(Fleet()->Ships()[i]), (shipScene[i] - camera).Length(), ppu);
-			if (ShipLod::DrawsModel(px)) pending++;
+			const auto& budget = RenderBudget::Ships(); // US-T720: one the budget left undrawn is not waited on
+			if (budget.Has(i) ? RenderLod::DrawsModel(budget.TierOf(i)) : ShipLod::DrawsModel(px)) pending++;
 		}
 		// US-T133: only the maps of bodies big enough on screen to show them (a far body is its impostor, its own colour,
 		// until it is near); before, every map of the system was waited on, holding a gate's cover open for a moon across it.
@@ -166,7 +168,10 @@ namespace SpaceGod
 		if (shipViews[i] != nullptr) return false;
 		cs::Ref<Core::Ship> ship = Fleet()->Ships()[i];
 		if (!Rendering::ShipModels::Ready(ship)) return false;
-		shipViews[i] = cs::New<Views::ShipView>(ship, systemRoot);
+		// US-T720: a ship the render budget left out of the drawn tiers has no model to build; one in them takes a pooled one.
+		const auto& budget = RenderBudget::Ships();
+		if (budget.Has(i) && !RenderLod::DrawsModel(budget.TierOf(i))) return false;
+		shipViews[i] = Views::ShipViewPool::Ships().Take(ship, systemRoot);
 		if (viewFaction.Count() != shipViews.Count()) ResizeArray(viewFaction, shipViews.Count());
 		viewFaction[i] = ship->Faction;
 		shipViews[i]->SetVisible(false);
@@ -177,8 +182,7 @@ namespace SpaceGod
 	{
 		cs::Ref<Views::ShipView> v = shipViews[i];
 		if (v == nullptr) return;
-		Rendering::Materials::DestroyOwned(v->Root->transform);
-		GameObject::Destroy(v->Root);
+		Views::ShipViewPool::Ships().Release(v); // US-T720
 		shipViews[i] = nullptr;
 	}
 

@@ -15,6 +15,7 @@
 #include "Fleet.h"
 #include "OrbitalElements.h"
 #include "RenderBudget.h" // US-T719
+#include "Views/ShipViewPool.h" // US-T720
 #include "RenderLod.h"
 #include "ScaleModel.h"
 #include "ShipLod.h"
@@ -1601,12 +1602,13 @@ namespace SpaceGod
 						lodBudget.Mark(u->Ship->Id, Core::LodRelevance::Attacker);
 			for (int i = 0; i < shipViews.Count(); i++)
 			{
-				if (shipViews[i] == nullptr) continue;
 				auto ship = Fleet()->Ships()[i];
 				if ((ship->Destroyed && !ship->GateDeparted) || !HoldRewindShipShown(i, !ship->Destroyed) || !PerceivesShipModel(i)) continue;
 				if (ship->Controller()->Phase == Core::ShipPhase::Landed) continue;
 				auto rel = Relative(shipScene[i]);
 				double px = Core::ShipLod::ApparentPx(shipLength[i] * Core::ShipLod::ExtentFactor(ship), rel.magnitude(), pixelsPerUnit);
+				// US-T720: one with no model yet is ranked too when its size would draw one, so the budget decides whether it gets one.
+				if (shipViews[i] == nullptr && !Core::ShipLod::DrawsModel(px)) continue;
 				uint8_t relevance = Core::LodRelevance::None;
 				if (piloted != nullptr && ship == piloted) relevance |= Core::LodRelevance::Piloted;
 				if (Target::OfShip(ship) == Selected) relevance |= Core::LodRelevance::Target;
@@ -1643,9 +1645,8 @@ namespace SpaceGod
 			{
 				// Taken as a prize: repaint in the captor's livery (freeing the old view's own meshes and materials).
 				// Refitted at a yard: rebuild its hardpoints from the new loadout.
-				Rendering::Materials::DestroyOwned(shipViews[i]->Root->transform);
-				UnityCompat::Destroy(shipViews[i]->Root);
-				shipViews[i] = cs::New<Views::ShipView>(ship, systemRoot);
+				Views::ShipViewPool::Ships().Release(shipViews[i]); // US-T720
+				shipViews[i] = Views::ShipViewPool::Ships().Take(ship, systemRoot);
 				viewFaction[i] = ship->Faction;
 			}
 			auto rel = Relative(shipScene[i]);
@@ -1664,6 +1665,13 @@ namespace SpaceGod
 			// past the render budget's caps, a tier down (US-T719).
 			auto tier = lodBudget.Has(i) ? lodBudget.TierOf(i) : Core::RenderLod::Tier(Core::RenderLod::Ship(), px);
 			bool visible = Core::RenderLod::DrawsModel(tier);
+			if (!visible && lodBudget.Has(i) && ship != World()->PilotedShip && Target::OfShip(ship) != Selected && !(SpaceCamera->FocusTarget.IsShip() && SpaceCamera->FocusTarget.Ship == ship))
+			{
+				// US-T720: out of the drawn tiers its model goes back to the pool (the piloted, selected or followed hull keeps its own).
+				Views::ShipViewPool::Ships().Release(shipViews[i]);
+				shipViews[i] = nullptr;
+				continue;
+			}
 			shipViews[i]->SetVisible(visible);
 			if (!visible) continue;
 			shipViews[i]->SetDetail(tier == Core::LodTier::Full && !ship->Derelict);

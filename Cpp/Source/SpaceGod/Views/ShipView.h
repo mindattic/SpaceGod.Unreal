@@ -124,6 +124,14 @@ namespace SpaceGod::Views
 		ShipView(const cs::Ref<Core::Ship>& ship, const cs::Ref<Transform>& parent);
 
 		/// <summary>
+		/// US-T720: hands this view, built for a hull of the same model (<see cref="ShipViewPool"/>'s key), to
+		/// <paramref name="ship"/>: its hardpoints and shield patches follow the new hull's subsystems. False, leaving it
+		/// as it was, when the two hulls' subsystems differ or the view shows what only its own ship went through (a lost
+		/// bow or stern, a wreck's or derelict's tumble, the camera inside it).
+		/// </summary>
+		bool Rebind(const cs::Ref<Core::Ship>& ship);
+
+		/// <summary>
 		/// A shield generator's colour at <paramref name="charge"/> (0 to 1 of its cap): dim and translucent when
 		/// nearly drained, bright when full. Its patch's disc and the bubble a hit raises on that patch
 		/// (<see cref="BattleFx"/>, U.SPC-T40) share it, so a bubble reads as the patch that took the hit.
