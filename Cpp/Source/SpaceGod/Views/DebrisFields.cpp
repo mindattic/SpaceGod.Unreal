@@ -42,7 +42,7 @@ namespace SpaceGod::Views
 			if (!fields.ContainsKey(w)) fields[w] = Create(w);
 			auto& pieces = fields.At(w);
 			auto centre = app->WreckScene(w);
-			float length = static_cast<float>(app->Scale()->ShipLength(w->LengthKm));
+			float length = static_cast<float>(app->Scale()->ShipLength(w->Ship != nullptr ? ScaleModel::DrawnLengthKm(w->Ship) : w->LengthKm));
 			float size = length * 0.07f * static_cast<float>(w->Fade(jd));
 			// US-T177: a piece drifting into a station bounces off it (the same path the pilot's collisions use).
 			auto stations = SectionColliders::StationsNear(app->World(), app->World()->WreckHelio(w, jd), w->DebrisRadiusKm(jd) + w->LengthKm, jd);

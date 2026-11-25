@@ -6,12 +6,15 @@
 
 namespace SpaceGod::Core
 {
+	class BattleUnit;
 	class BodyCatalog;
 	class BodyDefinition;
 	class Ephemeris;
 	class Hyperlanes;
 	class Lane;
 	class Ship;
+	class ToggleSetting;
+	enum class ShipClass : int;
 
 	/// <summary>
 	/// Maps true (km) geometry into scene units, blending between two presentations:
@@ -126,6 +129,29 @@ namespace SpaceGod::Core
 		double DisplayRadius(const cs::Ref<BodyDefinition>& body) const;
 
 		double ShipLength(double lengthKm) const;
+
+		/// <summary>
+		/// US-T715: drawn hulls at their real length (docs/TrueScale.md). The catalog's <see cref="CombatSpec.LengthKm"/> is
+		/// simulation data (separation, battle layout, handling, saves) and is never changed; with this on, the view draws a
+		/// hull of a class <see cref="RealLengthM"/> lists at that length instead (a fighter 16 m, not 100 m), so a fighter
+		/// beside a carrier is 1/200 of it. <see cref="ShipLength"/> itself is unchanged: structures, gates and battle km keep
+		/// their scale. Drawing only: nothing in the simulation reads it.
+		/// </summary>
+		static const cs::Ref<ToggleSetting>& TrueScale();
+
+		/// <summary>US-T715: a class's real length (m) where it differs from its catalog length, else 0.</summary>
+		static double RealLengthM(ShipClass cls);
+
+		/// <summary>US-T715: the class's real length (m): <see cref="RealLengthM"/>, or its catalog length where that is real.</summary>
+		static double TrueLengthM(ShipClass cls);
+
+		/// <summary>US-T715: the length (km) a hull is drawn at: its real length under <see cref="TrueScale"/>, else its
+		/// catalog length. Pass it to <see cref="ShipLength"/> and <see cref="GameplayShipLength"/> for a hull's drawing.</summary>
+		static double DrawnLengthKm(const cs::Ref<Ship>& ship);
+
+		/// <summary>US-T715: <see cref="DrawnLengthKm"/> for a battle unit: a ship unit's hull at its drawn length; platforms,
+		/// forts and launched craft (already at their real size) at their own.</summary>
+		static double DrawnLengthKm(const cs::Ref<BattleUnit>& unit);
 
 		/// <summary>Scene distance from the centre of <paramref name="body"/> for a true distance in km.</summary>
 		double LocalDistance(const cs::Ref<BodyDefinition>& body, double distanceKm) const;

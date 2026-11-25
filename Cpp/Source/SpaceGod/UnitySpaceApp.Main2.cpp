@@ -942,7 +942,7 @@ namespace SpaceGod
 	{
 		if (SeatZoomOverrideKm > 0) return SeatZoomOverrideKm;
 		if (auto held = HeldNonHelm()) return held->InhabitedSizeKm();
-		if (IsPiloting() && Piloted.Ship != nullptr) return Piloted.Ship->LengthKm();
+		if (IsPiloting() && Piloted.Ship != nullptr) return Core::ScaleModel::DrawnLengthKm(Piloted.Ship);
 		return 0;
 	}
 
@@ -1049,7 +1049,7 @@ namespace SpaceGod
 			{
 				auto ship = ships[i];
 				if (ship->IsEscort() != (pass == 1)) continue;
-				shipLength[i] = Scale()->ShipLength(ship->LengthKm());
+				shipLength[i] = Scale()->ShipLength(Core::ScaleModel::DrawnLengthKm(ship));
 
 				if (ship == World()->PilotedShip && ship->Phase == Core::ShipPhase::Lane)
 				{
@@ -1331,7 +1331,7 @@ namespace SpaceGod
 		if (target.IsStructure() && Structures->Sizes.TryGetValue(target.Structure, s)) return s * 0.5;
 		double r = 0;
 		if (target.IsRing() && Structures->Sizes.TryGetValue(target.Ring, r)) return r * 0.5;
-		if (target.IsUnit()) return Scale()->ShipLength(target.Unit->LengthKm) * 0.5;
+		if (target.IsUnit()) return Scale()->ShipLength(Core::ScaleModel::DrawnLengthKm(target.Unit)) * 0.5;
 		return 1;
 	}
 
@@ -1763,7 +1763,7 @@ namespace SpaceGod
 		}
 		if (wreckStart[i] < 0) wreckStart[i] = Time::unscaledTime;
 		auto rel = Relative(WreckScene(wreck));
-		float length = static_cast<float>(Scale()->ShipLength(ship->LengthKm()));
+		float length = static_cast<float>(Scale()->ShipLength(Core::ScaleModel::DrawnLengthKm(ship)));
 		// A wreck has no icon: below a pixel it is not drawn at all (U.SPC-T415).
 		if (Core::RenderLod::Tier(Core::RenderLod::Wreck(), Core::RenderLod::ApparentPx(length, rel.magnitude(), PixelsPerUnitAtUnitDistance())) == Core::LodTier::Culled)
 		{

@@ -12,6 +12,7 @@
 #include "Combat/Battle.h"
 #include "Combat/CombatState.h"
 #include "Combat/CombatSpecs.h"
+#include "ScaleModel.h"
 #include "Ships.h"
 
 namespace SpaceGod::Core
@@ -21,8 +22,8 @@ namespace SpaceGod::Core
 	double IEmbodiable::InhabitedSizeKm() const
 	{
 		auto s = Subject();
-		if (s.Unit != nullptr && s.Unit->LengthKm > 0) return s.Unit->LengthKm;
-		if (s.Ship != nullptr) return s.Ship->LengthKm();
+		if (s.Unit != nullptr && s.Unit->LengthKm > 0) return ScaleModel::DrawnLengthKm(s.Unit);
+		if (s.Ship != nullptr) return ScaleModel::DrawnLengthKm(s.Ship);
 		return 0;
 	}
 

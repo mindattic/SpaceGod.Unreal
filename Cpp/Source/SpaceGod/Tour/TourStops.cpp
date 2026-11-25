@@ -22,6 +22,7 @@
 #include "Embodiment/Influence.h" // US-T140: the dev waiver
 #include "Fleet.h"
 #include "ScaleModel.h"
+#include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "SimClock.h"
 #include "Systems/DeepSpace.h"
@@ -514,7 +515,7 @@ namespace SpaceGod::Tour
 					double at = 0;
 					for (auto cls : classes)
 					{
-						double len = std::max(app.Scale()->ShipLength(CombatSpec::Of(cls)->LengthKm), 1e-6);
+						double len = std::max(app.Scale()->ShipLength(ScaleModel::TrueScale()->Value ? ScaleModel::TrueLengthM(cls) / 1000.0 : CombatSpec::Of(cls)->LengthKm), 1e-6);
 						at += len * 0.5;
 						DVec3 offsetKm = app.Scale()->InverseLocalOffset(def, baseScene + alongScene * at);
 						lineup->Ships.Add(app.Fleet()->SpawnAt(cs::Cat("Lineup ", ShipClassSpec::Of(cls)->DisplayName), cls, app.World()->Sol, earth,

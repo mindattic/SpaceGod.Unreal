@@ -314,19 +314,19 @@ namespace SpaceGod::Views
 		switch (fx.Kind)
 		{
 			case FxKind::Impact:
-				if (u != nullptr) world->Impact(at, toScene(fx.A - u->Pos), hull(u->LengthKm), Mathf::Clamp01(static_cast<float>(fx.Size) / 400.0f));
+				if (u != nullptr) world->Impact(at, toScene(fx.A - u->Pos), hull(ScaleModel::DrawnLengthKm(u)), Mathf::Clamp01(static_cast<float>(fx.Size) / 400.0f));
 				break;
 			case FxKind::SubsystemDestroyed:
-				if (u != nullptr) world->Blast(at, hull(u->LengthKm), EffectsTune::SubsystemBlastShare);
+				if (u != nullptr) world->Blast(at, hull(ScaleModel::DrawnLengthKm(u)), EffectsTune::SubsystemBlastShare);
 				break;
 			case FxKind::UnitDestroyed:
 				world->Blast(at, hull(fx.Size), 1.0f);
 				break;
 			case FxKind::Breach:
-				if (u != nullptr) world->BreachJet(at, toScene(fx.A - fx.B), hull(u->LengthKm));
+				if (u != nullptr) world->BreachJet(at, toScene(fx.A - fx.B), hull(ScaleModel::DrawnLengthKm(u)));
 				break;
 			case FxKind::FtlJump:
-				if (u != nullptr) world->FtlJump(at, toScene(fx.B - fx.A), hull(u->LengthKm), false);
+				if (u != nullptr) world->FtlJump(at, toScene(fx.B - fx.A), hull(ScaleModel::DrawnLengthKm(u)), false);
 				break;
 			default:
 				break;
@@ -570,7 +570,7 @@ namespace SpaceGod::Views
 					// US-T161: sized from the struck hull's drawn size (hardware is one linear 7 units/km now, so the
 					// old km floor and damage-scaled disc swamped a small hull): an impact is a fraction of the hull,
 					// growing a little with the damage, and nothing here outgrows the hull.
-					float hull = static_cast<float>(app->Scale()->ShipLength(e.Unit->LengthKm));
+					float hull = static_cast<float>(app->Scale()->ShipLength(ScaleModel::DrawnLengthKm(e.Unit)));
 					if (e.Kind == FxKind::Impact) r = hull * Mathf::Clamp(0.06f + static_cast<float>(e.Size) * 0.00003f, 0.06f, 0.25f) * (0.5f + t);
 					else r = Mathf::Min(r, hull * 0.5f);
 					cap = hull * 0.5f;
@@ -590,7 +590,7 @@ namespace SpaceGod::Views
 		// charge is the ring flickering out; the jump is a white flash where the hull was and a streak along its nose.
 		auto at = e.Unit != nullptr && e.Unit->Present() ? e.Unit->Pos : e.A;
 		auto c = Point(e.Battle, at);
-		float hull = e.Unit != nullptr ? static_cast<float>(app->Scale()->ShipLength(e.Unit->LengthKm)) : PixelSize(c, 20);
+		float hull = e.Unit != nullptr ? static_cast<float>(app->Scale()->ShipLength(ScaleModel::DrawnLengthKm(e.Unit))) : PixelSize(c, 20);
 		switch (e.Kind)
 		{
 			case FxKind::FtlSpool:
@@ -684,7 +684,7 @@ namespace SpaceGod::Views
 		auto color = Color(tint.r, tint.g, tint.b, 1.0f) * (tint.a * fade);
 
 		auto centre = Point(e.Battle, u->Pos);
-		float shellR = static_cast<float>(app->Scale()->ShipLength(u->LengthKm) * BubbleRadius);
+		float shellR = static_cast<float>(app->Scale()->ShipLength(ScaleModel::DrawnLengthKm(u)) * BubbleRadius);
 		if (shellR < PixelSize(centre, 14))
 		{
 			Sprite(centre, Mathf::Max(shellR, PixelSize(centre, 10)), color, Shape::Ring);

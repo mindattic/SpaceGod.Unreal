@@ -167,7 +167,7 @@ namespace SpaceGod::Views
 		const auto& decks = FlightDecks::Of(carrier);
 		if (decks.Count() == 0) return;
 		auto rel = app->Relative(app->BattleScene(b, carrier->Pos));
-		auto tier = RenderLod::Tier(FlightDecks::Lod(), RenderLod::ApparentPx(app->Scale()->ShipLength(carrier->LengthKm), rel.magnitude(), ppu));
+		auto tier = RenderLod::Tier(FlightDecks::Lod(), RenderLod::ApparentPx(app->Scale()->ShipLength(ScaleModel::DrawnLengthKm(carrier)), rel.magnitude(), ppu));
 		bool shown = RenderLod::DrawsModel(tier);
 		double w = cs::Math::Max(MouthMinKm, carrier->LengthKm * MouthHalfWidth), h = cs::Math::Max(MouthMinKm * 0.5, carrier->LengthKm * MouthHalfHeight);
 		for (const auto& d : decks)

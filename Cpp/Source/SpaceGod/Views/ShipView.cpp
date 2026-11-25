@@ -18,6 +18,7 @@
 #include "Combat/Boarding.h" // US-T442: the compartments drawn from inside
 #include "Combat/ShipComponents.h" // US-T269
 #include "Economy/BeltMining.h"
+#include "ScaleModel.h"
 #include "Ships.h"
 
 #include <algorithm>
@@ -1023,7 +1024,7 @@ namespace SpaceGod::Views
 
 		// Decks: one every ~12 m of the hull's height (one for a small craft, at most ten), each a frame round the deck with
 		// its frames across it every tenth of the hull.
-		double lengthM = Ship ? Ship->LengthKm() * 1000.0 : 100.0;
+		double lengthM = Ship ? ScaleModel::DrawnLengthKm(Ship) * 1000.0 : 100.0;
 		int decks = Mathf::Clamp(static_cast<int>(Mathf::Round(static_cast<float>(box.size().y * lengthM / 12.0))), 1, 10);
 		Color deck(0.6f, 0.78f, 0.95f, 0.4f);
 		for (int k = 1; k <= decks; k++)

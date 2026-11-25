@@ -8,6 +8,9 @@
 #include "Fleet.h"
 #include "Hyperlanes.h"
 #include "Ships.h"
+#include "Combat/Battle.h"
+#include "Combat/CombatSpecs.h"
+#include "Settings/GameSetting.h"
 
 namespace SpaceGod::Core
 {
@@ -32,6 +35,50 @@ namespace SpaceGod::Core
 	double ScaleModel::ShipLength(double lengthKm) const
 	{
 		return LogLerp(lengthKm / KmPerUnit, GameplayShipLength(lengthKm, seatZoom), blend);
+	}
+
+	const cs::Ref<ToggleSetting>& ScaleModel::TrueScale()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("scale.trueScale", SettingGroups::Graphics,
+			"True-scale hulls", true,
+			"Hulls are drawn at their real length: a 16 m fighter is 1/200 of a 3.2 km carrier and a person is 1/9 of the fighter. Off, small craft are drawn at their longer catalog lengths. Drawing only: battles play the same either way.",
+			"scale true size length hull fighter carrier proportion");
+		return value;
+	}
+
+	double ScaleModel::RealLengthM(ShipClass cls)
+	{
+		switch (cls)
+		{
+			case ShipClass::GatePicket: return 60;
+			case ShipClass::CaptureTug: return 45;
+			case ShipClass::Gunship: return 40;
+			case ShipClass::Courier: return 40;
+			case ShipClass::AssaultShuttle: return 30;
+			case ShipClass::Bomber: return 22;
+			case ShipClass::Fighter: return 16;
+			case ShipClass::Recon: return 14;
+			case ShipClass::Interceptor: return 12;
+			default: return 0;
+		}
+	}
+
+	double ScaleModel::TrueLengthM(ShipClass cls)
+	{
+		double m = RealLengthM(cls);
+		return m > 0 ? m : CombatSpec::Of(cls)->LengthKm * 1000.0;
+	}
+
+	double ScaleModel::DrawnLengthKm(const cs::Ref<Ship>& ship)
+	{
+		double m = TrueScale()->Value && ship->Spec != nullptr ? RealLengthM(ship->Spec->Class) : 0;
+		return m > 0 ? m / 1000.0 : ship->LengthKm();
+	}
+
+	double ScaleModel::DrawnLengthKm(const cs::Ref<BattleUnit>& unit)
+	{
+		double m = unit->Kind == UnitKind::Ship && unit->Ship != nullptr && unit->Ship->Spec != nullptr && TrueScale()->Value ? RealLengthM(unit->Ship->Spec->Class) : 0;
+		return m > 0 ? m / 1000.0 : unit->LengthKm;
 	}
 
 	double ScaleModel::SeatZoomFor(double inhabitedKm)
