@@ -1146,6 +1146,51 @@ namespace SpaceGod::Core
 				  "past where the last rewind left you, nor past a craft launched or landed, your own hull's fate or a change "
 				  "of seat, which it cannot undo yet.")), // US-T409, US-T410
 
+			cs::New<ManualChapter>("History", "Nine centuries off Earth, from 2100 to the game's start on 1 January 3026", Keys(), // US-T862
+				T("2100-2160: The Long Recovery",
+				  "Earth climbs out of the climate century poorer and hotter but not broken. Space is cheap and dull: heavy "
+				  "launchers fly daily, orbit is a business, and a few thousand people live off Earth. Shackleton Station on the "
+				  "Moon is crewed for good in 2118, the Orbital Accords of 2146 put everything above 100 km under one registry, "
+				  "and in 2157 the first humans land on Mars to stay."),
+				T("2160-2290: The Cislunar Age",
+				  "The Ascension Tether, the Thread, rises from the Galapagos and reaches geostationary orbit in 2191, cutting the "
+				  "price of space twentyfold; it still runs today. Earth Orbital grows at geostationary orbit, Tycho City is founded "
+				  "on the Moon in 2204, Kepler Freight Lines is chartered in 2238, the fusion torch flies in 2251, Ares Prime is "
+				  "founded on Mars in 2266, and stations reach Venus and Mercury in the 2280s."),
+				T("2290-2420: The Expansion",
+				  "Fusion opens the whole system. Ceres Hub is founded in 2296 and the Belt rush follows; Ganymede and Callisto are "
+				  "settled from 2341, Stickney Depot becomes the Martian fuel port, and Kraken Port on Titan is founded in 2394 to "
+				  "pump its seas. The Sol Authority governs it all from Earth, the inner worlds well and the outer ones badly."),
+				T("2420-2560: The Charter Wars",
+				  "The Belt strikes in 2423 and declares the Belt Consortium at Ceres Hub in 2431; the First Charter War ends with it "
+				  "recognised. The Sol Authority becomes the Sol Federation in 2452. The outer moons sign the Outer Reach Compact at "
+				  "Kraken Port in 2489, and the Second Charter War (2503-2531), the first true fleet actions, ends in exhaustion. "
+				  "Crews who took no side become the Independents."),
+				T("2560-2700: The Lightless Crossing",
+				  "Sleeper ships leave for the nearest stars; Lantern reaches Alpha Centauri in 2611 and its children found the first "
+				  "settlement there in the 2640s. The cruise drive of 2614 puts Mars a day from Earth and Saturn a week, and the "
+				  "solar system becomes one economy."),
+				T("2700-2810: The Gate Century",
+				  "The first jump gate opens to Proxima in 2709, and hyperlanes soon link every star within twenty light-years. In "
+				  "2734 a survey ship at Barnard's Star meets the Biomass, a living mass that drifts in from between the stars and "
+				  "creeps toward gates. Since the Gate Protocol of 2748 every gun shoots it on sight; one globule fell on Earth in "
+				  "2751 and has been walled off and burned ever since. It is a nuisance now, not a terror."),
+				T("2810-2960: The Long Frontier",
+				  "Each power builds its own lanes and hundreds of colonies are founded. The Frontier Charter of 2822 gives a gate "
+				  "builder a century's charter at its far end, and the carrying companies grow rich. The Black Banner rises in the "
+				  "2840s as a confederation of lane raiders. The Federation and the Compact fight the short Gate War (2870-2874), and "
+				  "from the 2900s navies build carriers, because a gate fight is won in its first minutes."),
+				T("2960-3026: The Threshold",
+				  "In 2968 humanity's power use passes 10^16 watts: a Type I civilization, just. Colonies spread faster than ever and "
+				  "the frontier is thinly held. In 3009 the Compact refuses to renew the Frontier Charter for Federation companies, "
+				  "and in 3019 the two go to war for the third time. The war is still on when the game begins on 1 January 3026."),
+				T("The powers in 3026",
+				  "The Sol Federation (2452, from the Sol Authority and the Orbital Accords) holds Earth, the Moon, Mars, the inner "
+				  "system and its own frontier, seated at Earth Orbital. The Belt Consortium (2431), seated at Ceres Hub, is rich on "
+				  "trade and neutral when that pays. The Outer Reach Compact (2489), seated at Kraken Port, holds Saturn and the "
+				  "outer system and is at war with the Federation. The Independents (2520s) are free traders and unaligned crews, "
+				  "nobody's navy. The Black Banner (2840s) is the pirate confederation of the long lanes, raiding everyone.")),
+
 			cs::New<ManualChapter>(EveryKeyTitle, "The whole reference card: every key and control, by what it is for", cs::List<cs::String>() /* C#: null */),
 		};
 		return value;

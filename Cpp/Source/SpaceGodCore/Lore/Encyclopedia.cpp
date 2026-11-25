@@ -71,6 +71,17 @@ namespace SpaceGod::Core
 
 		cs::String EncPlural(int n, const char* one, const char* many) { return cs::Cat(n, " ", n == 1 ? one : many); }
 
+		// The founding of each of Sol's powers, as docs/HISTORY.md tells it (US-T862).
+		cs::String FactionOrigin(const cs::String& name)
+		{
+			if (name == "Sol Federation") return "Founded 2452, when the Sol Authority on Earth, the Moon and Mars reorganised after the First Charter War; its roots are the Orbital Accords of 2146.";
+			if (name == "Belt Consortium") return "Founded 2431, declared at Ceres Hub by the Belt's settlements and companies after the Ceres Strike, and recognised by Earth in the Treaty of Vesta.";
+			if (name == "Outer Reach Compact") return "Founded 2489, when Titan, Callisto and the outer moons signed its charter at Kraken Port; it has fought the Federation three times since.";
+			if (name == "Independent") return "Founded in the 2520s by crews who took no side in the Charter Wars, flew their own colours and were left alone because everyone needed their cargo.";
+			if (name == "Black Banner") return "Founded in the 2840s as a confederation of raiders working the long gate lanes, grown into a nation of outlaws with havens in every system.";
+			return cs::String();
+		}
+
 		cs::String EncTonnes(double t)
 		{
 			return t >= 1e6 ? cs::Cat(cs::Fmt(t / 1e6, "0.0"), " Mt") : t >= 1e3 ? cs::Cat(cs::Fmt(t / 1e3, "0.0"), " kt") : cs::Cat(cs::Fmt(t, "0"), " t");
@@ -767,6 +778,8 @@ namespace SpaceGod::Core
 			a->AddKeywords(f->Name);
 			cs::String record = lore.Long(a->LoreKey, "");
 			if (!record.empty()) a->AddSection("", record);
+			cs::String origin = FactionOrigin(f->Name);
+			if (!origin.empty()) a->AddSection("Origins", origin);
 			int settlements = 0, ships = 0;
 			for (const auto& sys : galaxy.Systems)
 			{
