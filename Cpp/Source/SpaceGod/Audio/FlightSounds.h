@@ -14,6 +14,7 @@ namespace SpaceGod::Audio
 	///   US-T170), its voice by the hull's role and mass: a fighter's whine, a hauler's throb, a capital ship's rumble;
 	///   an afterburner layer and its ignition, the engine cut to a murmur while drifting (US-T165) or with the drives down;
 	/// - the RCS jets' puffs as they fire (Views/RcsJets), the flip of a turn-and-burn (Alt at the helm);
+	/// - a launch tube's catapult firing under a craft waiting in it (US-T786);
 	/// - the drives, from the regime's cues (Core::DriveRegime, US-T197): the cruise drive's spool, engage, drop-out and a
 	///   called-off charge, a hyperlane's entry and exit, a jump gate's crossing, the FTL drive's spool, jump and arrival,
 	///   and a loop under each while it carries the hull;

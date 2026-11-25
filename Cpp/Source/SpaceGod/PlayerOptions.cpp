@@ -131,6 +131,14 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ToggleSetting>& PlayerOptions::CinematicLaunch()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.cinematicLaunch", Gameplay, "Cinematic launch camera", false,
+			"Fired out of a carrier's launch tube, the view watches your craft shoot out of the tube's mouth instead of looking down the tube from the cockpit.",
+			"cinematic launch camera tube catapult carrier cockpit outside view");
+		return value;
+	}
+
 	const cs::Ref<ToggleSetting>& PlayerOptions::PauseOnFocusLoss()
 	{
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.pauseOnFocusLoss", Gameplay, "Pause when the window loses focus", false,
@@ -203,7 +211,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); PauseOnFocusLoss(); Clock(); Dates();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); CinematicLaunch(); PauseOnFocusLoss(); Clock(); Dates();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -273,6 +281,8 @@ namespace SpaceGod
 	{
 		return ScriptedRun() ? 1.0f : cs::Math::Max(0.0f, cs::Math::Min(2.0f, static_cast<float>(CameraFeel()->Value / 100.0)));
 	}
+
+	bool PlayerOptions::CinematicLaunchCamera() { return !ScriptedRun() && CinematicLaunch()->Value; }
 
 	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }
 

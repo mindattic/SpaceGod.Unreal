@@ -10,6 +10,7 @@
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
 #include "Combat/DriveRegime.h"
+#include "Combat/FlightDecks.h" // US-T786: the catapult
 #include "Combat/SystemCruise.h"
 #include "Embodiment/FighterSeat.h"
 #include "Embodiment/FlightFeel.h"
@@ -184,6 +185,22 @@ namespace SpaceGod::Audio::FlightSounds
 				Tone(b, 0, 0.35f, 90, 40, 0.8f, Wave::Sine, 0.002f);
 				Tone(b, 0, 0.3f, 400, 900, 0.2f, Wave::Saw, 0.01f);
 				return Finish(b, "BoostIgnite", 0.7f);
+			}();
+			return clip;
+		}
+
+		const SoundClip& CatapultFire()
+		{
+			static const SoundClip clip = []
+			{
+				// US-T786: the shuttle's clamp slamming home and the catapult's stroke roaring down the tube, falling away
+				// behind as the craft is thrown out of its mouth.
+				auto b = Buffer(1.6f);
+				Tone(b, 0, 0.18f, 70, 35, 0.9f, Wave::Sine, 0.001f);
+				Noise(b, 0, 0.08f, 0.8f, 0.9f, 0.001f, 70);
+				Noise(b, 0.02f, 1.4f, 0.6f, 0.35f, 0.05f, 71);
+				Tone(b, 0.02f, 1.2f, 160, 60, 0.35f, Wave::Saw, 0.08f);
+				return Finish(b, "CatapultFire", 0.8f);
 			}();
 			return clip;
 		}
@@ -512,6 +529,7 @@ namespace SpaceGod::Audio::FlightSounds
 			// The engine and its afterburner.
 			Layer engine, boost;
 			bool boosting = false, drifting = false, manoeuvre = false;
+			bool tubeWaiting = false; // US-T786: the craft flown waits in a launch tube for its catapult
 			float rcs = 0;
 			double rcsAt = 0;
 			std::uint32_t puffs = 0;
@@ -555,6 +573,7 @@ namespace SpaceGod::Audio::FlightSounds
 			seen.ftl.Stop(0.6f);
 			StopPassing();
 			seen.boosting = seen.drifting = seen.manoeuvre = false;
+			seen.tubeWaiting = false;
 			seen.rcs = 0;
 			seen.flyingFor = 0;
 			seen.sinceFlown = 99;
@@ -673,6 +692,20 @@ namespace SpaceGod::Audio::FlightSounds
 			const bool manoeuvre = craft.helm && app->Input.Manoeuvre && !app->PilotTelegraph.has_value() && !drivesDown;
 			if (manoeuvre && !seen.manoeuvre) Fx(FlipWhoosh(), 0.6f, basePitch);
 			seen.manoeuvre = manoeuvre;
+		}
+
+		/// US-T786: the craft flown waiting in a launch tube hears its catapult fire (not one taken mid-stroke).
+		void StepLaunch(const Craft& craft)
+		{
+			auto v = craft.unit != nullptr && !craft.helm && craft.battle != nullptr ? FlightDecks::VisitOf(craft.unit) : nullptr;
+			bool waiting = false, fired = false;
+			if (v != nullptr && v->Stage == DeckStage::Launching && v->Deck != nullptr && v->Deck->LaunchOnly())
+			{
+				fired = craft.battle->Seconds >= v->Release;
+				waiting = !fired;
+			}
+			if (fired && seen.tubeWaiting) Fx(CatapultFire(), 0.9f);
+			seen.tubeWaiting = waiting;
 		}
 
 		// ---------------------------------------------------------------- the drives
@@ -1055,6 +1088,7 @@ namespace SpaceGod::Audio::FlightSounds
 		}
 
 		StepEngine(app, craft, dt);
+		StepLaunch(craft);
 		StepDrives(app, flying, dt);
 		StepAlerts(app, craft);
 		StepPassing(app, craft, dt);

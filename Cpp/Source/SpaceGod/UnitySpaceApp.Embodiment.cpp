@@ -10,6 +10,7 @@
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h" // US-T106: a craft's carrier
+#include "Combat/FlightDecks.h" // US-T786: a launch tube
 #include "Astro.h"
 #include "Combat/PilotAim.h" // US-T129
 #include "Combat/FlightModels.h" // US-T168: a light craft's slack string
@@ -29,6 +30,7 @@
 #include "Fleet.h"
 #include "Infrastructure/Infrastructure.h"
 #include "InterfaceOptions.h" // US-T834
+#include "PlayerOptions.h" // US-T786: Cinematic launch camera
 #include "Comms/VoiceCasting.h" // US-T834
 #include "Input/MouseFlight.h" // US-T736
 #include "Sensors/SensorPosture.h"
@@ -261,6 +263,8 @@ namespace SpaceGod
 		}
 		SpaceCamera->PilotView = std::nullopt;
 		SpaceCamera->PilotEye = nullptr;
+		tubeLaunchCraft = nullptr; // US-T786
+		tubeLaunchFired = tubeLaunchEye = false;
 		SpaceCamera->ExitFocus();
 		if (!commandFocus.IsNone() && !(commandFocus.IsShip() && commandFocus.Ship->Destroyed) && !commandFocus.IsUnit())
 			SpaceCamera->FocusOn(commandFocus);
@@ -705,6 +709,64 @@ namespace SpaceGod
 		auto pose = held->PoseAt(Clock->Jd);
 		auto roof = ToVector(pose.Up.SwapYZ());
 		SpaceCamera->PilotView = Quaternion::LookRotation(seatAim, Vector3::Dot(roof, seatAim) > 0.99f ? up : roof);
+		StepTubeLaunch(cockpitSeat);
+	}
+
+	void UnitySpaceApp::StepTubeLaunch(const cs::Ref<FighterSeat>& f)
+	{
+		auto u = f != nullptr ? f->Unit : nullptr;
+		auto v = u != nullptr && f->Battle != nullptr ? FlightDecks::VisitOf(u) : nullptr;
+		if (v == nullptr || v->Stage != DeckStage::Launching || v->Deck == nullptr || !v->Deck->LaunchOnly())
+		{
+			// Clear of the tube's mouth: the chase takes over, gliding in behind the hull from wherever the tube's eye was.
+			if (tubeLaunchEye && u != nullptr && u.get() == tubeLaunchCraft && !u->Dead) RideCameraRig(f, f->PoseAt(Clock->Jd), true);
+			tubeLaunchCraft = nullptr;
+			tubeLaunchFired = tubeLaunchEye = false;
+			return;
+		}
+		// The catapult fires: a slam through the airframe and the view kicked wide as the tube throws it (not on a craft taken
+		// mid-stroke, nor a rewind's resume).
+		bool fired = f->Battle->Seconds >= v->Release;
+		if (u.get() != tubeLaunchCraft) tubeLaunchFired = fired;
+		tubeLaunchCraft = u.get();
+		if (fired && !tubeLaunchFired && !HoldRewindJustResumed())
+		{
+			flightFeel.Kick(CatapultSlam);
+			fovKick = Mathf::Max(fovKick, CatapultFovKickDeg * PlayerOptions::FeelScale());
+		}
+		tubeLaunchFired = fired;
+
+		// The eye is the tube's while the craft is in it: set once (a new chase clears it), read by the camera each frame.
+		if (!SpaceCamera->PilotEye) SpaceCamera->PilotEye = [this, f]() { return TubeLaunchEye(f); };
+		tubeLaunchEye = true;
+		DVec3 axis, right, deckUp;
+		v->Deck->Basis(axis, right, deckUp);
+		seatAim = ToVector(axis.SwapYZ()).normalized();
+		auto look = seatAim;
+		if (PlayerOptions::CinematicLaunchCamera())
+		{
+			auto toCraft = TargetScene(SeatTarget(f)) - TubeLaunchEye(f);
+			if (toCraft.LengthSquared() > 1e-18) look = ToVector(toCraft.Normalized());
+		}
+		SpaceCamera->PilotView = Quaternion::LookRotation(look, ToVector(deckUp.SwapYZ()).normalized());
+	}
+
+	DVec3 UnitySpaceApp::TubeLaunchEye(const cs::Ref<FighterSeat>& f)
+	{
+		auto host = SeatTarget(f);
+		auto at = TargetScene(host);
+		auto v = f != nullptr && f->Unit != nullptr ? FlightDecks::VisitOf(f->Unit) : nullptr;
+		if (v == nullptr || v->Deck == nullptr) return at;
+		DVec3 axis, right, up;
+		v->Deck->Basis(axis, right, up);
+		double radius = TargetRadius(host);
+		// From the canopy, down the tube: a little ahead of the craft's middle and above it.
+		if (!PlayerOptions::CinematicLaunchCamera())
+			return at + (f->Unit->Forward.SwapYZ() * TubeCanopyForward + up.SwapYZ() * TubeCanopyRise) * radius;
+		// Cinematic: off to the side of the tube's mouth and ahead of it, sized by the craft as drawn, so it is thrown past.
+		double kmScale = BattleKmScale();
+		double radiusKm = kmScale > 0 ? radius / kmScale : 0;
+		return BattleScene(f->Battle, v->Deck->Bow() + (axis * TubeWatchAhead + right * TubeWatchSide + up * TubeWatchRise) * radiusKm);
 	}
 
 	void UnitySpaceApp::StepSeatFeel(const cs::Ref<IEmbodiable>& held, const EmbodimentInput& input, float dt)

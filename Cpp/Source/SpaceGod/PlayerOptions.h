@@ -53,6 +53,8 @@ namespace SpaceGod
 		static const cs::Ref<Core::RangeSetting>& CameraShake();
 		/// US-T840: the camera feel (head-look, G lean, boost kick, hit jolt, chase lag) at this strength (0% off to 200%).
 		static const cs::Ref<Core::RangeSetting>& CameraFeel();
+		/// US-T786: out of a launch tube, the view watches the craft fired from outside the carrier instead of from its cockpit.
+		static const cs::Ref<Core::ToggleSetting>& CinematicLaunch();
 		/// US-T555: the pause menu opens when the window loses focus, outside co-op. Off by default.
 		static const cs::Ref<Core::ToggleSetting>& PauseOnFocusLoss();
 		/// US-T617: times of day in 24-hour (as always) or 12-hour form.
@@ -115,6 +117,8 @@ namespace SpaceGod
 		static float ShakeScale();
 		/// What the camera feel is multiplied by: Camera feel as 0..2 (1 in a scripted run).
 		static float FeelScale();
+		/// US-T786: Cinematic launch camera is on (never in a scripted run).
+		static bool CinematicLaunchCamera();
 		/// Pause when the window loses focus is on (never in a scripted run).
 		static bool PausesOnFocusLoss();
 

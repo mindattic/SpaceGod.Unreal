@@ -248,6 +248,29 @@ private:
 	/// <summary>US-T170: the feel of the seat flown this frame (<see cref="flightFeel"/>): a launched craft's, an EVA worker's.</summary>
 	void StepSeatFeel(const cs::Ref<Core::IEmbodiable>& held, const Core::EmbodimentInput& input, float dt);
 
+	/// <summary>
+	/// US-T786: a cockpit whose craft sits in a carrier's launch tube (FlightDecks, US-T779): the view looks down the tube
+	/// from the canopy (or, with Settings > Gameplay > Cinematic launch camera, watches from beyond the tube's mouth), the
+	/// catapult's firing slams through the airframe and kicks the view wide, and the chase takes over once it is clear.
+	/// Render only: the deck flies the craft the same either way.
+	/// </summary>
+	void StepTubeLaunch(const cs::Ref<Core::FighterSeat>& f);
+
+	/// <summary>US-T786: where the eye sits while <paramref name="f"/>'s craft is in a launch tube, scene units.</summary>
+	Core::DVec3 TubeLaunchEye(const cs::Ref<Core::FighterSeat>& f);
+
+	/// <summary>US-T786: the craft in a tube as last seen (null for none), whether its catapult had fired, and whether the
+	/// camera's eye is the tube's (<see cref="TubeLaunchEye"/>).</summary>
+	const void* tubeLaunchCraft = nullptr;
+	bool tubeLaunchFired = false, tubeLaunchEye = false;
+
+	/// <summary>US-T786: the canopy's place on the craft, and the cinematic eye's beyond the tube's mouth, in the craft's
+	/// radii; the slam and the view's kick as the catapult fires.</summary>
+	static constexpr double TubeCanopyForward = 0.55, TubeCanopyRise = 0.22;
+	static constexpr double TubeWatchAhead = 14, TubeWatchSide = 5, TubeWatchRise = 2.5;
+	static constexpr double CatapultSlam = 1.4;
+	static constexpr float CatapultFovKickDeg = 10.0f;
+
 	/// <summary>An EVA worker's weld hits as last seen, so each new one is felt as it lands (US-T170).</summary>
 	int seatWeldHits = 0;
 
