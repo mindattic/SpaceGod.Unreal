@@ -11,6 +11,7 @@
 #include "Combat/PilotTuning.h"
 #include "Combat/ShipCatalog.h"
 #include "Combat/WeakPatches.h"
+#include "Difficulty.h"
 #include "Ships.h"
 #include <cstring>
 
@@ -30,6 +31,8 @@ namespace SpaceGod::Core
 			case DogfightTactic::BoomAndZoom: return "BoomAndZoom";
 			case DogfightTactic::Jink: return "Jink";
 			case DogfightTactic::Scissors: return "Scissors";
+			case DogfightTactic::Break: return "Break";
+			case DogfightTactic::Extend: return "Extend";
 		}
 		return "?";
 	}
@@ -81,7 +84,14 @@ namespace SpaceGod::Core
 			return nullptr;
 		}
 
-		bool DfDefensive(DogfightTactic t) { return t == DogfightTactic::FlipAndBurn || t == DogfightTactic::Jink || t == DogfightTactic::Scissors; }
+		bool DfDefensive(DogfightTactic t)
+		{
+			return t == DogfightTactic::FlipAndBurn || t == DogfightTactic::Jink || t == DogfightTactic::Scissors || t == DogfightTactic::Break
+				|| t == DogfightTactic::Extend;
+		}
+
+		/// <summary>US-T754: the pilot's skill, 0..1: a carrier craft's own, a fleet light fighter's middling.</summary>
+		double DfSkillOf(const cs::Ref<BattleUnit>& u) { return u->Fighter != nullptr ? DfClamp(u->Fighter->Skill, 0.0, 1.0) : 0.5; }
 
 		bool DfSmallCraft(const cs::Ref<BattleUnit>& o) { return o->Kind == UnitKind::Fighter || (o->Kind == UnitKind::Ship && o->LengthKm <= WeakPoints::MaxSmallCraftKm); }
 
@@ -158,6 +168,18 @@ namespace SpaceGod::Core
 		return static_cast<double>(x >> 11) * (1.0 / 9007199254740992.0);
 	}
 
+	double DogfightManeuvers::ReactionSeconds(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& threat)
+	{
+		double s = u->Fighter != nullptr ? Max(0.0, u->Fighter->Reaction) * ReactionShare : FleetReactionS;
+		return Difficulty::ReactionAt(threat != nullptr && threat->PlayerControlled() && !u->PlayerControlled(), s);
+	}
+
+	double DogfightManeuvers::AimErrorDeg(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& t)
+	{
+		double deg = AimErrorBaseDeg * (1 - 0.9 * DfSkillOf(u));
+		return Difficulty::AimErrorAt(t != nullptr && t->PlayerControlled() && !u->PlayerControlled(), deg);
+	}
+
 	cs::Ref<BattleUnit> DogfightManeuvers::OnTail(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u)
 	{
 		cs::Ref<BattleUnit> best;
@@ -179,7 +201,7 @@ namespace SpaceGod::Core
 
 	DogfightTactic DogfightManeuvers::Choose(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& t, const cs::Ref<BattleUnit>& threat, const Handling& h, double roll)
 	{
-		double skill = u->Fighter != nullptr ? DfClamp(u->Fighter->Skill, 0.0, 1.0) : 0.5;
+		double skill = DfSkillOf(u);
 		double speed = u->Vel.Length();
 		if (threat != nullptr)
 		{
@@ -189,6 +211,11 @@ namespace SpaceGod::Core
 			if (d < FlipKm && speed > 0.4 * h.TopSpeed && roll < 0.45 + 0.4 * skill) return DogfightTactic::FlipAndBurn;
 			// Alongside at much its own speed: reverse into it, again and again, until it is out in front.
 			if (d < 1.4 && relSpeed < 0.15) return DogfightTactic::Scissors;
+			// US-T754: further back, fast, and it not gaining: run it out of its guns' reach and come back on our terms.
+			double gaining = DVec3::Dot(threat->Vel - u->Vel, DfUnit(u->Pos - threat->Pos, u->Forward));
+			if (d > ExtendKm && speed > 0.7 * h.TopSpeed && gaining < 0.05 && roll < 0.3 + 0.5 * skill) return DogfightTactic::Extend;
+			// A sharp pilot breaks hard across the attacker's line; a green one jinks and hopes.
+			if (roll < 0.2 + 0.6 * skill) return DogfightTactic::Break;
 			return DogfightTactic::Jink;
 		}
 		auto rel = t->Pos - u->Pos;
@@ -228,6 +255,8 @@ namespace SpaceGod::Core
 			case DogfightTactic::BoomAndZoom: s.Left = 16; s.Side = r < 0.5 ? -1 : 1; break;
 			case DogfightTactic::Jink: s.Left = 2.0 + r * 2.0; s.Side = r < 0.5 ? -1 : 1; break;
 			case DogfightTactic::Scissors: s.Left = 4.0 + r * 3.0; s.Side = markSide; s.KickIn = 1.2 + r * 0.6; break;
+			case DogfightTactic::Break: s.Left = 0.5 * flipS + 1.5 + r * 1.0; s.Side = markSide; break;
+			case DogfightTactic::Extend: s.Left = 14; s.Side = r < 0.5 ? -1 : 1; break;
 		}
 	}
 
@@ -385,6 +414,53 @@ namespace SpaceGod::Core
 				if (threat == nullptr && DVec3::Dot(u->Forward, toMark) > 0.6) s.Left = 0;
 				break;
 			}
+			case DogfightTactic::Break:
+			{
+				// US-T754: the nose hauled round at full rate across the attacker's line, toward its side so it overshoots
+				// or must pull a harder turn than it can, the thrusters sliding the hull out of the stream.
+				auto mark = threat != nullptr ? threat : DfFind(b, s.ThreatId);
+				if (mark == nullptr) mark = t;
+				auto toMark = DfUnit(mark->Pos - u->Pos, -track);
+				auto across = DfUnit(toMark - mark->Forward * DVec3::Dot(toMark, mark->Forward), DVec3::Cross(mark->Forward, WeakPatches::LevelRoof(mark->Forward)));
+				c.Face = across * 0.85 + toMark * 0.35;
+				c.WantVel = DfUnit(track * 0.4 + across * 0.9, across) * top;
+				c.Boost = true;
+				c.Roll = s.Side;
+				// Out of its guns' line: done, the fight picked afresh.
+				if (s.Time > 0.8 && DVec3::Dot(mark->Forward, DfUnit(u->Pos - mark->Pos, mark->Forward)) < 0.8) s.Left = 0;
+				break;
+			}
+			case DogfightTactic::Extend:
+			{
+				// US-T754: straight out under boost, a little off the attacker's line, then round again for the fight.
+				auto mark = threat != nullptr ? threat : DfFind(b, s.ThreatId);
+				if (mark == nullptr) mark = t;
+				auto away = DfUnit(u->Pos - mark->Pos, track);
+				double gap = (mark->Pos - u->Pos).Length();
+				if (s.Stage == 0)
+				{
+					auto level = WeakPatches::LevelRoof(away);
+					auto beside = DfUnit(DVec3::Cross(away, level), DVec3::UnitX) * (0.25 * s.Side);
+					auto run = DfUnit(track * 0.6 + away * 0.4 + beside, away);
+					c.Face = run;
+					c.WantVel = run * (top * BoostFactor);
+					c.Boost = true;
+					if (gap > ZoomKm || s.StageTime > 7)
+					{
+						s.Stage = 1;
+						s.StageTime = 0;
+					}
+				}
+				else
+				{
+					c.Face = toT;
+					c.WantVel = toT * top;
+					c.Boost = DVec3::Dot(u->Forward, toT) > 0.8;
+					c.Roll = s.Side;
+					if (DVec3::Dot(u->Forward, toT) > 0.9 || s.StageTime > 6) s.Left = 0;
+				}
+				break;
+			}
 		}
 		return c;
 	}
@@ -414,6 +490,19 @@ namespace SpaceGod::Core
 		double seed = DfSeedOf(u);
 		auto h = Handling::Of(u);
 		auto threat = OnTail(b, u);
+		// US-T754: a new attacker on its tail is acted on only once the pilot has taken it in (one it is already
+		// fighting off is not new).
+		if (threat == nullptr) s.SeenId = 0;
+		else if (threat->Id != s.ThreatId || !DfDefensive(s.Tactic))
+		{
+			if (threat->Id != s.SeenId)
+			{
+				s.SeenId = threat->Id;
+				s.Seen = 0;
+			}
+			s.Seen += dt;
+			if (s.Seen < ReactionSeconds(u, threat)) threat = nullptr;
+		}
 		s.Left -= dt;
 		s.Time += dt;
 		s.StageTime += dt;
@@ -421,9 +510,23 @@ namespace SpaceGod::Core
 		// Something new on its tail cuts an attack short (not a zoom already carrying it clear).
 		if (threat != nullptr && !DfDefensive(s.Tactic) && !(s.Tactic == DogfightTactic::BoomAndZoom && s.Stage == 1)) rechoose = true;
 		// Shaken off: back on the attack.
-		if (threat == nullptr && (s.Tactic == DogfightTactic::Jink || s.Tactic == DogfightTactic::Scissors) && s.Time > 0.8) rechoose = true;
+		if (threat == nullptr && (s.Tactic == DogfightTactic::Jink || s.Tactic == DogfightTactic::Scissors || s.Tactic == DogfightTactic::Break) && s.Time > 0.8) rechoose = true;
 		if (rechoose) Start(u, t, threat, Choose(u, t, threat, h, Draw(seed, s)), h, s, seed);
 		auto cmd = Plan(b, u, t, threat, h, s, dt);
+		// US-T754: the pilot's hand, not a turret's: the nose hunts round the point it wants in a slow smooth wander,
+		// wider the greener the pilot, so it misses believably and never snaps onto the pip.
+		double err = AimErrorDeg(u, t) * (cs::Math::PI / 180.0);
+		if (err > 0)
+		{
+			s.AimPhase += dt * AimWanderHz * DfTwoPi;
+			double p = s.AimPhase + seed * 0.001;
+			auto face = DfUnit(cmd.Face, u->Forward);
+			auto level = WeakPatches::LevelRoof(face);
+			auto side = DfUnit(DVec3::Cross(face, level), DVec3::UnitX);
+			double x = cs::Math::Sin(p) * cs::Math::Cos(0.37 * p);
+			double y = cs::Math::Sin(0.61 * p + 1.3);
+			cmd.Face = face + (side * x + level * y) * cs::Math::Tan(err);
+		}
 		Thrust(u, cmd, h, dt);
 		return true;
 	}

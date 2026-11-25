@@ -39,6 +39,14 @@ namespace SpaceGod::Core
 		/// <summary>Scissors: an attacker alongside or close behind, it reverses its turn into it again and again, slowing,
 		/// to force it out in front.</summary>
 		Scissors,
+
+		/// <summary>Break: a hostile settling on its tail, it hauls the nose hard round across the attacker's line of fire
+		/// at full rate and boost, so the gunner behind it cannot hold the lead (US-T754).</summary>
+		Break,
+
+		/// <summary>Extend: fast and the attacker not gaining on it, it runs straight out of its guns' reach under boost,
+		/// then turns back in to re-engage on its own terms (US-T754).</summary>
+		Extend,
 	};
 	SPACEGODCORE_API const char* ToString(DogfightTactic v);
 
@@ -51,10 +59,16 @@ namespace SpaceGod::Core
 	/// <see cref="Battle.DogfightTurnShare"/>). So an interceptor carves where a heavy fighter slides.
 	///
 	/// The pilot picks a named manoeuvre by the situation (<see cref="Choose"/>): something on its tail sends it into a
-	/// flip-and-burn (close and fast), the scissors (alongside) or a jink (further back); a target far off it slashes
+	/// flip-and-burn (close and fast), the scissors (alongside), an extension (fast, the attacker not gaining), a break
+	/// (a sharp pilot) or a jink (a green one); a target far off it slashes
 	/// through on a boom-and-zoom; close, it flies lead pursuit, or lag pursuit when it would overshoot, or a drift turn
 	/// when the target is well off its nose. Each manoeuvre holds for its own seconds and stages (<see cref="State"/>)
 	/// and is cut short when the fight turns.
+	///
+	/// US-T754: the pilot is a person, not a turret. A new attacker on its tail is acted on only after the pilot's
+	/// reaction time (<see cref="ReactionSeconds"/>), and its nose hunts round the point it wants by an aim error that
+	/// shrinks with skill (<see cref="AimErrorDeg"/>), a slow smooth wander, never a snap. Against a hull a player holds,
+	/// the difficulty stretches or cuts both (<see cref="Difficulty"/>; exactly as designed at Normal).
 	///
 	/// Deterministic: every draw is a hash of the pilot's seed and its own count of draws, never the battle's shared
 	/// random stream nor wall time; and in battle-local km, the same at both scales. The one hook into
@@ -87,6 +101,14 @@ namespace SpaceGod::Core
 
 			/// <summary>How many draws the pilot has made (its own deterministic stream, see <see cref="Draw"/>).</summary>
 			uint32_t Draws = 0;
+
+			/// <summary>US-T754: the attacker on its tail it has seen but not yet reacted to (its unit id, 0: none), and
+			/// for how long, seconds.</summary>
+			int SeenId = 0;
+			double Seen = 0;
+
+			/// <summary>US-T754: the phase of the nose's aim wander, radians.</summary>
+			double AimPhase = 0;
 		};
 
 		/// <summary>The hull's Newtonian handling in the dogfight: turn and roll, deg/s; top speed, km/s; and the drive's
@@ -124,6 +146,18 @@ namespace SpaceGod::Core
 		/// <summary>How much harder than its cruise the boost burns (as <see cref="FighterAI.BurnBoost"/>).</summary>
 		static constexpr double BoostFactor = 1.3;
 
+		/// <summary>US-T754: how far behind it an attacker must be, km, before an energy-rich pilot extends rather than
+		/// turning with it.</summary>
+		static constexpr double ExtendKm = 1.8;
+
+		/// <summary>US-T754: the share of a pilot's reaction lag (<see cref="FighterState.Reaction"/>, seconds) it takes to
+		/// act on a new attacker on its tail; and a fleet light fighter's reaction, seconds, which has no pilot of its own.</summary>
+		static constexpr double ReactionShare = 0.5; static constexpr double FleetReactionS = 0.45;
+
+		/// <summary>US-T754: the nose's aim error, degrees, of a pilot of no skill (an ace's is a tenth of it); and how
+		/// fast the error wanders, Hz: slow enough to read as a hand on a stick.</summary>
+		static constexpr double AimErrorBaseDeg = 3.5; static constexpr double AimWanderHz = 0.6;
+
 		/// <summary>
 		/// One step of <paramref name="u"/>'s dogfight on enemy craft <paramref name="t"/>: picks (or keeps) its manoeuvre
 		/// and flies it, Newtonian, nose, drive and roll. Returns false (and does nothing) without a target to fight.
@@ -148,6 +182,14 @@ namespace SpaceGod::Core
 		/// (back) and the push across it to the manoeuvre thrusters; momentum does the rest.
 		/// </summary>
 		static void Thrust(const cs::Ref<BattleUnit>& u, const Command& cmd, const Handling& h, double dt);
+
+		/// <summary>US-T754: the seconds <paramref name="u"/>'s pilot takes to act on <paramref name="threat"/> settling on
+		/// its tail: its own reaction, stretched or cut by the difficulty when a player holds the attacker.</summary>
+		static double ReactionSeconds(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& threat);
+
+		/// <summary>US-T754: how far, degrees, <paramref name="u"/>'s nose wanders off the point it wants against
+		/// <paramref name="t"/>: less the better the pilot, scaled by the difficulty when a player holds the mark.</summary>
+		static double AimErrorDeg(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& t);
 
 		/// <summary>The pilot's next draw, 0..1: a hash of its seed and its count of draws.</summary>
 		static double Draw(double seed, State& s);

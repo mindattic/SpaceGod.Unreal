@@ -23,9 +23,9 @@ namespace SpaceGod::UI
 		{
 			switch (Difficulty::Current())
 			{
-			case DifficultyLevel::Story: return "Story: the galaxy goes easy on the unit you embody (less damage, wilder fire, a quarter more pay).";
-			case DifficultyLevel::Hard: return "Hard: more damage taken, sharper fire, quicker locks, keener pirates, less pay.";
-			case DifficultyLevel::Custom: return "Custom: the five Custom sliders in Settings > Gameplay.";
+			case DifficultyLevel::Story: return "Story: the galaxy goes easy on the unit you embody (less damage, wilder fire, slower pilots, a quarter more pay).";
+			case DifficultyLevel::Hard: return "Hard: more damage taken, sharper fire, quicker locks and pilots, keener pirates, less pay.";
+			case DifficultyLevel::Custom: return "Custom: the six Custom sliders in Settings > Gameplay.";
 			default: return "Normal: the game as designed.";
 			}
 		}

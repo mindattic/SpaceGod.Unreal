@@ -71,7 +71,7 @@ namespace SpaceGod::Core
 		int found = 0;
 		// ---- Core/ (the folder's own files)
 		Difficulty::Level(); Difficulty::CustomDamageTaken(); Difficulty::CustomAccuracy(); Difficulty::CustomLockTime(); Difficulty::CustomAggression();
-		Difficulty::CustomPay(); found++; // US-T253 (not a C# source)
+		Difficulty::CustomPay(); Difficulty::CustomReaction(); found++; // US-T253 (not a C# source)
 		RenderLod::SimplifyBelowPx(); RenderLod::CullBelowPx(); RenderLod::AggregatePx(); found++;
 		RenderBudget::FullCap(); RenderBudget::SimplifiedCap(); RenderBudget::IconCap(); RenderBudget::Hysteresis(); found++; // US-T719 (not a C# source)
 		ShipLod::IconBelowPx(); ShipLod::IconNames(); found++;

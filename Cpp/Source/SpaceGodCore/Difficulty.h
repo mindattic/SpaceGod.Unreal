@@ -4,7 +4,8 @@
 // Story / Normal / Hard / Custom, in the Gameplay group of the settings (a profile setting the menu shows by itself), picked
 // on the main menu beside New Game and changeable later. It scales only what touches a unit a player embodies
 // (BattleUnit::PlayerControlled, set through the seat commands so every co-op peer and every rewind agrees): the damage the
-// held hull takes, the accuracy of hostile fire at it and the time a hostile missile mount needs to lock it, how keen pirates
+// held hull takes, the accuracy of hostile fire at it (and of a hostile pilot's nose, US-T754), how quickly a hostile pilot
+// reacts to it on its tail (US-T754), and the time a hostile missile mount needs to lock it, how keen pirates
 // are to go for it, and the pay of the contracts a player takes. AI-vs-AI fighting is untouched, and at Normal every scale
 // is exactly 1 and every hook a no-op, so the Bench's digests hold.
 //
@@ -43,6 +44,8 @@ namespace SpaceGod::Core
 		static const cs::Ref<RangeSetting>& CustomAggression();
 		/// <summary>Custom only: the pay of a contract a player takes, times its posted price.</summary>
 		static const cs::Ref<RangeSetting>& CustomPay();
+		/// <summary>Custom only (US-T754): how long a hostile pilot takes to react to the held hull on its tail, times its own.</summary>
+		static const cs::Ref<RangeSetting>& CustomReaction();
 
 		static DifficultyLevel Current();
 		static cs::String Name();
@@ -53,6 +56,7 @@ namespace SpaceGod::Core
 		static double LockTime();
 		static double PirateAggression();
 		static double Pay();
+		static double HostileReaction();
 
 		/// <summary>Whether anything is scaled at all (false at Normal, and at a Custom left at 1s).</summary>
 		static bool Active();
@@ -64,6 +68,13 @@ namespace SpaceGod::Core
 
 		/// <summary>The accuracy scale of a hostile gunner aiming at a unit: scaled when a player holds it.</summary>
 		static double AccuracyAt(bool playerHeld, double accuracyScale);
+
+		/// <summary>US-T754: a hostile pilot's aim error (degrees) at a unit: wider or tighter, as its accuracy is scaled,
+		/// when a player holds it.</summary>
+		static double AimErrorAt(bool playerHeld, double errorDeg);
+
+		/// <summary>US-T754: the seconds a hostile pilot takes to react to a unit on its tail: scaled when a player holds it.</summary>
+		static double ReactionAt(bool playerHeld, double seconds);
 
 		/// <summary>A hostile missile mount's reload after a launch at a unit a player holds: the lock it must build again
 		/// before the next (<paramref name="lockSeconds"/>, stretched or cut by the lock-time scale) is added to it.</summary>
@@ -82,7 +93,8 @@ namespace SpaceGod::Core
 
 		// ---------------------------------------------------------------- the save
 
-		/// <summary>The difficulty as a save records it: the level's name, and for Custom its five scales ("Custom 1 0.8 1.5 1 1.2").</summary>
+		/// <summary>The difficulty as a save records it: the level's name, and for Custom its six scales ("Custom 1 0.8 1.5 1 1.2 1";
+		/// a save from before US-T754 has five, and leaves the reaction scale alone).</summary>
 		static cs::String Record();
 
 		/// <summary>Puts back what <see cref="Record"/> wrote; empty (a save from before difficulty) leaves the setting alone.

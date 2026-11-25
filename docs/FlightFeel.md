@@ -248,6 +248,21 @@ by more than 10%:
 3. A curve preview in the Controls options: the axis's raw input against the output, live.
 4. The scripted runs keep linear curves and no dead zone, as the pad's settings do today.
 
+### US-T754: AI dogfight behaviours
+
+The crews' dogfight (`DogfightManeuvers`) is flown by a person, not a turret, and this one does change the Bench
+digests: rebaseline them deliberately.
+
+1. Two more manoeuvres: **Break** (a hard full-rate turn across an attacker's line, toward its side) and **Extend**
+   (fast and the attacker not gaining: out of its reach under boost, then round again). On the tail, a sharp pilot
+   breaks or extends, a green one jinks; flip-and-burn and scissors as before.
+2. Reaction: a new attacker on the tail is acted on after the pilot's own lag (half its `Reaction`, 0.2-0.9 s; a
+   fleet light fighter 0.45 s).
+3. Aim error: the nose wanders smoothly round the pip, 3.5 deg for no skill down to a tenth of it for an ace, at
+   0.6 Hz, so the AI misses believably and the nose never snaps.
+4. Difficulty: against a hull a player holds, aim error divides by the hostile-accuracy scale and reaction multiplies
+   by a new hostile-reaction scale (Story 1.6x, Hard 0.65x, `gameplay.custom.reaction`); exactly 1 at Normal.
+
 ## Not changed
 
 The crews' flight (the Bench digests), the capital's telegraph and come-about, the hauler's mass weighting and
