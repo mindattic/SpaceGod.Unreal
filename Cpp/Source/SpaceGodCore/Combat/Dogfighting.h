@@ -285,6 +285,37 @@ namespace SpaceGod::Core
 		static double TopSpeedFactor(double engines);
 	};
 
+	/// <summary>
+	/// The flight computer's throttle under the player's hands (US-T818, docs/FlightFeel.md): with assist on, a small craft
+	/// reaches top speed from rest within <see cref="ToTop"/> and stops from it within <see cref="ToStop"/>, however weak
+	/// its own drive, and the light fighter rolls at least <see cref="LightFighterRoll"/>. A floor on assist's push along
+	/// the nose, as the feel's spin-up is on the attitude thrusters'; crews keep the hull's own thrust and the catalog's roll.
+	/// </summary>
+	// [SettingsSource]
+	class SPACEGODCORE_API AssistThrottle
+	{
+	public:
+		/// <summary>The 0-to-top setting of <paramref name="family"/>, s; null for a family without one.</summary>
+		static const cs::Ref<RangeSetting>& ToTop(FlightFamily family);
+
+		/// <summary>The top-to-stop setting of <paramref name="family"/>, s; null for a family without one.</summary>
+		static const cs::Ref<RangeSetting>& ToStop(FlightFamily family);
+
+		static const cs::Ref<RangeSetting>& LightFighterRoll();
+
+		/// <summary>Seconds from rest to top speed for <paramref name="family"/>; 0: the hull's own drive.</summary>
+		static double ToTopS(FlightFamily family);
+
+		/// <summary>Seconds from top speed to a stop for <paramref name="family"/>; 0: the hull's own retros.</summary>
+		static double ToStopS(FlightFamily family);
+
+		/// <summary>The least roll rate for <paramref name="family"/>, deg/s; 0: the catalog's.</summary>
+		static double RollDegS(FlightFamily family);
+
+	private:
+		static cs::Ref<RangeSetting> Seconds(const char* key, const char* label, double seconds, const char* what);
+	};
+
 	// ---------------------------------------------------------------- countermeasures
 
 	/// <summary>

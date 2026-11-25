@@ -94,13 +94,15 @@ namespace SpaceGod::Core
 		auto u = s.Up;
 		auto r = s.Right();
 		double throttle = Clamp(input.Throttle), strafeR = Clamp(input.StrafeRight), strafeU = Clamp(input.StrafeUp);
-		double main = hull.MainAccel * driveMult;
+		double main = hull.MainAccel * driveMult, retro = hull.RetroAccel;
+		if (input.ToTopS > 0) main = Max(main, tuning.MaxSpeed / input.ToTopS);
+		if (input.ToStopS > 0) retro = Max(retro, tuning.MaxSpeed / input.ToStopS);
 		double setPoint = tuning.MaxSpeed * driveMult;
 		auto commanded = f * (throttle * setPoint)
 			+ r * (strafeR * setPoint * strafeSpeedFraction)
 			+ u * (strafeU * setPoint * strafeSpeedFraction);
 		auto need = (commanded - s.Vel) / dt - gravityKmS2;
-		return f * Max(-hull.RetroAccel, Min(main, DVec3::Dot(need, f)))
+		return f * Max(-retro, Min(main, DVec3::Dot(need, f)))
 			+ r * Limit(DVec3::Dot(need, r), lateralCap)
 			+ u * Limit(DVec3::Dot(need, u), verticalCap);
 	}
@@ -217,6 +219,7 @@ namespace SpaceGod::Core
 		// Roll is about the nose; positive input rolls clockwise from behind, a positive spin about it.
 		double rollAlpha = hull.RollAngularAccel;
 		double rollIn = Clamp(input.Roll);
+		rollRateDegS = Max(rollRateDegS, input.RollRateDegS);
 		if (input.FlightAssistOff)
 		{
 			wRoll += rollIn * rollAlpha * dt;

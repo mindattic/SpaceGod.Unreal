@@ -75,6 +75,15 @@ namespace SpaceGod::Core
 		/// crew, which boosts on the design's <see cref="PilotTuning.BoostDurationS"/> and refills at half that pace.</summary>
 		double BoostPoolS = 0, BoostRefillS = 0;
 
+		/// <summary>The flight computer's throttle (US-T818, <see cref="AssistThrottle"/>): with assist on, the push along the
+		/// nose is at least enough to reach top speed from rest in <see cref="ToTopS"/> and to stop from it in
+		/// <see cref="ToStopS"/>, s. Set only with <see cref="Piloted"/>; 0 for every crew, which keeps the hull's own thrust.</summary>
+		double ToTopS = 0, ToStopS = 0;
+
+		/// <summary>The least roll rate with assist on, deg/s (US-T818). Set only with <see cref="Piloted"/>; 0 for every crew,
+		/// which rolls at the catalog's rate.</summary>
+		double RollRateDegS = 0;
+
 		/// <summary>Drift (US-T165, Chorus style; <see cref="Drift"/>): the dogfight model is suspended, the hull coasts on
 		/// the way it has and its attitude thrusters swing it freely onto <see cref="DesiredForward"/>. Only
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI

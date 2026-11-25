@@ -738,6 +738,10 @@ namespace SpaceGod::Core
 		input.BoostRecharge = engines;
 		input.BoostPoolS = BoostPool::PoolSeconds(craft->Family());
 		input.BoostRefillS = BoostPool::RefillSecondsAt(engines);
+		// The flight computer's throttle and the light fighter's roll (US-T818).
+		input.ToTopS = AssistThrottle::ToTopS(craft->Family());
+		input.ToStopS = AssistThrottle::ToStopS(craft->Family());
+		input.RollRateDegS = AssistThrottle::RollDegS(craft->Family());
 		if (stick->FlightAssistOff) input.Throttle = Max(-1.0, Min(1.0, stick->Burn));
 		// Drift (US-T165): held, the craft coasts and turns free onto the aim; let go, a boost-out along the new facing.
 		stick->Drift.Update(stick->DriftHeld, dt);

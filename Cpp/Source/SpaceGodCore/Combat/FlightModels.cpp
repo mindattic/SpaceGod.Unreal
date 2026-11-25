@@ -131,7 +131,7 @@ namespace SpaceGod::Core
 			// The player's snap (US-T79): the attitude thrusters reach the top swing and roll in SpinUpS, or faster if
 			// the hull's own can; Rotate's v² = 2αθ then brakes the nose onto the aim just as crisply.
 			double spin = Max(hull.PitchYawAngularAccel, turning.TurnRateDegS * Astro::Deg2Rad / Feel.SpinUpS);
-			double roll = Max(hull.RollAngularAccel, turning.RollRateDegS() * Astro::Deg2Rad / Feel.SpinUpS);
+			double roll = Max(hull.RollAngularAccel, Max(turning.RollRateDegS(), input.RollRateDegS) * Astro::Deg2Rad / Feel.SpinUpS);
 			PilotFlight::Rotate(s, HullDynamics(hull.MassKt, hull.MainAccel, hull.RetroAccel, hull.LateralAccel, hull.VerticalAccel, spin, roll),
 				turning, input, dt);
 		}

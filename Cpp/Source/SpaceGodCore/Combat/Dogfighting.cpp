@@ -457,6 +457,70 @@ namespace SpaceGod::Core
 
 	double BoostPool::TopSpeedFactor(double engines) { return 1 + (engines - 1) * TopSpeedSway()->Value; }
 
+	cs::Ref<RangeSetting> AssistThrottle::Seconds(const char* key, const char* label, double seconds, const char* what)
+	{
+		return cs::New<RangeSetting>(key, SettingGroups::Dogfighting, label, seconds, 0.5, 20, 0.1,
+			cs::Cat("With flight assist on, how long it takes under your hands to ", what, "; the flight computer pushes harder than the drive alone when it must. Crews fly on the hull's own thrust."),
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "flight model handling throttle acceleration assist");
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::ToTop(FlightFamily family)
+	{
+		static const cs::Ref<RangeSetting> light = Seconds("flight.lightFighter.toTop", "Light fighters: 0 to top speed", 2.5, "reach top speed from rest");
+		static const cs::Ref<RangeSetting> interceptor = Seconds("flight.interceptor.toTop", "Interceptors: 0 to top speed", 2.2, "reach top speed from rest");
+		static const cs::Ref<RangeSetting> runner = Seconds("flight.runner.toTop", "Couriers: 0 to top speed", 3, "reach top speed from rest");
+		static const cs::Ref<RangeSetting> bomber = Seconds("flight.bomber.toTop", "Bombers: 0 to top speed", 5, "reach top speed from rest");
+		static const cs::Ref<RangeSetting> none;
+		switch (family)
+		{
+			case FlightFamily::LightFighter: return light;
+			case FlightFamily::Interceptor: return interceptor;
+			case FlightFamily::Runner: return runner;
+			case FlightFamily::Bomber: return bomber;
+			default: return none;
+		}
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::ToStop(FlightFamily family)
+	{
+		static const cs::Ref<RangeSetting> light = Seconds("flight.lightFighter.toStop", "Light fighters: top speed to stop", 2, "stop from top speed");
+		static const cs::Ref<RangeSetting> interceptor = Seconds("flight.interceptor.toStop", "Interceptors: top speed to stop", 1.8, "stop from top speed");
+		static const cs::Ref<RangeSetting> runner = Seconds("flight.runner.toStop", "Couriers: top speed to stop", 3, "stop from top speed");
+		static const cs::Ref<RangeSetting> bomber = Seconds("flight.bomber.toStop", "Bombers: top speed to stop", 4.5, "stop from top speed");
+		static const cs::Ref<RangeSetting> none;
+		switch (family)
+		{
+			case FlightFamily::LightFighter: return light;
+			case FlightFamily::Interceptor: return interceptor;
+			case FlightFamily::Runner: return runner;
+			case FlightFamily::Bomber: return bomber;
+			default: return none;
+		}
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::LightFighterRoll()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("flight.lightFighter.roll", SettingGroups::Dogfighting,
+			"Light fighters: roll rate", 300, 90, 540, 5,
+			"With flight assist on, how fast a light fighter rolls under your hands (its catalog roll if that is faster), so a roll-and-pull is one quick move. Crews roll at the catalog's rate.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), " deg/s"); }), "flight model handling light fighter roll");
+		return setting;
+	}
+
+	double AssistThrottle::ToTopS(FlightFamily family)
+	{
+		auto& s = ToTop(family);
+		return s != nullptr ? s->Value : 0;
+	}
+
+	double AssistThrottle::ToStopS(FlightFamily family)
+	{
+		auto& s = ToStop(family);
+		return s != nullptr ? s->Value : 0;
+	}
+
+	double AssistThrottle::RollDegS(FlightFamily family) { return family == FlightFamily::LightFighter ? LightFighterRoll()->Value : 0; }
+
 	// ---------------------------------------------------------------- countermeasures
 
 	const cs::Ref<RangeSetting>& Countermeasures::Effectiveness()
