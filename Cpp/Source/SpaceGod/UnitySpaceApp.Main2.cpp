@@ -14,6 +14,7 @@
 #include "Ephemeris.h"
 #include "Fleet.h"
 #include "OrbitalElements.h"
+#include "RenderBudget.h" // US-T719
 #include "RenderLod.h"
 #include "ScaleModel.h"
 #include "ShipLod.h"
@@ -1587,6 +1588,35 @@ namespace SpaceGod
 		}
 		if (IsSol() && AsteroidBelt != nullptr) AsteroidBelt->Render(Clock->Jd, Scale(), Relative(bodyScene[0]));
 
+		// US-T719: the ships that could draw a model this frame take their tiers under the render budget's caps, the
+		// flown hull, the target, the wing and the flown hull's attackers first.
+		auto& lodBudget = Core::RenderBudget::Ships();
+		lodBudget.Begin();
+		{
+			auto piloted = World()->PilotedShip;
+			auto pilotedLeader = piloted != nullptr ? piloted->Leader : nullptr;
+			if (piloted != nullptr && piloted->Battle != nullptr)
+				for (const auto& u : piloted->Battle->Units)
+					if (u->Ship != nullptr && u->Target != nullptr && u->Target->Ship == piloted && !u->Dead && !u->Fled)
+						lodBudget.Mark(u->Ship->Id, Core::LodRelevance::Attacker);
+			for (int i = 0; i < shipViews.Count(); i++)
+			{
+				if (shipViews[i] == nullptr) continue;
+				auto ship = Fleet()->Ships()[i];
+				if ((ship->Destroyed && !ship->GateDeparted) || !HoldRewindShipShown(i, !ship->Destroyed) || !PerceivesShipModel(i)) continue;
+				if (ship->Controller()->Phase == Core::ShipPhase::Landed) continue;
+				auto rel = Relative(shipScene[i]);
+				double px = Core::ShipLod::ApparentPx(shipLength[i] * Core::ShipLod::ExtentFactor(ship), rel.magnitude(), pixelsPerUnit);
+				uint8_t relevance = Core::LodRelevance::None;
+				if (piloted != nullptr && ship == piloted) relevance |= Core::LodRelevance::Piloted;
+				if (Target::OfShip(ship) == Selected) relevance |= Core::LodRelevance::Target;
+				if (piloted != nullptr && ship != piloted && (ship->Leader == piloted || ship == pilotedLeader || (pilotedLeader != nullptr && ship->Leader == pilotedLeader)))
+					relevance |= Core::LodRelevance::Wingman;
+				lodBudget.Add(i, px, rel.magnitude(), relevance, *Core::RenderLod::Ship());
+			}
+		}
+		lodBudget.Assign(UnityCamera != nullptr ? UnityCamera->farClipPlane : cs::Double::MaxValue);
+
 		int glowIndex = 0;
 		for (int i = 0; i < shipViews.Count(); i++)
 		{
@@ -1630,8 +1660,9 @@ namespace SpaceGod
 			// An ore tug with its load on is drawn by the length of both (U.SPC-T498).
 			double px = Core::ShipLod::ApparentPx(shipLength[i] * Core::ShipLod::ExtentFactor(ship), rel.magnitude(), pixelsPerUnit);
 			// Too small to read: hide the model, the HUD draws its named faction icon instead (U.SPC-T376), folded
-			// into one mark with its neighbours where they crowd; too small for its hardpoints, the hull alone (U.SPC-T415).
-			auto tier = Core::RenderLod::Tier(Core::RenderLod::Ship(), px);
+			// into one mark with its neighbours where they crowd; too small for its hardpoints, the hull alone (U.SPC-T415);
+			// past the render budget's caps, a tier down (US-T719).
+			auto tier = lodBudget.Has(i) ? lodBudget.TierOf(i) : Core::RenderLod::Tier(Core::RenderLod::Ship(), px);
 			bool visible = Core::RenderLod::DrawsModel(tier);
 			shipViews[i]->SetVisible(visible);
 			if (!visible) continue;

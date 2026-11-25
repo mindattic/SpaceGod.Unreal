@@ -10,6 +10,7 @@
 #include "BodyDefinition.h"
 #include "Ephemeris.h"
 #include "Fleet.h"
+#include "RenderBudget.h" // US-T719
 #include "ScaleModel.h"
 #include "ShipLod.h"
 #include "Ships.h"
@@ -44,7 +45,10 @@ namespace SpaceGod
 
 	bool UnitySpaceApp::ShipModelShown(const cs::Ref<Core::Ship>& ship, double px) const
 	{
-		return ShipLod::DrawsModel(px) && ship != nullptr && ship->Id < shipViews.Count() && shipViews[ship->Id] != nullptr;
+		if (ship == nullptr || ship->Id >= shipViews.Count() || shipViews[ship->Id] == nullptr) return false;
+		// US-T719: a ship the render budget ranked this frame is drawn in the tier it was given.
+		const auto& budget = RenderBudget::Ships();
+		return budget.Has(ship->Id) ? RenderLod::DrawsModel(budget.TierOf(ship->Id)) : ShipLod::DrawsModel(px);
 	}
 
 	void UnitySpaceApp::BeginHelmGateCover()
