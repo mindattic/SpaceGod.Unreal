@@ -23,8 +23,12 @@ namespace SpaceGod::Core
 			int flags = (i.Primary ? 1 : 0) | (i.Secondary ? 2 : 0) | (i.Boost ? 4 : 0) | (i.Manoeuvre ? 8 : 0)
 				| ((i.PowerSplit >= 0 ? i.PowerSplit + 1 : 0) << 4) | ((i.SelfDestruct & 3) << 11) | ((i.HelmAbility & 31) << 13)
 				| ((i.Sensor & 3) << 18) | (i.Drift ? 1 << 20 : 0) | (i.JumpJets ? 1 << 21 : 0);
-			return cs::Cat("control ", Int(c->Player().Seat), " ", Num(i.Aim.X), " ", Num(i.Aim.Y), " ", Num(i.Aim.Z), " ",
+			auto line = cs::Cat("control ", Int(c->Player().Seat), " ", Num(i.Aim.X), " ", Num(i.Aim.Y), " ", Num(i.Aim.Z), " ",
 				Num(i.Throttle), " ", Num(i.StrafeRight), " ", Num(i.StrafeUp), " ", Num(i.Roll), " ", Int(flags));
+			// US-T736: mouse flight's virtual stick and auto-level, trailing only when in use, so older lines read the same.
+			if (i.RateStick || i.AutoLevelS > 0)
+				line = cs::Cat(line, " ", Int(i.RateStick ? 1 : 0), " ", Num(i.StickRight), " ", Num(i.StickUp), " ", Num(i.AutoLevelS));
+			return line;
 		}
 		// US-T137: something said over comms, to a hull's id or -(settlement id + 1).
 		if (auto m = cs::As<CommsCommand>(command)) return cs::Cat("comms ", Int(m->Player().Seat), " ", Int(m->Target), " ", Int(m->Verb));
@@ -71,6 +75,13 @@ namespace SpaceGod::Core
 			input.Sensor = (flags >> 18) & 3; // US-T93
 			input.Drift = (flags & (1 << 20)) != 0; // US-T165
 			input.JumpJets = (flags & (1 << 21)) != 0; // US-T83
+			if (f.Count() >= 14) // US-T736
+			{
+				input.RateStick = ParseInt(f[10]) != 0;
+				input.StickRight = ParseNum(f[11]);
+				input.StickUp = ParseNum(f[12]);
+				input.AutoLevelS = ParseNum(f[13]);
+			}
 
 			return cs::New<SeatControlCommand>(p, input);
 		}

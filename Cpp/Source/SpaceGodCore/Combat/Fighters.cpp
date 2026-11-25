@@ -714,7 +714,15 @@ namespace SpaceGod::Core
 		state.Up = stick->Up.LengthSquared() > 1e-12 ? stick->Up : PilotState::LevelUp(u->Forward);
 		state.AngularVelocity = stick->AngularVelocity;
 		PilotInput input;
-		input.DesiredForward = stick->Aim.LengthSquared() > 1e-12 ? stick->Aim.Normalized() : DVec3::Zero;
+		input.DesiredForward = !stick->RateStick && stick->Aim.LengthSquared() > 1e-12 ? stick->Aim.Normalized() : DVec3::Zero;
+		// Mouse flight (US-T736): the virtual stick's rate demand, and the roof eased level on the system's north.
+		input.StickRight = stick->RateStick ? stick->StickRight : 0;
+		input.StickUp = stick->RateStick ? stick->StickUp : 0;
+		if (stick->AutoLevelS > 0)
+		{
+			input.LevelUp = PilotState::LevelUp(u->Forward);
+			input.LevelS = stick->AutoLevelS;
+		}
 		input.Throttle = Max(0.0, Min(1.0, stick->Throttle));
 		input.StrafeRight = stick->StrafeRight;
 		input.StrafeUp = stick->StrafeUp;

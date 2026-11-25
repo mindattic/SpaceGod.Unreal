@@ -80,6 +80,16 @@ namespace SpaceGod::Core
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI
 		/// strafing run, US-T164) through a <see cref="DriftControl"/>. Unset, every model flies exactly as before.</summary>
 		bool Drift = false;
+
+		/// <summary>The virtual stick (US-T736, mouse flight): a turn-rate demand across the nose, as fractions of the hull's top
+		/// turn rate, toward its starboard and its roof (the pair's length capped at 1). Read only while
+		/// <see cref="DesiredForward"/> is zero; both zero then, flight assist holds the nose where it is.</summary>
+		double StickRight = 0, StickUp = 0;
+
+		/// <summary>Auto-level (US-T736): with assist on and no roll input, the roof eases toward this (unit; zero leaves the roll
+		/// alone) with a time constant of <see cref="LevelS"/> seconds, no faster than the roll rate.</summary>
+		DVec3 LevelUp;
+		double LevelS = 1;
 	};
 
 	/// <summary>

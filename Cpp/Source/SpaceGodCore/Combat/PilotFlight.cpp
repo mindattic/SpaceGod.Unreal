@@ -202,6 +202,13 @@ namespace SpaceGod::Core
 					target = axis.Normalized() * rate;
 				}
 			}
+			else
+			{
+				// The virtual stick (US-T736): the nose swings toward the demand's side of it at that share of the top rate.
+				auto toward = s.Right() * input.StickRight + s.Up * input.StickUp;
+				double share = Min(1.0, toward.Length());
+				if (share > 1e-9) target = DVec3::Cross(f, toward).Normalized() * (share * turnRateDegS * Astro::Deg2Rad);
+			}
 			auto dw = target - wTurn;
 			if (dw.Length() > maxDw) dw = dw.Normalized() * maxDw;
 			wTurn = wTurn + dw;
@@ -217,6 +224,14 @@ namespace SpaceGod::Core
 		else
 		{
 			double targetRoll = rollIn * rollRateDegS * Astro::Deg2Rad;
+			// Auto-level (US-T736): let go of roll and the roof eases toward the level up, signed about the nose.
+			auto level = input.LevelUp - f * DVec3::Dot(input.LevelUp, f);
+			if (rollIn == 0 && level.LengthSquared() > 1e-12)
+			{
+				level = level.Normalized();
+				double off = cs::Math::Atan2(DVec3::Dot(DVec3::Cross(s.Up, level), f), DVec3::Dot(s.Up, level));
+				targetRoll = Limit(off / Max(input.LevelS, dt), rollRateDegS * Astro::Deg2Rad);
+			}
 			wRoll += Limit(targetRoll - wRoll, rollAlpha * dt);
 		}
 

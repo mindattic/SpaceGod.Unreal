@@ -28,6 +28,7 @@
 #include "Embodiment/StationSeat.h"
 #include "Fleet.h"
 #include "Infrastructure/Infrastructure.h"
+#include "Input/MouseFlight.h" // US-T736
 #include "Sensors/SensorPosture.h"
 #include "Session/Commands.h"
 #include "Session/ISession.h"
@@ -629,10 +630,29 @@ namespace SpaceGod
 		auto rot = SpaceCamera->Rotation;
 		auto up = rot * Vector3::up();
 		auto right = rot * Vector3::right();
-		seatAim = (Quaternion::AngleAxis(look.x * Cameras::SpaceCamera::LookSensitivity(), up) *
-			Quaternion::AngleAxis(-Cameras::SpaceCamera::LookY(look.y) * Cameras::SpaceCamera::LookSensitivity(), right) * seatAim).normalized();
-		ClampSeatAim(held); // US-T129
+		// US-T736: mouse flight on the virtual stick, a launched craft's nose flown by the cursor's offset as a turn rate, the
+		// view on the nose; the flip still swings onto the retrograde by aim.
+		auto cockpitSeat = cs::As<FighterSeat>(held);
+		bool rateStick = cockpitSeat != nullptr && ::SpaceGod::Input::MouseFlight::VirtualStick() && !Input.Manoeuvre;
+		Vector2 stickOut = Vector2::zero();
+		if (rateStick)
+		{
+			float k = Cameras::SpaceCamera::LookSensitivity();
+			stickOut = ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * k, Cameras::SpaceCamera::LookY(look.y) * k));
+			seatAim = ToVector(cockpitSeat->Unit->Forward.SwapYZ()).normalized();
+		}
+		else
+		{
+			::SpaceGod::Input::MouseFlight::Centre();
+			seatAim = (Quaternion::AngleAxis(look.x * Cameras::SpaceCamera::LookSensitivity(), up) *
+				Quaternion::AngleAxis(-Cameras::SpaceCamera::LookY(look.y) * Cameras::SpaceCamera::LookSensitivity(), right) * seatAim).normalized();
+			ClampSeatAim(held); // US-T129
+		}
 		EmbodimentInput input;
+		input.RateStick = rateStick;
+		input.StickRight = stickOut.x;
+		input.StickUp = stickOut.y;
+		input.AutoLevelS = cockpitSeat != nullptr ? ::SpaceGod::Input::MouseFlight::AutoLevelS() : 0;
 		input.Aim = DVec3(seatAim.x, seatAim.y, seatAim.z).SwapYZ();
 		input.Throttle = Mathf::Clamp(Input.Move.z, -1.0f, 1.0f);
 		input.StrafeRight = Mathf::Clamp(Input.Move.x, -1.0f, 1.0f);
@@ -752,6 +772,12 @@ namespace SpaceGod
 			ShowToast(f->ToggleFlightAssist()
 				? "Flight assist off: it drifts on its momentum, W/S are raw thrust, Alt flips for a turn and burn"
 				: "Flight assist on: the thrusters cancel drift and it flies where it points");
+		if (Input.MatchSpeed) // US-T736
+		{
+			double throttle = f->MatchSpeed();
+			ShowToast(throttle < 0 ? cs::String("Nothing locked to match speed with: T locks a target")
+				: cs::Cat("Matching the lock's speed: throttle ", cs::ToInt(cs::Math::Round(throttle * 100)), "%"));
+		}
 		if (Input.LockTarget)
 		{
 			auto locked = f->CycleLock(aim);

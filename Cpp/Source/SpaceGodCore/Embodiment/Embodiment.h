@@ -265,6 +265,12 @@ namespace SpaceGod::Core
 		/// (<see cref="WeaponGroups.Secondaries"/>) the second trigger fires, picked directly instead of cycled one at a
 		/// time; other seats ignore it.</summary>
 		int FireGroup = 0;
+
+		/// <summary>Mouse flight on the virtual stick (US-T736): the nose flown by a turn-rate demand across it, fractions of
+		/// the top rate toward starboard and the roof, instead of <see cref="Aim"/>; and auto-level's time constant, s (0:
+		/// off). A launched craft's cockpit (<see cref="FighterSeat"/>) reads them; other seats ignore them.</summary>
+		bool RateStick = false;
+		double StickRight = 0, StickUp = 0, AutoLevelS = 0;
 	};
 
 	/// <summary>

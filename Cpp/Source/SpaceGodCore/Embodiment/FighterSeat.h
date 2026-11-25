@@ -116,6 +116,10 @@ namespace SpaceGod::Core
 
 		bool FlightAssistOff() const;
 
+		/// <summary>Match speed (US-T736, Freelancer's): the throttle's set point to the locked hull's speed, as near as the
+		/// craft's top allows. Returns the throttle now, or -1 with nothing locked.</summary>
+		double MatchSpeed();
+
 		/// <summary>Moves a pip of the reactor's power to <paramref name="s"/>; false if it has as much as it can take.</summary>
 		bool ShiftPower(PowerSystem s);
 

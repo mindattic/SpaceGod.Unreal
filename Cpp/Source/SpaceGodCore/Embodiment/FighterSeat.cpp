@@ -115,6 +115,10 @@ namespace SpaceGod::Core
 		stick->StrafeRight = input.StrafeRight;
 		stick->StrafeUp = input.StrafeUp;
 		stick->Roll = input.Roll;
+		stick->RateStick = input.RateStick; // US-T736
+		stick->StickRight = input.StickRight;
+		stick->StickUp = input.StickUp;
+		stick->AutoLevelS = input.AutoLevelS;
 		stick->Boost = input.Boost;
 		stick->Secondary = input.Secondary;
 		Unit->PlayerFireHeld = input.Primary;
@@ -261,6 +265,16 @@ namespace SpaceGod::Core
 	{
 		auto stick = Stick();
 		return stick ? stick->FlightAssistOff : false;
+	}
+
+	double FighterSeat::MatchSpeed()
+	{
+		auto stick = Stick();
+		auto target = Unit->PlayerLockTarget;
+		if (stick == nullptr || target == nullptr || target->Dead) return -1;
+		double top = Unit->Combat->Spec->MaxSpeed;
+		stick->Throttle = top > 0 ? cs::Math::Min(1.0, target->Vel.Length() / top) : 0;
+		return stick->Throttle;
 	}
 
 	bool FighterSeat::ShiftPower(PowerSystem s) { return Unit->Power != nullptr && Unit->Power->Shift(s); }

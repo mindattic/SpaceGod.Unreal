@@ -121,6 +121,11 @@ namespace SpaceGod::Core
 		bool DriftHeld = false;
 		DriftControl Drift;
 
+		/// <summary>Mouse flight on the virtual stick this step (US-T736): the nose's turn-rate demand
+		/// (<see cref="PilotInput.StickRight"/>) instead of <see cref="Aim"/>, and auto-level's time constant, s (0: off). Not saved.</summary>
+		bool RateStick = false;
+		double StickRight = 0, StickUp = 0, AutoLevelS = 0;
+
 		/// <summary>The seat's flight line for the readout (US-T87): with assist off, what stopping costs. Not saved.</summary>
 		cs::String Note;
 

@@ -169,6 +169,7 @@ namespace SpaceGod::Input
 				{ KeyAction::SystemCruise, "systemCruise", "Flight: cruise drive", Controls, EdgeKind, { InputBinding(Key::J, S) }, "Spool the in-system cruise drive for what the nose is on, or drop out of it." },
 				{ KeyAction::Drift, "drift", "Flight: drift", Controls, HeldAct, { Key::R, Pad(PadButton::B) }, "A fighter's drift (hold, or toggle as Controls > Drift key sets it). In command its pad button backs out, as Esc does." },
 				{ KeyAction::FlightAssist, "flightAssist", "Flight: flight assist", Controls, EdgeKind, { Key::F, Pad(PadButton::RightStick) }, "Flight assist on or off." },
+				{ KeyAction::MatchSpeed, "matchSpeed", "Flight: match speed", Controls, EdgeKind, { Key::Z }, "Sets the throttle to the locked target's speed." }, // US-T736
 				{ KeyAction::JumpJets, "jumpJets", "Flight: jump jets (mech)", Controls, HeldAct, { Key::Space }, "Held in a mech: the jump jets lift it off the plating and fly it in open space (the pause's Space is theirs while you pilot one)." },
 
 				{ KeyAction::Fire, "fire", "Combat: fire", Controls, HeldAct, { Pad(PadButton::RightTrigger) }, "Held: fires the guns at the controls. The left mouse button always fires too (it is fixed)." }, // US-T437: the pad's fire of before

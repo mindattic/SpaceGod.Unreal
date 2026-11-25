@@ -45,7 +45,7 @@ namespace SpaceGod::Input
 		// Move (the camera's swim in command, thrust and strafe at the controls)
 		MoveForward, MoveBack, StrafeLeft, StrafeRight, Rise, Sink, Boost, Slow,
 		// Flight
-		RollLeft, RollRight, Manoeuvre, Cruise, SystemCruise, Drift, FlightAssist, JumpJets,
+		RollLeft, RollRight, Manoeuvre, Cruise, SystemCruise, Drift, FlightAssist, MatchSpeed /* US-T736 */, JumpJets,
 		// Combat and sensors
 		Fire /* US-T437 */, SecondaryFire /* US-T437 */, LockTarget, LockAttacker /* US-T307 */, Tractor, DropMine, TunePhasers, RunHot, SensorPing, SilentRunning, PowerToggle, SelfDestruct,
 		// Reactor
