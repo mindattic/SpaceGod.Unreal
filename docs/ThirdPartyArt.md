@@ -202,6 +202,32 @@ a new asset.
   Grey) with a light wash of its owner's colour. Without the pack, headless, or with `-NoSSC`, every station is
   procedural as before. The lineup adds `ssc-stations` and `ssc-archetypes` sheets.
 
+## The kit part catalogue (US-T763)
+
+`Data/ModularParts.json` indexes every modular part of the three kits: the parts of each `*Modules.fbx` (USC's 18 sets,
+Star Sparrow's 8 parts, Space Station Creator's 4 sets), 298 in all. It holds names and numbers only, nothing of the art,
+so it is committed; it is the catalogue the seeded hull assembler (US-T765) picks from. Rebuild it on a machine with the
+packs extracted with `tools/index-kit-parts.ps1` or the console command `sg.IndexKitParts [blender=<exe>]` (both run
+`tools/index_kit_parts.py` in Blender 3.3+, the command as a hidden low-priority child process).
+
+Per part: `id` (`<pack>/<set>/<name>`), `family` (the set), `role`, `tags`, `node` and `file` (where it is in the pack),
+`atlas` (the texture atlas that paints it), `tris`, `min`/`max` and `sockets`; `asset` and `assetOrigin` when an import
+script already brings it in (USC's bolted-on modules about their box middle, Star Sparrow's modules about their pivot).
+Every number is in the game's model frame (nose +Z, up +Y, +X starboard) in the pack's metres, relative to the part's
+own pivot, which is where the pack's own creator attaches it (an antenna's foot, a wing's root).
+
+- **Roles:** `core` (hull sections, holds, superstructure, tagged `bridge`), `bow` (cockpits, noses, canopies), `stern`,
+  `engine` (`pod` or `nozzle`), `wing` (`fin`, `flat` or `vertical`, `paired` when both sides are one mesh across the
+  pivot), `turret` (`mount`, `barrel`, `missile`), `hangar`, `antenna` (`dish`, `sensor`, `solar`, `mast`), `armour`,
+  plus `connector` (trusses, arms, pylons, pipes, joints) and `detail` (greebles). By name, in priority order, from the
+  rules in the script. Style tags: the pack, `fighter`/`capital`/`station`, and the role's own.
+- **Sockets:** a face where a neighbour mates, at the middle of the part's own vertices on that face of its box (so a
+  tapered nose or offset flange is exact), with the face's outward normal and the patch's extent. Hull-like parts have
+  `fore`, `aft`, `top`, `bottom`, `port`, `starboard`; engines `mount` (fore) and `exhaust` (aft) and the four sides;
+  one-sided wings `root` (the edge nearest the pivot) and `tip`, plus `fore`/`aft`; barrels `breech` (the end nearest
+  the pivot) and `muzzle`, along their longest extent; turret mounts `base` and `top`; antennas `base` and `tip`.
+  Two parts mate by turning one socket's normal onto the reverse of the other's and bringing their positions together.
+
 ## Lighting the prebuilt hulls (US-T172)
 
 `M_USCShip`, `M_SSCStation` and `M_StarSparrowShip` are self-lit (Unlit materials lighting themselves from the star in
