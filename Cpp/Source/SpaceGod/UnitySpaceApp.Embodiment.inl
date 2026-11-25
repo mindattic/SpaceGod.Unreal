@@ -164,6 +164,35 @@ private:
 	/// in the fight. True if it handled the key.</summary>
 	bool BackToCarrier();
 
+	// ---------------------------------------------------------------- drop into battle (US-T806)
+
+public:
+	/// <summary>US-T806: the fight "Fly this" drops into from <paramref name="t"/> (a ship in a fight, a unit in one, a world a
+	/// fight is under way at) and the unit picked there (none for a world), or null when it is in no fight.</summary>
+	cs::Ref<Core::Battle> FlyThisBattle(const Target& t, cs::Ref<Core::BattleUnit>& at);
+
+	/// <summary>US-T806: whether the god view offers "Fly this" on <paramref name="t"/>: a fight there, or a ship to take the helm of.</summary>
+	bool CanFlyThis(const Target& t);
+
+	/// <summary>
+	/// US-T806, "Fly this" on a battle or fleet marker in the god view: time warp drops to 1x and the player is seated with
+	/// the hand-off camera (<see cref="TakeSeat"/>). In a fight: the craft picked, if it is one and free; else the free
+	/// fighter of the picked unit's side nearest it (any side for a world); else a squadron launched from that side's
+	/// nearest carrier (<see cref="Core::HelmAbilities::Use"/>, through its flight decks and launch tubes, so a tube's craft
+	/// is flown from the breech, US-T786), the player in its lead. Out of a fight: the ship's own helm. Player-only: launching
+	/// is single player (co-op has no command for it), and the AI never calls this.
+	/// </summary>
+	void FlyThis(const Target& t);
+
+private:
+	/// <summary>US-T806: the free fighter of <paramref name="side"/> (-1 any) in <paramref name="battle"/> nearest
+	/// <paramref name="nearKm"/> (battle-local): flying, not held by anyone, not on its way home, not a boarding shuttle.</summary>
+	cs::Ref<Core::FighterSeat> FreeFighterIn(const cs::Ref<Core::Battle>& battle, int side, Core::DVec3 nearKm);
+
+	/// <summary>US-T806: a squadron out of the carrier of <paramref name="side"/> (-1 any) nearest <paramref name="nearKm"/> that
+	/// has craft aboard fit to fly, fighters first; its lead's seat, or null with none launched.</summary>
+	cs::Ref<Core::FighterSeat> LaunchForPlayer(const cs::Ref<Core::Battle>& battle, int side, Core::DVec3 nearKm);
+
 public:
 	/// <summary>Shift+1..0 at the helm (US-T106): the ability in that slot of the hull's bar, the number key spent so it is not
 	/// also a captain's order; 0 when the key is no ability.</summary>

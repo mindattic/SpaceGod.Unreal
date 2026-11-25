@@ -79,6 +79,22 @@ The view's character on screen (`Hud::DrawPossession`, eased in with the view, s
 - **Panorama**: soft bands top and bottom, a bearing scale along the lower one (ticks every 5 degrees, labels every 45),
   and "TRAFFIC CONTROL · PANORAMIC · REACH 600,000 km".
 
+## Fly this: dropping into a battle (US-T806)
+
+The selection card in the god view has a **Fly this** button on a battle's marker (a ship or unit in a fight, a battle's
+row in the navigator, a world a fight is under way at) and on a fleet's ship. `UnitySpaceApp::FlyThis`
+(`UnitySpaceApp.Embodiment.cpp`) picks the seat and hands it to `TakeSeat`, the one seat-change path, so the show above
+and the camera's glide play as for any take; time warp drops to 1x and comes back with P.
+
+- The craft selected, if it is a fighter nobody holds.
+- Else the free fighter of the selected unit's side nearest it (any side for a world): flying, held by nobody, not
+  on its way home to land, not a boarding shuttle.
+- Else a squadron launched from that side's nearest carrier with craft aboard (fighters first, then interceptors, heavy
+  fighters, bombers, recon), through `HelmAbilities::Use` as its helm would, out through its flight decks and launch
+  tubes; the player takes its lead, so in a tube the cockpit looks down it from the breech (US-T786). Single player only:
+  co-op has no command to carry a launch ordered from the god view.
+- Else any side's free fighter. Out of a fight, the ship's own helm.
+
 ## Checking it
 
 ```powershell

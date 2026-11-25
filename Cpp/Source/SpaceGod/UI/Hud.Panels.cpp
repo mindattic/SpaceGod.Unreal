@@ -1335,6 +1335,8 @@ namespace SpaceGod::UI
 		bool focused = app->SpaceCamera->FocusTarget == t && app->SpaceCamera->Mode != Cameras::SpaceCamera::CameraMode::Free;
 		if (GUI::Button(Rect(r.x + 14, r.yMax() - 32, 150, 24), focused ? "Re-frame  [F]" : "Focus  [F]", buttonActive)) app->FocusSelected();
 		if (GUI::Button(Rect(r.x + 172, r.yMax() - 32, 150, 24), "Deselect  [Esc]", button)) app->Select(Target::None());
+		// US-T806: drop into the fight (or take the fleet's helm) from the god view.
+		if (!app->AtControls() && app->CanFlyThis(t) && GUI::Button(Rect(r.x + 330, r.yMax() - 32, w - 344, 24), "Fly this", buttonActive)) app->FlyThis(t);
 	}
 
 	cs::String Hud::PropellantText(const cs::Ref<Ship>& ship)

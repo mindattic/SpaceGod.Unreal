@@ -513,6 +513,131 @@ namespace SpaceGod
 		return true;
 	}
 
+	// ---------------------------------------------------------------- drop into battle (US-T806)
+
+	cs::Ref<Battle> UnitySpaceApp::FlyThisBattle(const Target& t, cs::Ref<BattleUnit>& at)
+	{
+		at = nullptr;
+		if (t.IsShip() && t.Ship != nullptr && t.Ship->Battle != nullptr && !t.Ship->Battle->Over)
+		{
+			at = t.Ship->Battle->UnitOf(t.Ship);
+			return t.Ship->Battle;
+		}
+		if (t.IsUnit() && t.Battle != nullptr && !t.Battle->Over)
+		{
+			at = t.Unit;
+			return t.Battle;
+		}
+		if (t.IsBody())
+			for (const auto& b : World()->War->Battles)
+				if (!b->Over && b->Body == t.Body) return b;
+		return nullptr;
+	}
+
+	bool UnitySpaceApp::CanFlyThis(const Target& t)
+	{
+		cs::Ref<BattleUnit> at;
+		if (FlyThisBattle(t, at) != nullptr) return true;
+		return t.IsShip() && t.Ship != nullptr && !t.Ship->Destroyed;
+	}
+
+	void UnitySpaceApp::FlyThis(const Target& t)
+	{
+		cs::Ref<BattleUnit> at;
+		auto battle = FlyThisBattle(t, at);
+		cs::Ref<IEmbodiable> seat;
+		if (battle == nullptr)
+		{
+			// A fleet out of any fight: there is nothing launched to fly, so its own helm.
+			if (t.IsShip() && t.Ship != nullptr && !t.Ship->Destroyed) seat = Embodiables::HelmOf(World(), t.Ship);
+			if (seat == nullptr)
+			{
+				ShowToast("Nothing to fly there: pick a fight or a ship");
+				return;
+			}
+		}
+		else
+		{
+			int side = at != nullptr ? at->Side : -1;
+			DVec3 nearKm = at != nullptr ? at->Pos : DVec3::Zero;
+			if (at != nullptr && at->Kind == UnitKind::Fighter && EmbodiedBy(at).IsNone())
+			{
+				auto own = Embodiables::FighterOf(battle, at);
+				if (own != nullptr && own->CanEmbody()) seat = own;
+			}
+			if (seat == nullptr) seat = FreeFighterIn(battle, side, nearKm);
+			if (seat == nullptr) seat = LaunchForPlayer(battle, side, nearKm);
+			if (seat == nullptr && side >= 0) seat = FreeFighterIn(battle, -1, nearKm);
+			if (seat == nullptr)
+			{
+				ShowToast(cs::Cat("No free fighter in ", battle->Name, Coop::CoopPeer::Current() != nullptr
+					? cs::String(", and launching from the god view is single player only") : cs::String(", and no carrier there has one aboard to launch")));
+				return;
+			}
+		}
+		TakeSeat(seat);
+		if (AtControls() && Clock->WarpIndex != 0) Clock->SetWarp(0);
+	}
+
+	cs::Ref<FighterSeat> UnitySpaceApp::FreeFighterIn(const cs::Ref<Battle>& battle, int side, DVec3 nearKm)
+	{
+		if (battle == nullptr) return nullptr;
+		auto held = EmbodiedNow();
+		cs::Ref<FighterSeat> best;
+		double bestD = cs::Double::MaxValue;
+		for (const auto& u : battle->Units)
+		{
+			if (u->Kind != UnitKind::Fighter || u->Fighter == nullptr || !u->Present() || u->Captured) continue;
+			if (side >= 0 && u->Side != side) continue;
+			if (u->Fighter->Role == FighterRole::AssaultShuttle || FlightDecks::Away(u)) continue;
+			double d = (u->Pos - nearKm).LengthSquared();
+			if (d >= bestD) continue;
+			bool taken = false;
+			for (const auto& e : held)
+				if (e.Subject.Unit == u) taken = true;
+			if (taken) continue;
+			auto seat = Embodiables::FighterOf(battle, u);
+			if (seat == nullptr || !seat->CanEmbody()) continue;
+			bestD = d;
+			best = seat;
+		}
+		return best;
+	}
+
+	cs::Ref<FighterSeat> UnitySpaceApp::LaunchForPlayer(const cs::Ref<Battle>& battle, int side, DVec3 nearKm)
+	{
+		// The launch is a direct order to the carrier, as its helm's is; co-op has no command to carry it from the god view.
+		if (battle == nullptr || Coop::CoopPeer::Current() != nullptr) return nullptr;
+		auto carriers = cs::List<std::tuple<double, cs::Ref<BattleUnit>>>();
+		for (const auto& u : battle->Units)
+		{
+			if (u->Kind != UnitKind::Ship || u->Ship == nullptr || !u->Present() || u->Captured) continue;
+			if (side >= 0 && u->Side != side) continue;
+			if (!FlightDecks::HasOpenDeck(u)) continue;
+			carriers.Add(std::make_tuple((u->Pos - nearKm).LengthSquared(), u));
+		}
+		carriers.Sort([](const std::tuple<double, cs::Ref<BattleUnit>>& a, const std::tuple<double, cs::Ref<BattleUnit>>& b)
+		{
+			return cs::CompareTo(std::get<0>(a), std::get<0>(b));
+		});
+		static constexpr HelmAbility flyThisLaunches[] = { HelmAbility::LaunchFighters, HelmAbility::LaunchInterceptors,
+			HelmAbility::LaunchHeavyFighters, HelmAbility::LaunchBombers, HelmAbility::LaunchRecon };
+		for (const auto& c : carriers)
+		{
+			auto carrier = std::get<1>(c);
+			for (auto a : flyThisLaunches)
+			{
+				HelmAbilities::Use(carrier->Ship, a, World());
+				const auto& r = HelmAbilities::Last();
+				helmAbilitySeq = r.Seq; // the god view says what came of it, not the helm's toast
+				if (r.Launched.Count() == 0) continue;
+				auto seat = Embodiables::FighterOf(battle, r.Launched[0]);
+				if (seat != nullptr) return seat;
+			}
+		}
+		return nullptr;
+	}
+
 	// ---------------------------------------------------------------- the picker (U.SPC-T446)
 
 	void UnitySpaceApp::TogglePicker()
