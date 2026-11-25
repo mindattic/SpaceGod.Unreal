@@ -21,6 +21,7 @@
 #include "Combat/ElectronicWarfare.h" // US-T404
 #include "Settings/GameSetting.h" // US-T404: the paint settings' values
 #include "Combat/Fighters.h"
+#include "Combat/SubsystemTargets.h" // US-T833
 #include "Combat/FleetCoordination.h" // US-T403
 #include "Embodiment/FighterSeat.h"
 #include "Ships.h"
@@ -412,16 +413,16 @@ namespace SpaceGod::UI
 		if (weakLine)
 		{
 			if (weak != nullptr)
-				DrawLabel(FitText(cs::Cat("WEAK POINT  ", cs::Strings::ToUpperInvariant(WeakPoints::Label(weak)), "  ", Pct(weak->Health()), "  ",
-					arrayPicked ? "silence it" : WeakPoints::ExposedFrom(t, weak, me->Pos) ? "OPEN" : "covered"), minorLabel, w), Vector2(x, y), LockColor, true);
+				DrawLabel(FitText(cs::Cat(WeakPoints::SpecOf(weak->Kind()) != nullptr ? "WEAK POINT  " : "SUBSYSTEM  ", cs::Strings::ToUpperInvariant(WeakPoints::Label(weak)), "  ", Pct(weak->Health()), "  ",
+					arrayPicked ? "silence it" : WeakPoints::SpecOf(weak->Kind()) == nullptr ? "" : WeakPoints::ExposedFrom(t, weak, me->Pos) ? "OPEN" : "covered"), minorLabel, w), Vector2(x, y), LockColor, true);
 			else if (BroadcastArrays::Silenced(t))
 				DrawLabel("BROADCAST ARRAY  out: it cannot report", Vector2(x, y), LockColor, true);
 			else
 				DrawLabel(WeakPoints::IsCapital(t) ? "WEAK POINT  none left" : "WEAK POINT  none (a destroyer and up)", Vector2(x, y), Dim, true);
 			y += RowH;
 			// US-T96: any ship's broadcast array can be picked while it stands.
-			bool pickable = weak != nullptr || WeakPoints::IsCapital(t) || (BroadcastArrays::Carries(t) && !BroadcastArrays::Silenced(t));
-			if (fighterSeat) DrawLabel(FitText(pickable ? "6 next weak point  \xC2\xB7  T next lock" : "T next lock", minorLabel, w), Vector2(x, y), Dim, true);
+			bool pickable = weak != nullptr || SubsystemTargets::Any(t); // US-T833
+			if (fighterSeat) DrawLabel(FitText(pickable ? "6 next subsystem  \xC2\xB7  T next lock" : "T next lock", minorLabel, w), Vector2(x, y), Dim, true);
 		}
 	}
 }

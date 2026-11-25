@@ -809,9 +809,9 @@ namespace SpaceGod
 			{
 				auto weak = f->CycleWeakPoint();
 				// US-T96: any hull's broadcast array is in the cycle; knocked out, the victim cannot report the attack.
-				ShowToast(weak == nullptr ? cs::String("Lock a ship (T) to pick a weak point or its broadcast array")
+				ShowToast(weak == nullptr ? cs::String("Lock a ship (T) to pick a subsystem")
 					: BroadcastArrays::Is(f->Unit->PlayerLockTarget, weak) ? cs::String("Broadcast array: knock it out and they cannot report the attack")
-					: cs::Cat("Weak point: ", WeakPoints::Label(weak)));
+					: cs::Cat(WeakPoints::SpecOf(weak->Kind()) != nullptr ? "Weak point: " : "Subsystem: ", WeakPoints::Label(weak)));
 				break;
 			}
 			case 7: f->ShiftPower(PowerSystem::Weapons); break;

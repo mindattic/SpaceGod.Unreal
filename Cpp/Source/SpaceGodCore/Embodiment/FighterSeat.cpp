@@ -6,6 +6,7 @@
 #include "Combat/Attackers.h"
 #include "Combat/Battle.h"
 #include "Combat/BroadcastArrays.h"
+#include "Combat/SubsystemTargets.h" // US-T833
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
@@ -238,8 +239,8 @@ namespace SpaceGod::Core
 	{
 		auto t = Unit->PlayerLockTarget;
 		if (t == nullptr || !t->Present()) return nullptr;
-		// Its weak points, then its broadcast array (US-T96): any hull fought as a ship has one to knock out.
-		Unit->PlayerSubTarget = BroadcastArrays::Cycle(t, Unit->PlayerSubTarget, step);
+		// Its weak points, bridge, hangar and weapon mounts (US-T833), then its broadcast array (US-T96).
+		Unit->PlayerSubTarget = SubsystemTargets::Cycle(t, Unit->PlayerSubTarget, step);
 		return Unit->PlayerSubTarget;
 	}
 

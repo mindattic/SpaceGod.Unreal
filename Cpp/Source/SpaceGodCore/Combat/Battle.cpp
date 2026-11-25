@@ -43,6 +43,7 @@
 #include "Combat/ShieldEmitters.h"
 #include "Combat/SpinalMounts.h"
 #include "Combat/StrandedWings.h"
+#include "Combat/SubsystemTargets.h" // US-T833
 #include "Combat/TachyonLances.h"
 #include "Combat/WeakPatches.h"
 #include "Combat/WeaponSystems.h"
@@ -1748,13 +1749,16 @@ namespace SpaceGod::Core
 			return;
 		}
 		auto at = origin + dir * t;
-		// US-T96: the player's guns strike the broadcast array picked on the hull locked when they land by it.
-		auto sub = BroadcastArrays::Struck(u, hit, at, SubsystemNear(hit, at));
+		// US-T96, US-T833: the player's guns strike the subsystem picked on the hull locked when they land by it, and tear
+		// at the hull section under it.
+		auto nearest = SubsystemNear(hit, at);
+		auto sub = SubsystemTargets::Struck(u, hit, at, nearest);
+		auto struckAt = sub != nearest ? hit->PointOf(sub->Def) : at;
 		// A plasma bolt bleeds off over the distance it crossed (U.SPC-T488).
 		if (w->FalloffEdgeShare < 1 && w->Damage > 0) damage *= w->DamageAt(t) / w->Damage;
 		FxShot shot(*this, u, s); // US-T257
 		Emit(EnergyWeapons::FxOf(s->Kind(), true).value_or(w->AntiSmall ? FxKind::PointDefense : w->Lance ? FxKind::TachyonLance : FxKind::Beam), origin, at, damage, u->Side, hit, sub ? sub->Index : -1);
-		ApplyDamage(hit, sub, damage, at, std::nullopt, WeakPoints::IsSmallCraft(u) ? WeakPoints::Factor(hit, sub, dir) : 1, dir, false, WeaponSystems::FamilyOf(s->Kind()));
+		ApplyDamage(hit, sub, damage, struckAt, at, WeakPoints::IsSmallCraft(u) ? WeakPoints::Factor(hit, sub, dir) : 1, dir, false, WeaponSystems::FamilyOf(s->Kind()));
 	}
 
 	void Battle::StepAimedRound(const cs::Ref<KineticRound>& r, double dt)
@@ -1770,9 +1774,11 @@ namespace SpaceGod::Core
 			{
 				auto at = r->Pos + step / len * t;
 				r->Gone = true;
-				auto sub = BroadcastArrays::Struck(r->Shooter, hit, at, SubsystemNear(hit, at)); // US-T96
+				auto nearest = SubsystemNear(hit, at);
+				auto sub = SubsystemTargets::Struck(r->Shooter, hit, at, nearest); // US-T96, US-T833
+				auto struckAt = sub != nearest ? hit->PointOf(sub->Def) : at;
 				FxShot shot(*this, r->Shooter, r->Mount); // US-T257
-				ApplyDamage(hit, sub, r->Damage, at, std::nullopt, r->SmallCraft ? WeakPoints::Factor(hit, sub, r->Vel - hit->Vel) : 1, r->Vel - hit->Vel,
+				ApplyDamage(hit, sub, r->Damage, struckAt, at, r->SmallCraft ? WeakPoints::Factor(hit, sub, r->Vel - hit->Vel) : 1, r->Vel - hit->Vel,
 					false, WeaponSystems::FamilyOfRound(*r));
 				return;
 			}
