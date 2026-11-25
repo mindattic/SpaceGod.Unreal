@@ -18,6 +18,7 @@
 
 #include "UnitySpaceApp.h"
 #include "Camera/StarTravel.h"
+#include "Combat/Battle.h"
 #include "Systems/CruiseDrive.h"
 
 #include "World.h"
@@ -185,6 +186,15 @@ namespace SpaceGod::UI
 			AddPanel(s, [this] { DrawHunters(); });
 		}
 		// The foot stack, over the reactor and the sensors (registered before these): the locked hull's card, then the selection.
+		{
+			auto s = spec(DrawerRadarId, "RADAR", "RDR", Edge::Right, Vector2(248, 340));
+			s.available = [this, screenFree]
+			{
+				cs::Ref<Core::Battle> battle;
+				return screenFree() && HeldUnit(battle) != nullptr && battle != nullptr;
+			};
+			AddPanel(s, [this] { DrawRadar(); });
+		}
 		AddPanel(spec(DrawerTargetId, "TARGET", "TGT", Edge::Right, Vector2(248, 300)), [this] { DrawTargetCard(); });
 		{
 			auto s = spec(DrawerSelectionId, "SELECTION", "SCAN", Edge::Right, Vector2(418, 300));

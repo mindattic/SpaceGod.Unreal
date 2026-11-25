@@ -41,6 +41,10 @@ public:
 	static constexpr const char* DrawerObjectivesId = "objectives";
 	static constexpr const char* DrawerReactorId = "reactor";
 	static constexpr const char* DrawerSensorsId = "sensors";
+	/// US-T853 (UI/Hud.Radar.cpp): in a fight, the 3D radar: every contact on a plan-view ellipse in the held hull's frame with
+	/// elevation stalks, the lock ringed, the nearest inbound round and the lock state, own shield quadrants, pips and boost.
+	static constexpr const char* DrawerRadarId = "radar";
+	void DrawRadar();
 	/// US-T440: every other HUD panel's drawer (UI/Hud.DrawerPanels.cpp registers them; docs/HUD.md lists them).
 	static constexpr const char* DrawerTopBarId = "topbar";
 	static constexpr const char* DrawerNewsId = "news";

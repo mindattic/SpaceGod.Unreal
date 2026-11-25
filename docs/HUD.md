@@ -90,6 +90,7 @@ resized by hand.
 | Market (`market`) | right edge, top stack (the opportunities' place) | its key, either mode |
 | Gas works (`harvest`), Hunted (`hunters`) | right edge, top stack | HUD mode, when there is something to show |
 | Reactor (`reactor`), Sensors (`sensors`) | right edge, at the foot | HUD mode, at the controls; alerts OFFLINE, LIT UP |
+| Radar (`radar`) | right edge, over the sensors, under the target card | in a fight: FreeSpace-style 3D radar in the held hull's frame (plan ellipse, elevation stalks, stance colours, lock ringed, scaled to ArrowReachKm), the nearest inbound missile and LOCKING ON / seeker state, own shield quadrants as rim arcs, W/S/E pips and boost |
 | Target (`target`), Selection (`selection`) | right edge, over the sensors | HUD mode; the selection card takes what the edge leaves and scrolls in it |
 | Status (`status`) | bottom edge, at the foot | HUD mode |
 | Seat (`seat`), Helm (`helm`), Tractor beam (`tractor`), FTL drive (`ftl`) | bottom edge, over the status line | HUD mode, when there is something to show |
