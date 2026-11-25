@@ -23,8 +23,8 @@ namespace SpaceGod::UnityCompat
 
 	struct Mathf
 	{
-		static constexpr float PI = 3.14159274f;
-		static constexpr float Deg2Rad = PI * 2.0f / 360.0f;
+		static constexpr float Pi = 3.14159274f;
+		static constexpr float Deg2Rad = Pi * 2.0f / 360.0f;
 		static constexpr float Rad2Deg = 1.0f / Deg2Rad;
 		static constexpr float Epsilon = 1.401298E-45f;
 		static constexpr float Infinity = std::numeric_limits<float>::infinity();

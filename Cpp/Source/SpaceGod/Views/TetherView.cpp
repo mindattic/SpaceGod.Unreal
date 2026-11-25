@@ -78,7 +78,7 @@ namespace SpaceGod::Views
 			s = Mix(s);
 			float z = (s & 0xffff) / 32768.0f - 1;
 			s = Mix(s);
-			float a = (s & 0xffff) / 65536.0f * 2 * Mathf::PI;
+			float a = (s & 0xffff) / 65536.0f * 2 * Mathf::Pi;
 			float r = std::sqrt(Mathf::Max(0.0f, 1 - z * z));
 			b = Vector3(r * std::cos(a), z, r * std::sin(a));
 		}

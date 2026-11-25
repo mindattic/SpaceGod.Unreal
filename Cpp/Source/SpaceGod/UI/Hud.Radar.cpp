@@ -104,8 +104,8 @@ namespace SpaceGod::UI
 		};
 
 		// The disc: its rim, half reach, the nose and beam lines.
-		RadarArc(centre, rx, ry, 0, 2 * Mathf::PI, 48, 1, RadarFaded(Dim, 0.5f), RadarFaded(Dim, 0.5f));
-		RadarArc(centre, rx * 0.5f, ry * 0.5f, 0, 2 * Mathf::PI, 24, 1, RadarFaded(Dim, 0.3f), RadarFaded(Dim, 0.3f));
+		RadarArc(centre, rx, ry, 0, 2 * Mathf::Pi, 48, 1, RadarFaded(Dim, 0.5f), RadarFaded(Dim, 0.5f));
+		RadarArc(centre, rx * 0.5f, ry * 0.5f, 0, 2 * Mathf::Pi, 24, 1, RadarFaded(Dim, 0.3f), RadarFaded(Dim, 0.3f));
 		DrawLine(Vector2(centre.x, centre.y - ry), Vector2(centre.x, centre.y + ry), RadarFaded(Dim, 0.2f), 1.0f);
 		DrawLine(Vector2(centre.x - rx, centre.y), Vector2(centre.x + rx, centre.y), RadarFaded(Dim, 0.2f), 1.0f);
 
@@ -126,8 +126,8 @@ namespace SpaceGod::UI
 						count[k]++;
 					}
 			}
-			const float centres[4] = {-Mathf::PI * 0.5f, 0, Mathf::PI * 0.5f, Mathf::PI}; // FORE up, STBD right, AFT down, PORT left
-			const float half = Mathf::PI * 0.2f;
+			const float centres[4] = {-Mathf::Pi * 0.5f, 0, Mathf::Pi * 0.5f, Mathf::Pi}; // FORE up, STBD right, AFT down, PORT left
+			const float half = Mathf::Pi * 0.2f;
 			for (int k = 0; k < 4; k++)
 			{
 				if (count[k] == 0) continue;

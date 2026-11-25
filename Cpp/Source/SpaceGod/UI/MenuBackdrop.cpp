@@ -140,7 +140,7 @@ namespace SpaceGod::UI
 
 		if (planet)
 		{
-			float drift = Mathf::Sin(time * 2.0f * Mathf::PI / PlanetDriftPeriod) * PlanetDriftDeg;
+			float drift = Mathf::Sin(time * 2.0f * Mathf::Pi / PlanetDriftPeriod) * PlanetDriftDeg;
 			Quaternion bearing = turn * Quaternion::Euler(PlanetPitchDeg, PlanetYawDeg + drift, 0);
 			auto t = planet->Root->transform;
 			t->SetPosition(eye + bearing * Vector3::forward() * PlanetDistance);

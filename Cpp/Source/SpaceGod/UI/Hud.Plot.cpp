@@ -54,7 +54,7 @@ namespace SpaceGod::UI
 		{
 			for (int i = 0; i < dots; i++)
 			{
-				float a = i * 2 * Mathf::PI / dots;
+				float a = i * 2 * Mathf::Pi / dots;
 				Dot(Vector2(centre.x + Mathf::Cos(a) * radius, centre.y + Mathf::Sin(a) * radius), 2, c);
 			}
 		}
@@ -157,7 +157,7 @@ namespace SpaceGod::UI
 				int dots = std::clamp(static_cast<int>(reach * 0.6f), 12, 72);
 				for (int i = 0; i < dots; i++)
 				{
-					float a = i * 2 * Mathf::PI / dots;
+					float a = i * 2 * Mathf::Pi / dots;
 					auto q = Vector2(at.x + Mathf::Cos(a) * reach, at.y + Mathf::Sin(a) * reach);
 					if ((q - centre).magnitude() <= inner) Dot(q, 2, nc);
 				}

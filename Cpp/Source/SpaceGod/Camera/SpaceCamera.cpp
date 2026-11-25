@@ -495,7 +495,7 @@ namespace SpaceGod::Cameras
 		want = Vector3::ClampMagnitude(want, limit);
 		// Semi-implicit spring, substepped so omega * step stays under a half whatever the frame time (at most 8 steps;
 		// a hitch past a tenth of a second is stepped as one).
-		float omega = 2.0f * Mathf::PI * ChaseLagHz();
+		float omega = 2.0f * Mathf::Pi * ChaseLagHz();
 		float span = Mathf::Min(dt, 0.1f);
 		int steps = Mathf::Clamp(Mathf::CeilToInt(span * omega / 0.5f), 1, 8);
 		float h = span / steps;
@@ -630,7 +630,7 @@ namespace SpaceGod::Cameras
 		// US-T855: the ghost floats as it drifts: a slow sway across the view and a lean of a few degrees, nothing at either eye.
 		if (ghostSeconds > 0 && ghostSway > 0)
 		{
-			float swell = Mathf::Sin(Mathf::PI * e) * ghostSway;
+			float swell = Mathf::Sin(Mathf::Pi * e) * ghostSway;
 			float tau = travelT * ghostSeconds;
 			auto across = Rotation * Vector3::right();
 			auto rise = Rotation * Vector3::up();

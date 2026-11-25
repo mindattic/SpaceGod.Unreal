@@ -343,7 +343,7 @@ namespace SpaceGod::Views
 			cols.Add(Color::clear());
 			for (int k = 0; k < segs; k++)
 			{
-				float t = k * Mathf::PI * 2 / segs;
+				float t = k * Mathf::Pi * 2 / segs;
 				verts.Add(centre + (u * Mathf::Cos(t) + v * Mathf::Sin(t)) * radius);
 				uvs.Add(Vector3(0.5f, 0.5f, 0.0f));
 				cols.Add(Color::clear());

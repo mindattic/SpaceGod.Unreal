@@ -1469,7 +1469,7 @@ namespace SpaceGod::UI
 		constexpr int n = 28;
 		for (int i = 0; i < n; i++)
 		{
-			float a0 = i * Mathf::PI * 2 / n, a1 = (i + 1) * Mathf::PI * 2 / n;
+			float a0 = i * Mathf::Pi * 2 / n, a1 = (i + 1) * Mathf::Pi * 2 / n;
 			Line(p + Vector2(Mathf::Cos(a0), Mathf::Sin(a0)) * r, p + Vector2(Mathf::Cos(a1), Mathf::Sin(a1)) * r, c, thickness);
 		}
 	}

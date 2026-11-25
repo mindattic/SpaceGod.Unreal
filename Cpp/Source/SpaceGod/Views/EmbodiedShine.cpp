@@ -152,7 +152,7 @@ namespace SpaceGod::Views
 			bool sweeping = sweep < 1;
 			// The flare: where the sweep crests, on about two sweeps in three.
 			bool flares = FreezePhase >= 0 || Hash01(sweepNo, s.Player.Seat) < 0.66f;
-			float flare = flares && sweep > 0.38f && sweep < 0.78f ? Mathf::Sin(Mathf::PI * (sweep - 0.38f) / 0.4f) : 0.0f;
+			float flare = flares && sweep > 0.38f && sweep < 0.78f ? Mathf::Sin(Mathf::Pi * (sweep - 0.38f) / 0.4f) : 0.0f;
 			flare = flare * flare;
 
 			float px = 2 * r / dist * ppu;
@@ -188,7 +188,7 @@ namespace SpaceGod::Views
 					g->Sweep->localPosition = onHull;
 					g->Sweep->SetRotation(look);
 					g->Sweep->localScale = Vector3(r * 0.7f, Mathf::Max(r * 0.24f, perPx * 4), 1);
-					float env = Mathf::Pow(Mathf::Sin(Mathf::PI * Mathf::Clamp01(sweep)), 1.5f);
+					float env = Mathf::Pow(Mathf::Sin(Mathf::Pi * Mathf::Clamp01(sweep)), 1.5f);
 					g->SweepM->SetColor("_Color", Color::Lerp(Color::white(), color, 0.3f));
 					g->SweepM->SetFloat("_Intensity", 2.4f * env * nearW);
 				}

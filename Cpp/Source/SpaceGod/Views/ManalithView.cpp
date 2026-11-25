@@ -94,7 +94,7 @@ namespace SpaceGod::Views
 		// The starting pose, then a constant rate about the local axes (one rotation about the rate vector, so it is truly
 		// constant), then the precession wobble on local X.
 		Vector3 rate(RateX, RateY, RateZ);
-		float wobble = WobbleDeg * std::sin(2 * Mathf::PI * t / WobblePeriodS);
+		float wobble = WobbleDeg * std::sin(2 * Mathf::Pi * t / WobblePeriodS);
 		return Quaternion::Euler(StartPitch, StartYaw, StartRoll) * Quaternion::AngleAxis(rate.magnitude() * t, rate.normalized())
 			* Quaternion::AngleAxis(wobble, Vector3::right());
 	}
@@ -109,7 +109,7 @@ namespace SpaceGod::Views
 
 	Vector3 ManalithView::OnSphere()
 	{
-		float z = Range(-1, 1), a = Range(0, 2 * Mathf::PI);
+		float z = Range(-1, 1), a = Range(0, 2 * Mathf::Pi);
 		float r = std::sqrt(Mathf::Max(0.0f, 1 - z * z));
 		return Vector3(r * std::cos(a), z, r * std::sin(a));
 	}

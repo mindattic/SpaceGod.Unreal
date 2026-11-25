@@ -81,9 +81,9 @@ namespace SpaceGod::Views
 
 		float DeltaAngle(float from, float to)
 		{
-			float d = std::fmod(to - from + Mathf::PI, 2 * Mathf::PI);
-			if (d < 0) d += 2 * Mathf::PI;
-			return d - Mathf::PI;
+			float d = std::fmod(to - from + Mathf::Pi, 2 * Mathf::Pi);
+			if (d < 0) d += 2 * Mathf::Pi;
+			return d - Mathf::Pi;
 		}
 
 		const LegConstants& Leg()
@@ -366,8 +366,8 @@ namespace SpaceGod::Views
 				float s = Mathf::Clamp((f - 0.5f) * 2, 0.0f, 1.0f);
 				swing[leg] = s;
 				sole = MechWalker::Plating(spec, a.From[leg] + (a.To[leg] - a.From[leg]) * Ease(s));
-				raise = lift * std::sin(Mathf::PI * s);
-				footPitch[leg] = 14.0f * std::sin(Mathf::PI * std::min(s * 1.2f, 1.0f)) * static_cast<float>(a.Activity);
+				raise = lift * std::sin(Mathf::Pi * s);
+				footPitch[leg] = 14.0f * std::sin(Mathf::Pi * std::min(s * 1.2f, 1.0f)) * static_cast<float>(a.Activity);
 			}
 			else sole = a.Plant[leg];
 			Vector3 at = toRig(sole);
@@ -382,7 +382,7 @@ namespace SpaceGod::Views
 		for (int leg = 0; leg < 2; leg++)
 		{
 			if (swing[leg] < 0) continue;
-			float s = std::sin(Mathf::PI * swing[leg]) * static_cast<float>(a.Activity);
+			float s = std::sin(Mathf::Pi * swing[leg]) * static_cast<float>(a.Activity);
 			bob += s * (4.0f + 9.0f * speedFrac);
 			roll += (leg == 0 ? 1.0f : -1.0f) * s * (1.5f + 1.5f * speedFrac);
 			sway += (leg == 0 ? -1.0f : 1.0f) * s * 2.5f * speedFrac;

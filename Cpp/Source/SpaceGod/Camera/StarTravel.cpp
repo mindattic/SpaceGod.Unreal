@@ -42,7 +42,7 @@ namespace SpaceGod::Cameras
 		switch (Stage)
 		{
 			case Leg::Leave: return 0.6f * Smoother(Mathf::Clamp01((t - 0.55f) / 0.45f));
-			case Leg::Cross: return 0.6f + 0.4f * Mathf::Sin(Mathf::PI * Mathf::Clamp01((t - 0.18f) / 0.82f));
+			case Leg::Cross: return 0.6f + 0.4f * Mathf::Sin(Mathf::Pi * Mathf::Clamp01((t - 0.18f) / 0.82f));
 			default: return 0.6f * (1 - Smoother(Mathf::Clamp01(t / 0.5f)));
 		}
 	}

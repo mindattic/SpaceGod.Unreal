@@ -249,7 +249,7 @@ namespace SpaceGod
 	{
 		float show = possessionShow.Active ? Bump(possessionShow.T, 0.0f, Tune::WashPeakS, Tune::WashS) : 0.0f;
 		// US-T855: the ghost's veil, deepest at the standstill between the two bodies.
-		float veil = seatTransition.Active ? SeatVeilPeak * Mathf::Sin(Mathf::PI * SeatTransitionT()) : 0.0f;
+		float veil = seatTransition.Active ? SeatVeilPeak * Mathf::Sin(Mathf::Pi * SeatTransitionT()) : 0.0f;
 		float wash = Mathf::Max(show, veil);
 		return wash > 0 ? wash * Mathf::Max(PlayerOptions::FlashScale(), 0.35f) : 0.0f;
 	}
@@ -357,7 +357,7 @@ namespace SpaceGod
 	{
 		if (!possessionShow.Active || UI::UiMotion::ProfileReducesMotion()) return 0;
 		float s = Mathf::Clamp01(possessionShow.T / Tune::FovBreathS);
-		float breath = Mathf::Sin(Mathf::PI * s);
+		float breath = Mathf::Sin(Mathf::Pi * s);
 		return (possessionShow.Entering ? 1.0f : -1.0f) * Tune::FovBreathDeg * breath * breath;
 	}
 

@@ -141,7 +141,7 @@ namespace SpaceGod::Views
 		{
 			float u = f.Entering ? Mathf::Lerp(0.92f, -0.92f, s) : Mathf::Lerp(-0.92f, 0.92f, s);
 			float perPx = dist / ppu;
-			float env = Mathf::Pow(Mathf::Sin(Mathf::PI * s), 1.5f);
+			float env = Mathf::Pow(Mathf::Sin(Mathf::Pi * s), 1.5f);
 			SweepNow = env;
 			sweep->localPosition = f.Rel + fwd * (u * r) - d * (r * 0.3f);
 			sweep->SetRotation(look);
@@ -191,10 +191,10 @@ namespace SpaceGod::Views
 			auto perp = Vector3::Cross(span / spanLen, camFwd);
 			if (perp.sqrMagnitude() < 1e-8f) perp = camUp;
 			perp = perp.normalized() * curlSign;
-			auto p = Lerp(from, to, e) + perp * (spanLen * Tune::MoteCurl * Mathf::Sin(Mathf::PI * e));
+			auto p = Lerp(from, to, e) + perp * (spanLen * Tune::MoteCurl * Mathf::Sin(Mathf::Pi * e));
 			// Its tangent, for the trail: the path a little further on.
 			float e2 = Mathf::Min(1.0f, e + 0.02f);
-			auto p2 = Lerp(from, to, e2) + perp * (spanLen * Tune::MoteCurl * Mathf::Sin(Mathf::PI * e2));
+			auto p2 = Lerp(from, to, e2) + perp * (spanLen * Tune::MoteCurl * Mathf::Sin(Mathf::Pi * e2));
 			auto tangent = p2 - p;
 			float pd = p.magnitude();
 			if (pd < 1e-9f)
