@@ -40,6 +40,21 @@ namespace SpaceGod::Core
 		MiddleLocal = DVec3(d->X, d->Y, d->Z);
 		double length = Max(Carrier->LengthKm, 1e-6);
 		double half = Min(FlightDecks::HalfLengthShipLengths, FlightDecks::MaxHalfLengthKm / length);
+		if (d->MouthAxis.has_value() && d->MouthAxis->LengthSquared() > 1e-12)
+		{
+			// The hangar sits on its mouth: the deck runs inward from it, the mouth its bow, or its stern when it faces aft.
+			auto axis = d->MouthAxis->Normalized();
+			bool aft = axis.Z < 0;
+			if (aft) axis = axis * -1.0;
+			AxisLocal = axis;
+			MiddleLocal = aft ? MiddleLocal + axis * half : MiddleLocal - axis * half;
+			SternAlong = -half * length;
+			BowAlong = half * length;
+			if (BowAlong - SternAlong < 0.05) BowAlong = SternAlong + 0.05;
+			MouthHalfWidthKm = d->MouthWidth * length * 0.5;
+			MouthHalfHeightKm = d->MouthHeight * length * 0.5;
+			return;
+		}
 		SternAlong = (Max(-0.5, d->Z - half) - d->Z) * length;
 		BowAlong = (Min(0.5, d->Z + half) - d->Z) * length;
 		if (BowAlong - SternAlong < 0.05) BowAlong = SternAlong + 0.05;
@@ -54,19 +69,41 @@ namespace SpaceGod::Core
 
 	DVec3 FlightDeck::Gate() const { return At(SternAlong - FlightDecks::ApproachKm, DVec3::Zero); }
 
-	DVec3 FlightDeck::At(double along, DVec3 offset) const
+	DVec3 FlightDeck::Axis() const
 	{
+		if (AxisLocal.LengthSquared() <= 1e-12) return Carrier->Forward;
 		DVec3 right, up;
 		Carrier->Basis(right, up);
-		return Middle() + Carrier->Forward * along + right * offset.X + up * offset.Y;
+		return (right * AxisLocal.X + up * AxisLocal.Y + Carrier->Forward * AxisLocal.Z).Normalized();
+	}
+
+	void FlightDeck::Basis(DVec3& axis, DVec3& right, DVec3& up) const
+	{
+		Carrier->Basis(right, up);
+		if (AxisLocal.LengthSquared() <= 1e-12)
+		{
+			axis = Carrier->Forward;
+			return;
+		}
+		axis = (right * AxisLocal.X + up * AxisLocal.Y + Carrier->Forward * AxisLocal.Z).Normalized();
+		auto r = DVec3::Cross(axis, up);
+		if (r.LengthSquared() > 1e-12) right = r.Normalized();
+		up = DVec3::Cross(right, axis);
+	}
+
+	DVec3 FlightDeck::At(double along, DVec3 offset) const
+	{
+		DVec3 axis, right, up;
+		Basis(axis, right, up);
+		return Middle() + axis * along + right * offset.X + up * offset.Y;
 	}
 
 	void FlightDeck::Frame(DVec3 pos, double& along, DVec3& offset) const
 	{
-		DVec3 right, up;
-		Carrier->Basis(right, up);
+		DVec3 axis, right, up;
+		Basis(axis, right, up);
 		auto d = pos - Middle();
-		along = DVec3::Dot(d, Carrier->Forward);
+		along = DVec3::Dot(d, axis);
 		offset = DVec3(DVec3::Dot(d, right), DVec3::Dot(d, up), 0);
 	}
 
@@ -308,20 +345,41 @@ namespace SpaceGod::Core
 	DVec3 FlightDecks::InboundGoal(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, const cs::Ref<FlightDeck>& deck)
 	{
 		auto c = deck->Carrier;
-		DVec3 right, up;
-		c->Basis(right, up);
+		DVec3 axis, right, up;
+		deck->Basis(axis, right, up);
 		// Coming in from ahead of the gate it swings round the hull's flank to come up astern, never through the hull.
-		auto local = c->ToLocal(u->Pos) * c->LengthKm;
-		double gateZ = deck->MiddleLocal.Z * c->LengthKm + deck->SternAlong - ApproachKm;
-		if (local.Z > gateZ + GateCaptureKm)
+		if (deck->AxisLocal.LengthSquared() <= 1e-12)
 		{
-			double beam = c->LengthKm * BeamShipLengths + RoundHullKm;
-			double side = local.X != 0 ? cs::Math::Sign(local.X) : deck->MiddleLocal.X >= 0 ? 1 : -1;
-			return c->Pos + right * (side * beam) + up * (local.Y * 0.5) + c->Forward * gateZ;
+			auto local = c->ToLocal(u->Pos) * c->LengthKm;
+			double gateZ = deck->MiddleLocal.Z * c->LengthKm + deck->SternAlong - ApproachKm;
+			if (local.Z > gateZ + GateCaptureKm)
+			{
+				double beam = c->LengthKm * BeamShipLengths + RoundHullKm;
+				double side = local.X != 0 ? cs::Math::Sign(local.X) : deck->MiddleLocal.X >= 0 ? 1 : -1;
+				return c->Pos + right * (side * beam) + up * (local.Y * 0.5) + axis * gateZ;
+			}
+		}
+		else
+		{
+			// Off the keel: the same swing in the deck's frame round the hull's centre, as wide as the hull is across it.
+			double along = 0, centreAlong = 0;
+			DVec3 off, centreOff;
+			deck->Frame(u->Pos, along, off);
+			deck->Frame(c->Pos, centreAlong, centreOff);
+			double gateAlong = deck->SternAlong - ApproachKm - centreAlong;
+			along -= centreAlong;
+			off = off - centreOff;
+			if (along > gateAlong + GateCaptureKm)
+			{
+				double keel = cs::Math::Abs(DVec3::Dot(right, c->Forward));
+				double beam = c->LengthKm * (keel * 0.5 + (1 - keel) * BeamShipLengths) + RoundHullKm;
+				double side = off.X != 0 ? cs::Math::Sign(off.X) : -centreOff.X >= 0 ? 1 : -1;
+				return c->Pos + right * (side * beam) + up * (off.Y * 0.5) + axis * gateAlong;
+			}
 		}
 		if (!deck->Busy(u)) return deck->Gate();
 		double a = b->Seconds * 0.12 + (u->Fighter ? u->Fighter->Seed : 0);
-		return deck->Gate() - c->Forward * HoldAsternKm + (right * cs::Math::Cos(a) + up * cs::Math::Sin(a)) * HoldRadiusKm;
+		return deck->Gate() - axis * HoldAsternKm + (right * cs::Math::Cos(a) + up * cs::Math::Sin(a)) * HoldRadiusKm;
 	}
 
 	bool FlightDecks::TryFinal(const cs::Ref<Battle>& /*b*/, const cs::Ref<BattleUnit>& u, const cs::Ref<FlightDeck>& deck, double dt)
@@ -375,8 +433,9 @@ namespace SpaceGod::Core
 			double close = Min(FinalSpeedKmS, Max(MinCloseKmS, (v->SpotAlong - v->Along) * 0.2));
 			v->Along = Min(v->SpotAlong, v->Along + close * dt);
 			u->Pos = deck->At(v->Along, v->Offset);
-			u->Vel = c->Vel + c->Forward * (v->Along < v->SpotAlong ? close : 0);
-			Battle::TurnToward(u, c->Forward, Max(spec->TurnRateDegS, 30.0), dt);
+			auto axis = deck->Axis();
+			u->Vel = c->Vel + axis * (v->Along < v->SpotAlong ? close : 0);
+			Battle::TurnToward(u, axis, Max(spec->TurnRateDegS, 30.0), dt);
 			if (v->Along >= v->SpotAlong - 1e-6) Touchdown(b, u, v);
 			return true;
 		}
@@ -386,8 +445,9 @@ namespace SpaceGod::Core
 		v->Along += v->Speed * dt;
 		v->Offset = v->Offset - v->Offset * (1 - cs::Math::Exp(-dt / LineUpSeconds));
 		u->Pos = deck->At(v->Along, v->Offset);
-		u->Vel = c->Vel + c->Forward * v->Speed;
-		u->Forward = c->Forward;
+		auto axis = deck->Axis();
+		u->Vel = c->Vel + axis * v->Speed;
+		u->Forward = axis;
 		if (v->Along >= deck->BowAlong + ExitKm) ClearOfBow(b, u, v);
 		return true;
 	}
@@ -402,7 +462,7 @@ namespace SpaceGod::Core
 		if (!deck->Aboard.Contains(u)) deck->Aboard.Add(u);
 		u->Docked = true;
 		u->Vel = deck->Carrier->Vel;
-		u->Forward = deck->Carrier->Forward;
+		u->Forward = deck->Axis();
 		FighterAI::TakeAboard(deck->Carrier, u);
 	}
 
@@ -453,7 +513,7 @@ namespace SpaceGod::Core
 			int spot = cs::Math::Max(0, deck->Aboard.IndexOf(u));
 			u->Pos = deck->At(deck->SpotAlong(spot), DVec3::Zero);
 			u->Vel = c->Vel;
-			u->Forward = c->Forward;
+			u->Forward = deck->Axis();
 			if (!deck->Open() || !c->Present()) continue;
 			v->Service = Min(1.0, v->Service + dt / Max(1.0, ServiceSeconds()->Value));
 			Service(u, v->Service);
@@ -555,7 +615,7 @@ namespace SpaceGod::Core
 		craft->Fighter->Deck = v;
 		craft->Pos = best->At(v->Along, DVec3::Zero);
 		craft->Vel = carrier->Vel;
-		craft->Forward = carrier->Forward;
+		craft->Forward = best->Axis();
 		return true;
 	}
 
@@ -597,7 +657,7 @@ namespace SpaceGod::Core
 				d->Frame(u->Pos, along, off);
 				if (along < d->SternAlong - ApproachKm - GateCaptureKm || along > d->SternAlong) continue;
 				if (off.Length() > CaptureOffAxisKm) continue;
-				if (DVec3::Dot(u->Forward, o->Forward) < cs::Math::Cos(CaptureAlignDeg * Astro::Deg2Rad)) continue;
+				if (DVec3::Dot(u->Forward, d->Axis()) < cs::Math::Cos(CaptureAlignDeg * Astro::Deg2Rad)) continue;
 				if ((u->Vel - o->Vel).Length() > CaptureSpeedKmS) continue;
 				return d;
 			}
@@ -652,7 +712,7 @@ namespace SpaceGod::Core
 		deck->Frame(u->Pos, along, off);
 		double range = (deck->Gate() - u->Pos).Length();
 		double rel = (u->Vel - deck->Carrier->Vel).Length();
-		double nose = cs::Math::Acos(Max(-1.0, Min(1.0, DVec3::Dot(u->Forward, deck->Carrier->Forward)))) * Astro::Rad2Deg;
+		double nose = cs::Math::Acos(Max(-1.0, Min(1.0, DVec3::Dot(u->Forward, deck->Axis())))) * Astro::Rad2Deg;
 		cs::StringBuilder sb;
 		sb.Append("DECK ").Append(where).Append(' ');
 		sb.Append(cs::Fmt(range, "0.0")).Append(" km");

@@ -114,6 +114,13 @@ namespace SpaceGod::Core
 		DVec3 Stern() const;
 		DVec3 Bow() const;
 
+		/// <summary>The deck's axis, battle-local, toward its bow mouth: the hull's nose for a deck on the keel.</summary>
+		DVec3 Axis() const;
+
+		/// <summary>The deck's frame, battle-local: its axis and the right and up across it. The hull's own for a deck on the
+		/// keel; off it, right = axis x the hull's up (the hull's right when the axis runs along its up).</summary>
+		void Basis(DVec3& axis, DVec3& right, DVec3& up) const;
+
 		/// <summary>The approach gate: on the deck's axis, <see cref="FlightDecks.ApproachKm"/> astern of the stern mouth.</summary>
 		DVec3 Gate() const;
 

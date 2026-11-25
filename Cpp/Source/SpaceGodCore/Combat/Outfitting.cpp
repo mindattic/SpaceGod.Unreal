@@ -520,6 +520,13 @@ namespace SpaceGod::Core
 			// The hull frame's own cone for the hardpoint carries over; where it has none, the new part's module gives it (U.SPC-T533).
 			auto def = cs::New<SubsystemDef>(ModuleSpec::SubsystemOf(m), was->X, was->Y, was->Z, was->FacesAft, was->ConeAxis, was->ConeHalfDeg);
 			def->Rating = rating;
+			// A hangar refitted on an assembled hull keeps the mouth it sits on (US-T842).
+			if (def->Kind == SubsystemKind::Hangar)
+			{
+				def->MouthAxis = was->MouthAxis;
+				def->MouthWidth = was->MouthWidth;
+				def->MouthHeight = was->MouthHeight;
+			}
 			if (m == ModuleKind::HardenedShield) def->MaxHp *= 1.4;
 			if (m == ModuleKind::TorchEngine) def->MaxHp *= 1.2;
 			// A lance is spinal: whatever the mount's cone was, it fires only down the keel (U.SPC-T487).

@@ -198,8 +198,9 @@ namespace SpaceGod::Views
 			dv->Path->SetVisible(false);
 			if (!shown) continue;
 			auto color = d->Open() ? DeckOpen : DeckClosed;
-			Frame(b, d, d->SternAlong, w, h, dv->Stern, color);
-			Frame(b, d, d->BowAlong, w, h, dv->Bow, color);
+			double mw = d->MouthHalfWidthKm > 0 ? d->MouthHalfWidthKm : w, mh = d->MouthHalfHeightKm > 0 ? d->MouthHalfHeightKm : h;
+			Frame(b, d, d->SternAlong, mw, mh, dv->Stern, color);
+			Frame(b, d, d->BowAlong, mw, mh, dv->Bow, color);
 			if (d->Open() && d->Final != nullptr && d->Final->Present())
 			{
 				trailPoints[0] = app->Relative(app->BattleScene(b, d->Gate()));
