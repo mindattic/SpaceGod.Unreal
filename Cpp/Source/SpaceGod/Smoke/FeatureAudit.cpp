@@ -723,7 +723,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 
 		double AngleDeg(DVec3 a, DVec3 b)
 		{
-			return cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, DVec3::Dot(a.Normalized(), b.Normalized())))) * 180 / cs::Math::PI;
+			return cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, DVec3::Dot(a.Normalized(), b.Normalized())))) * 180 / (cs::Math::Tau * 0.5);
 		}
 
 		/// One frame of the mouse swinging the crosshair toward `want`: the error across the aim's right and up axes, turned
@@ -733,7 +733,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 			DVec3 aim = PilotAim().Normalized();
 			DVec3 right = DVec3::Cross(aim, app->PilotUp()).Normalized();
 			DVec3 up = DVec3::Cross(right, aim).Normalized();
-			double perPx = Cameras::SpaceCamera::LookSensitivity() * cs::Math::PI / 180;
+			double perPx = Cameras::SpaceCamera::LookSensitivity() * cs::Math::Tau * 0.5 / 180;
 			double x = cs::Math::Max(-120.0, cs::Math::Min(120.0, 0.5 * DVec3::Dot(want, right) / perPx));
 			double y = cs::Math::Max(-120.0, cs::Math::Min(120.0, 0.5 * DVec3::Dot(want, up) / perPx));
 			kb->mouseDelta = Vector2(static_cast<float>(signX * x), static_cast<float>(signY * y));
