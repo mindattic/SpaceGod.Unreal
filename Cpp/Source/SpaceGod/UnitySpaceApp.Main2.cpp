@@ -30,6 +30,7 @@
 #include "Combat/CombatState.h"
 #include "Combat/Diplomacy.h"
 #include "Combat/EnergyWeapons.h"
+#include "Combat/FlightModels.h"
 #include "Combat/Morale.h"
 #include "Combat/Outfitting.h"
 #include "Combat/PilotFlight.h"
@@ -1347,6 +1348,13 @@ namespace SpaceGod
 			return Quaternion::LookRotation(ToVector(u->Forward.SwapYZ()), ToVector(up.SwapYZ()));
 		}
 		return Quaternion::identity();
+	}
+
+	cs::Nullable<Core::FlightFamily> UnitySpaceApp::TargetFamily(const Target& target)
+	{
+		auto ship = target.IsShip() ? target.Ship : target.IsUnit() && target.Unit ? target.Unit->Ship : nullptr;
+		if (!ship || !ship->Spec) return cs::Nullable<Core::FlightFamily>();
+		return Core::FlightModelRegistry::Default()->FamilyOf(ship->Spec->Class);
 	}
 
 	cs::List<cs::Ref<Renderer>> UnitySpaceApp::ModelRenderersOf(const Target& target)

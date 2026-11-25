@@ -74,7 +74,7 @@ Other numbers the feel depends on:
 | Heavy string aim | 25 deg lead at 1.3x the hull's turn rate | `PilotAim::HeavyMaxLeadDeg`, `HeavyLookRateFactor` |
 | Hauler mouse | 0.6 of the fighter's | `HelmControls::HaulerLookFactor` |
 | Mouse | raw counts, x `camera.lookSensitivity` 0.12 deg a count, smoothing 0 (off) by default | `SpaceCamera` |
-| Pilot chase camera | 12 Hz response (about an 83 ms time constant) | `camera.pilotResponse` |
+| Pilot chase camera | 20 Hz on fighters, 12 on heavy fighters, bombers and haulers, 6 on capitals (US-T819) | `camera.pilotResponse`, `camera.pilotResponseHeavy`, `camera.pilotResponseHauler`, `camera.pilotResponseCapital` |
 | Pad | radial dead zone 0.2, Linear / Smooth / Precise curve, 180 deg/s at full deflection | `Input/Gamepad` |
 | Joystick / HOTAS / throttle axis | none | - |
 
@@ -155,10 +155,10 @@ damage, as before.
 
 | What | Target | Now |
 |---|---|---|
-| Input to the hull's command | the same frame (no queued frame) | not measured |
-| Pilot chase camera | 20 Hz on fighters (50 ms), 12 on heavy and haulers, 6 on capitals | 12 Hz for all |
+| Input to the hull's command | the same frame (no queued frame) | measured by feel-report (US-T819) |
+| Pilot chase camera | 20 Hz on fighters (50 ms), 12 on heavy and haulers, 6 on capitals | as the target (US-T819) |
 | Mouse smoothing | off by default (kept) | off |
-| Hand to screen at 60 fps | 50 ms or under (3 frames) | not measured |
+| Hand to screen at 60 fps | 50 ms or under (3 frames) | measured by feel-report (US-T819) |
 | Mouse flight (virtual stick) | dead zone 3% of the half-screen, full rate at 40%, curve exponent 1.5 | none (free aim and nose only) |
 | Pad / stick curves | per-axis dead zone, exponent 1 .. 3, outer dead zone 0 .. 10% | radial dead zone and three fixed curves, pad only |
 
@@ -178,10 +178,12 @@ What it measures today:
 | Field of view change | fov delta per frame | boost and speed widening, jumps over 1 deg a frame |
 | Jolts and hitches | a frame several times its neighbourhood median; a long frame whose rate is normal is a hitch | smoothness, not handling |
 
-What it does not see yet: the hull's own nose, velocity, throttle, boost, assist, power, and the input itself, so
-handling targets cannot be read off it. Each follow-on task adds the columns and the report section its targets need
-(below). The report then prints, per step, the measured value beside its target from this page, and flags any miss
-by more than 10%:
+US-T819 added the flown hull's columns (family, nose and roof, velocity, throttle, strafe, roll, the virtual stick,
+boost, assist, drift, turn and roll rate) and the scripted hand (keys held, mouse counts), with handling steps in the
+run (to top, to stop, a yaw and a roll 360, each with a settle) and the report's handling section. What it does not see
+yet: boost charge and power. Each follow-on task adds the columns and the report section its targets need (below).
+The report then prints, per step, the measured value beside its target from this page, and flags any miss by more
+than 10%:
 
 | Target | Measured as |
 |---|---|

@@ -3,8 +3,9 @@
 // its helm (the fly-in); flies it (thrust, a mouse turn, a roll, a boost); lets go; swims the free camera and stops;
 // takes the battleship's helm and turns it on the keys; goes straight from that seat to the fighter's; lets go again.
 // Every frame writes one CSV row: the step, dt, the camera's mode, its scene position and its forward and up, the field
-// of view, what is held, the show, and both hulls' scene positions and radii. tools/feel-report.py reads the rows and
-// names every jolt (a frame whose turn, move or zoom breaks from its neighbours), with the step it fell in.
+// of view, what is held, the show, both hulls' scene positions and radii, the flown hull's handling and the scripted hand
+// (US-T819). tools/feel-report.py reads the rows and names every jolt (a frame whose turn, move or zoom breaks from its
+// neighbours), with the step it fell in, and measures the handling against docs/FlightFeel.md's targets.
 //   sg.Feel [game|real] [csv <file>] [quit]   (csv default Saved/Logs/feel-<scale>.csv)
 
 #include "UnitySpaceApp.h"
@@ -18,7 +19,9 @@
 #include "UnitySpaceAppActor.h"
 
 #include "BodyCatalog.h"
+#include "Combat/FlightModels.h"
 #include "Embodiment/Embodiables.h"
+#include "Embodiment/HelmFlight.h"
 #include "Embodiment/Influence.h"
 #include "Embodiment/ShipHelm.h"
 #include "Fleet.h"
@@ -73,7 +76,7 @@ namespace
 		bool askedNewGame = false, quit = false, scripted = false;
 		SpaceGod::Smoke::ScriptedDevice Keys;
 		cs::Ref<Scene> scene = cs::New<Scene>();
-		FString csv;
+		FString csv, raw = TEXT("-,0,0");
 		TArray<FString> rows;
 
 		void Script()
@@ -109,11 +112,37 @@ namespace
 			const auto& ft = cam->FocusTarget;
 			const TCHAR* focus = !ft.IsShip() ? (ft.IsNone() ? TEXT("none") : TEXT("other"))
 				: ft.Ship == scene->fighter ? TEXT("fighter") : ft.Ship == scene->battleship ? TEXT("battleship") : TEXT("other");
-			rows.Add(FString::Printf(TEXT("\"%s\",%.5f,%s,%d,%s,%s,%s,%.4f,%s,%d,%.4f,%d,%.6g,%s,%s,%s"),
+			rows.Add(FString::Printf(TEXT("\"%s\",%.5f,%s,%d,%s,%s,%s,%.4f,%s,%d,%.4f,%d,%.6g,%s,%s,%s,%s,%s"),
 				at < steps.size() ? *steps[at].first : TEXT("end"), dt, UTF8_TO_TCHAR(SpaceGod::Cameras::ToString(cam->Mode)), cam->PilotLocked ? 1 : 0,
 				*V(cam->ScenePosition), *V(fwd), *V(up), app.UnityCamera ? app.UnityCamera->fieldOfView : 0.0f, held,
 				app.PossessionShowing() ? 1 : 0, app.PossessionT(), cam->PilotView.has_value() ? 1 : 0, cam->CurrentSpeed,
-				*shipCols(scene->fighter), *shipCols(scene->battleship), focus));
+				*shipCols(scene->fighter), *shipCols(scene->battleship), focus, *HullCols(app), *raw));
+		}
+
+		// US-T819: the flown hull as its helm flew it last frame, for feel-report's handling section: its family, nose and roof
+		// and velocity (ecliptic, km/s), what the stick asked (throttle, strafe, roll, the virtual stick, boost, assist,
+		// drift) and how fast it is turning and rolling (deg/s). Zeros while the god holds no helm.
+		static FString HullCols(UnitySpaceApp& app)
+		{
+			if (!app.IsPiloting()) return TEXT("none,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
+			const auto& h = app.PilotHelmFlight();
+			const auto& in = h.Input;
+			auto family = app.TargetFamily(Target::OfShip(app.Piloted.Ship));
+			return FString::Printf(TEXT("%s,%s,%s,%s,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%.3f,%.3f"),
+				family.has_value() ? UTF8_TO_TCHAR(ToString(*family)) : TEXT("none"), *V(h.State.Forward), *V(h.State.Up), *V(h.State.Vel),
+				in.Throttle, in.StrafeRight, in.StrafeUp, in.Roll, in.StickRight, in.StickUp, in.Boost ? 1 : 0, in.FlightAssistOff ? 0 : 1,
+				in.Drift ? 1 : 0, h.State.TurnRateDegS(), h.State.RollRateDegS());
+		}
+
+		// The scripted hand as written for the frame just flown: the keys held and the mouse's move, counts.
+		void RecordRaw()
+		{
+			static const std::pair<Key, const TCHAR*> named[] = { { Key::W, TEXT("W") }, { Key::S, TEXT("S") }, { Key::A, TEXT("A") },
+				{ Key::D, TEXT("D") }, { Key::LeftCtrl, TEXT("Ctrl") }, { Key::LeftShift, TEXT("Shift") } };
+			FString keys;
+			for (const auto& [k, name] : named)
+				if (Keys.held.count(k) > 0) keys += keys.IsEmpty() ? FString(name) : FString(TEXT("+")) + name;
+			raw = FString::Printf(TEXT("%s,%.3f,%.3f"), keys.IsEmpty() ? TEXT("-") : *keys, Keys.mouseDelta.x, Keys.mouseDelta.y);
 		}
 
 		bool Tick()
@@ -143,6 +172,7 @@ namespace
 			if (scripted)
 			{
 				Keys.Write();
+				RecordRaw();
 				Keys.EndFrame();
 			}
 			return true;
@@ -158,7 +188,8 @@ namespace
 				if (auto* a = FeelActor()) a->bScriptedInput = false;
 			}
 			rows.Insert(TEXT("step,dt,mode,locked,cx,cy,cz,fx,fy,fz,ux,uy,uz,fov,held,show,showT,pilotView,swimSpeed,"
-				"ax,ay,az,ar,bx,by,bz,br,focus"), 0);
+				"ax,ay,az,ar,bx,by,bz,br,focus,family,hfx,hfy,hfz,hux,huy,huz,vx,vy,vz,throttle,strafeR,strafeU,roll,stickR,stickU,"
+				"boost,assist,drift,turnRate,rollRate,keys,mx,my"), 0);
 			FFileHelper::SaveStringArrayToFile(rows, *csv);
 			if (quit) FPlatformMisc::RequestExit(false);
 			return false;
@@ -251,6 +282,14 @@ namespace
 		push(TEXT("fighter roll"), hold({ Key::LeftCtrl, Key::D }, 1.2));
 		push(TEXT("fighter boost"), hold({ Key::W, Key::LeftShift }, 1.5));
 		push(TEXT("fighter coast"), wait(1.0));
+		// US-T819: the handling feel-report measures against docs/FlightFeel.md: 0 to top, top to stop, a yaw and a roll, each
+		// with a settle after it for the overshoot.
+		push(TEXT("fighter to top"), hold({ Key::W }, 9.0));
+		push(TEXT("fighter to stop"), wait(8.0));
+		push(TEXT("fighter yaw"), hold({}, 0.6, SpaceGod::Vector2(12, 0)));
+		push(TEXT("fighter yaw settle"), wait(1.5));
+		push(TEXT("fighter roll 360"), hold({ Key::LeftCtrl, Key::D }, 1.5));
+		push(TEXT("fighter roll settle"), wait(1.0));
 
 		// ---- let go: back to the god's free camera, then a swim and a stop
 		push(TEXT("let go fighter"), [](UnitySpaceApp& app, double)

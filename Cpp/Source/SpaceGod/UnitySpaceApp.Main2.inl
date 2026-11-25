@@ -312,6 +312,8 @@ public:
 
 	Quaternion TargetRotation(const Target& target) override;
 
+	cs::Nullable<Core::FlightFamily> TargetFamily(const Target& target) override;
+
 private:
 	static Vector3 ToVector(Core::DVec3 v);
 

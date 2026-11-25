@@ -148,7 +148,128 @@ def main():
     print(f'fov jumps > 1 deg/frame: {len(fovj)}')
     for o in fovj[:25]:
         print(f'  frame {o["i"]:5d} [{o["step"]}] {o["dfov"]:+.2f}')
+    if 'family' in rows[0]:
+        handling(rows)
     return 0
+
+
+# US-T819: docs/FlightFeel.md's assist-on targets, s (overshoot in deg), per FlightFamily.
+TARGETS = {
+    'LightFighter': dict(top=2.5, stop=2.0, turn180=0.85, roll360=1.2, spinup=0.08, overshoot=2),
+    'Interceptor': dict(top=2.2, stop=1.8, turn180=0.8, roll360=1.1, spinup=0.08, overshoot=2),
+    'Runner': dict(top=3.0, stop=3.0, turn180=1.4, roll360=1.6, spinup=0.15, overshoot=2),
+    'HeavyFighter': dict(top=3.5, stop=3.0, turn180=1.6, roll360=1.8, spinup=0.15, overshoot=1),
+    'Bomber': dict(top=5.0, stop=4.5, turn180=2.1, roll360=2.5, spinup=0.25, overshoot=1),
+    'Hauler': dict(top=8.0, stop=7.0, turn180=2.4, roll360=3.0, spinup=0.4, overshoot=1),
+    'Capital': dict(stop=6.0),
+}
+
+
+def handling(rows):
+    """The flown hull's handling, from the columns US-T819 added: per step, 0 to top and top to stop on a throttle step, the
+    spin-up, overshoot and the 180 (or roll 360) a turn's peak rate gives; then hand to command and hand to screen."""
+    fr = []
+    t = 0.0
+    for i, r in enumerate(rows):
+        # The motion in row i was made with row i-1's dt (see US-T479 above).
+        t += float(rows[i - 1]['dt']) if i > 0 else 0.0
+        fr.append(dict(step=r['step'], t=t, family=r['family'], hf=vec(r, 'hfx', 'hfy', 'hfz'), hu=vec(r, 'hux', 'huy', 'huz'),
+                       speed=norm(vec(r, 'vx', 'vy', 'vz')), throttle=float(r['throttle']), roll=float(r['roll']),
+                       stick=(float(r['strafeR']), float(r['strafeU']), float(r['stickR']), float(r['stickU']), float(r['boost'])),
+                       assist=r['assist'] == '1', turn=float(r['turnRate']), rollRate=float(r['rollRate']),
+                       hand=(r['keys'], float(r['mx']) != 0 or float(r['my']) != 0), mouse=(float(r['mx']), float(r['my'])),
+                       f=vec(r, 'fx', 'fy', 'fz'), u=vec(r, 'ux', 'uy', 'uz')))
+
+    steps = []
+    for k, f in enumerate(fr):
+        if f['family'] == 'none':
+            continue
+        if not steps or steps[-1][0] != f['step']:
+            steps.append((f['step'], []))
+        steps[-1][1].append(k)
+
+    print()
+    print('handling (US-T819), against docs/FlightFeel.md; ! marks a miss by more than 10%')
+
+    def report(step, family, what, got, unit='s'):
+        want = TARGETS.get(family, {}).get(what)
+        if got is None:
+            print(f'  {step:24s} {family:13s} {what:9s} not reached' + (f'   target {want:g} {unit}' if want is not None else ''))
+            return
+        flag = ' !' if want is not None and got > want * 1.1 else ''
+        print(f'  {step:24s} {family:13s} {what:9s} {got:7.3f} {unit}' + (f'   target {want:g} {unit}' if want is not None else '') + flag)
+
+    for n, (name, ks) in enumerate(steps):
+        family = fr[ks[0]]['family']
+        after = steps[n + 1][1] if n + 1 < len(steps) and steps[n + 1][0].endswith('settle') else []
+        if 'to top' in name:
+            start = next((k for k in ks if fr[k]['throttle'] >= 0.99), None)
+            if start is not None:
+                tail = [fr[k]['speed'] for k in ks if fr[k]['t'] >= fr[ks[-1]]['t'] - 0.5]
+                settled = tail and max(tail) - min(tail) <= 0.01 * max(max(tail), 1e-12)
+                top = max(tail) if tail else 0
+                hit = next((k for k in ks if k >= start and fr[k]['speed'] >= 0.95 * top), None) if settled else None
+                report(name, family, 'top', fr[hit]['t'] - fr[start]['t'] if hit is not None else None)
+        if 'to stop' in name:
+            k0 = next((k for k in ks if fr[k]['throttle'] == 0), ks[0])
+            v0 = fr[k0]['speed']
+            if fr[k0]['throttle'] == 0 and v0 > 0:
+                hit = next((k for k in ks if fr[k]['speed'] <= 0.05 * v0), None)
+                report(name, family, 'stop', fr[hit]['t'] - fr[k0]['t'] if hit is not None else None)
+        for rate, full, what in (('turn', 180.0, 'turn180'), ('rollRate', 360.0, 'roll360')):
+            if what == 'turn180' and 'yaw' not in name and 'turn' not in name and 'pitch' not in name:
+                continue
+            if what == 'roll360' and 'roll' not in name:
+                continue
+            # The hand on it: Ctrl+A/D rolls, the mouse turns.
+            live = [k for k in ks if ('Ctrl' in fr[k]['hand'][0] if what == 'roll360' else fr[k]['hand'][1])]
+            if not live:
+                continue
+            peak = max(abs(fr[k][rate]) for k in ks)
+            if peak <= 0:
+                continue
+            start = live[0]
+            up = next((k for k in ks if k >= start and abs(fr[k][rate]) >= 0.9 * peak), None)
+            spin = fr[up]['t'] - fr[start]['t'] if up is not None else None
+            report(name, family, 'spinup', spin)
+            report(name, family, what, full / peak + (spin or 0.0))
+            if after and what == 'turn180':
+                # How far the nose swings on past where it comes to rest once the hand lets go.
+                window = [k for k in ks if k > live[-1]] + after
+                if window:
+                    k0, rest = live[-1], fr[window[-1]]['hf']
+                    total = angle(fr[k0]['hf'], rest)
+                    over = max(angle(fr[k0]['hf'], fr[k]['hf']) for k in window) - total
+                    report(name, family, 'overshoot', max(0.0, over), 'deg')
+
+    # Hand to command and to screen: from a row whose scripted hand changed (the hand is recorded on the row whose frame
+    # flew it), the frames until the helm's command or the hull's rate changes, and until the camera turns.
+    def command(f):
+        return (round(f['throttle'], 4), round(f['roll'], 4), tuple(round(x, 4) for x in f['stick']))
+
+    cmd, scr = [], []
+    for k in range(1, len(fr)):
+        p, q = fr[k - 1], fr[k]
+        if q['family'] == 'none' or p['family'] == 'none' or (q['hand'] == p['hand'] and q['mouse'] == p['mouse']):
+            continue
+        c = next((m - k for m in range(k, min(len(fr), k + 30))
+                  if command(fr[m]) != command(fr[m - 1]) or abs(fr[m]['turn'] - fr[m - 1]['turn']) > 0.5
+                  or abs(fr[m]['rollRate'] - fr[m - 1]['rollRate']) > 0.5), None)
+        s = next((m - k for m in range(k, min(len(fr), k + 30))
+                  if angle(fr[m]['f'], fr[m - 1]['f']) > 0.01 or roll_change(fr[m - 1]['f'], fr[m - 1]['u'], fr[m]['f'], fr[m]['u']) > 0.01), None)
+        dt = float(rows[k]['dt'])
+        if c is not None:
+            cmd.append((c, dt))
+        if s is not None:
+            scr.append((s, dt))
+    for label, xs, want in (('hand to command', cmd, 'target 0 frames'), ('hand to screen', scr, 'target 50 ms')):
+        if not xs:
+            print(f'  {label}: no hand changes seen')
+            continue
+        frames = [x for x, _ in xs]
+        ms = [(x + 1) * d * 1000 for x, d in xs]
+        print(f'  {label}: {len(xs)} changes, median {statistics.median(frames):.0f} frames, worst {max(frames)} frames'
+              f' ({max(ms):.0f} ms)   {want}')
 
 
 if __name__ == '__main__':

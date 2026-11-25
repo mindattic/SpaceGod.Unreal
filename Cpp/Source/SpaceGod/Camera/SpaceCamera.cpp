@@ -5,6 +5,7 @@
 #include "PlayerOptions.h"
 #include "BodyCatalog.h"
 #include "BodyDefinition.h"
+#include "Combat/FlightModels.h"
 #include "ScaleModel.h"
 #include "Settings/GameSetting.h"
 #include "Settings/Tuning.h"
@@ -98,11 +99,24 @@ namespace SpaceGod::Cameras
 		return value->Value;
 	}
 
-	float SpaceCamera::PilotCamResponseHz()
+	float SpaceCamera::PilotCamResponseHz(cs::Nullable<FlightFamily> family)
 	{
-		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "pilotResponse", "Pilot chase response", 12, 1, 60, 0.5, "Hz",
-			TuningScope::View, "How fast the pilot chase turns after the hull's facing: higher is tighter, lower a looser chase.");
-		return static_cast<float>(value->Value);
+		static const cs::Ref<RangeSetting> fighter = Tuning::Knob("camera", "pilotResponse", "Pilot chase response", 20, 1, 60, 0.5, "Hz",
+			TuningScope::View, "How fast the pilot chase turns after a fighter's facing (light fighter, interceptor, runner): higher is tighter, lower a looser chase.");
+		static const cs::Ref<RangeSetting> heavy = Tuning::Knob("camera", "pilotResponseHeavy", "Heavy chase response", 12, 1, 60, 0.5, "Hz",
+			TuningScope::View, "How fast the pilot chase turns after a heavy fighter's or a bomber's facing.");
+		static const cs::Ref<RangeSetting> hauler = Tuning::Knob("camera", "pilotResponseHauler", "Hauler chase response", 12, 1, 60, 0.5, "Hz",
+			TuningScope::View, "How fast the pilot chase turns after a hauler's facing.");
+		static const cs::Ref<RangeSetting> capital = Tuning::Knob("camera", "pilotResponseCapital", "Capital chase response", 6, 1, 60, 0.5, "Hz",
+			TuningScope::View, "How fast the pilot chase turns after a capital ship's facing.");
+		if (!family.has_value()) return static_cast<float>(fighter->Value);
+		switch (*family)
+		{
+		case FlightFamily::HeavyFighter: case FlightFamily::Bomber: return static_cast<float>(heavy->Value);
+		case FlightFamily::Hauler: return static_cast<float>(hauler->Value);
+		case FlightFamily::Capital: return static_cast<float>(capital->Value);
+		default: return static_cast<float>(fighter->Value);
+		}
 	}
 
 	float SpaceCamera::PilotLockTrackStrength()
@@ -149,7 +163,7 @@ namespace SpaceGod::Cameras
 
 	void SpaceCamera::DeclareTuning()
 	{
-		PilotViewLift(); PilotCamResponseHz(); PilotLockTrackStrength(); TravelSeconds(); QuickTravelSeconds(); LevelSeconds();
+		PilotViewLift(); PilotCamResponseHz(cs::Nullable<FlightFamily>()); PilotLockTrackStrength(); TravelSeconds(); QuickTravelSeconds(); LevelSeconds();
 		BaseLookSensitivity(); ChaseDistance();
 	}
 
@@ -409,7 +423,7 @@ namespace SpaceGod::Cameras
 			// A view the mouse sets (free aim, a fighter's seat, a gun, a capital's look-around) is the mouse's own: it
 			// turns with it at once and the hull catches up after it (US-T129).
 			if (PilotView.has_value()) Rotation = *PilotView;
-			else Rotation = Quaternion::Slerp(Rotation, wantRotation, 1.0f - Mathf::Exp(-dt * PilotCamResponseHz()));
+			else Rotation = Quaternion::Slerp(Rotation, wantRotation, 1.0f - Mathf::Exp(-dt * PilotCamResponseHz(world->TargetFamily(FocusTarget))));
 			if (cs::Math::Abs(input.Scroll) > 0)
 				zoomTarget = cs::Math::Max(MinZoom(FocusTarget), cs::Math::Min(20.0, zoomTarget * cs::Math::Pow(0.82, input.Scroll)));
 			zoom = cs::Math::Exp(cs::Math::Log(zoom) + (cs::Math::Log(zoomTarget) - cs::Math::Log(zoom)) * (1 - cs::Math::Exp(-dt * 10)));

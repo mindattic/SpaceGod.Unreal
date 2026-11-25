@@ -12,6 +12,7 @@ namespace SpaceGod::Core
 	class ScaleModel;
 	class RangeSetting;
 	class ToggleSetting;
+	enum class FlightFamily : int;
 }
 
 namespace SpaceGod::Input
@@ -55,6 +56,10 @@ namespace SpaceGod::Cameras
 
 		/// <summary>A target's own facing, scene (Unity) axes; identity when it has none.</summary>
 		virtual Quaternion TargetRotation(const Target& target) = 0;
+
+		/// <summary>The flight family of a hull, which sets how tightly the pilot chase follows it (US-T819); none for
+		/// anything that is not a hull.</summary>
+		virtual cs::Nullable<Core::FlightFamily> TargetFamily(const Target& target) { return cs::Nullable<Core::FlightFamily>(); }
 	};
 
 	/// <summary>
@@ -173,8 +178,9 @@ namespace SpaceGod::Cameras
 
 		/// <summary>How fast the pilot chase camera's rotation catches up to the hull's own facing
 		/// (and, with a lock, the blended look-at-target facing) -- high enough to feel tight behind
-		/// the ship, low enough that sharp turns read as a chase rather than a rigid weld.</summary>
-		static float PilotCamResponseHz();
+		/// the ship, low enough that sharp turns read as a chase rather than a rigid weld. One knob a family group
+		/// (fighters, heavy fighters and bombers, haulers, capitals); the fighters' when the family is unknown.</summary>
+		static float PilotCamResponseHz(cs::Nullable<Core::FlightFamily> family);
 
 		/// <summary>How far the camera leans from the ship's own facing toward looking at a locked
 		/// target (0 = ignores the lock, 1 = looks straight at it regardless of the ship's facing).</summary>
