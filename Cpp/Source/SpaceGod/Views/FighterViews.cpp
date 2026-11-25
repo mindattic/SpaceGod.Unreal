@@ -62,6 +62,9 @@ namespace SpaceGod::Views
 		}
 		if (!shipMaterial()) shipMaterial() = ShipModels::ProceduralMaterial();
 		glows = cs::New<UnityCompat::InstancedBatch>(root, quad(), glowMaterial());
+		trails = cs::New<LineStrip>("Trails", root);
+		trails->SetTint(Color::white());
+		trails->SetVisible(false);
 	}
 
 	void FighterViews::Update()
@@ -74,6 +77,8 @@ namespace SpaceGod::Views
 		auto rootWorld = UnityCompat::WorldMatrix::Of(*root);
 		auto toRoot = Quaternion::Inverse(root->rotation());
 		glows->Clear();
+		trailSegments.Clear();
+		trailColors.Clear();
 		for (const auto& b : app->World()->War->Battles)
 		{
 			for (const auto& u : b->Units)
@@ -96,11 +101,7 @@ namespace SpaceGod::Views
 				// below a tenth of a pixel and gives way to the halo of the mesh as the hull grows past MarkFadePx.
 				bool model = RenderLod::DrawsModel(tier), shown = tier != LodTier::Culled || hullPx >= MarkFloorPx;
 				if (v->Hull->activeSelf != model) v->Hull->SetActive(model);
-				if (!shown)
-				{
-					v->Trail->SetVisible(false);
-					continue;
-				}
+				if (!shown) continue;
 				auto f = u->Forward.SwapYZ();
 				auto fwd = Vector3(static_cast<float>(f.X), static_cast<float>(f.Y), static_cast<float>(f.Z));
 				v->Hull->transform->localPosition = rel;
@@ -135,15 +136,21 @@ namespace SpaceGod::Views
 				{
 					for (int i = 0; i < n; i++) trailPoints[i] = app->Relative(app->BattleScene(b, v->History[i]));
 					trailPoints[n - 1] = rel;
+					// Fading in from its tail (alpha 0 to 0.8 of 0.55 along it), as segments of the one batched line list.
 					auto c = u->Faction->Color;
-					v->Trail->SetPoints(trailPoints, n, Color(c.R, c.G, c.B, 0.55f), 0.0f, 0.8f);
-					v->Trail->SetTint(Color::white());
-					v->Trail->Root->transform->localPosition = Vector3::zero();
-					v->Trail->SetVisible(true);
+					for (int i = 0; i + 1 < n; i++)
+					{
+						trailSegments.Add(trailPoints[i]);
+						trailColors.Add(Color(c.R, c.G, c.B, 0.55f * Mathf::Lerp(0.0f, 0.8f, static_cast<float>(i) / (n - 1))));
+						trailSegments.Add(trailPoints[i + 1]);
+						trailColors.Add(Color(c.R, c.G, c.B, 0.55f * Mathf::Lerp(0.0f, 0.8f, static_cast<float>(i + 1) / (n - 1))));
+					}
 				}
 			}
 		}
 		glows->Flush();
+		if (trailSegments.Count() > 0) trails->SetSegments(trailSegments, trailColors, trailSegments.Count());
+		trails->SetVisible(trailSegments.Count() > 0);
 		cs::List<cs::Ref<BattleUnit>> gone;
 		for (auto kv : views)
 			if (!live.Contains(kv.first)) gone.Add(kv.first);
@@ -151,7 +158,6 @@ namespace SpaceGod::Views
 		{
 			auto v = views.At(u);
 			Destroy(v->Hull);
-			v->Trail->Dispose();
 			views.Remove(u);
 		}
 		cs::List<cs::Ref<FlightDeck>> closed;
@@ -257,8 +263,6 @@ namespace SpaceGod::Views
 			v->EngineAt = (mid + out) / static_cast<float>(ports.Count());
 		}
 
-		v->Trail = cs::New<LineStrip>("Trail", root);
-		v->Trail->SetVisible(false);
 		return v;
 	}
 }

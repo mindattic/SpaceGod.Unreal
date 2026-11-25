@@ -40,7 +40,6 @@ namespace SpaceGod::Views
 			/// <summary>Where its engine glow sits in the hull's frame (one unit long): the middle of the nozzles its model
 			/// draws (US-T432), else just behind its stern.</summary>
 			Vector3 EngineAt = Vector3(0, 0, -0.55f);
-			cs::Ref<LineStrip> Trail;
 			cs::List<Core::DVec3> History;
 			float NextSample = 0;
 		};
@@ -51,6 +50,11 @@ namespace SpaceGod::Views
 		/// <summary>Every craft's engine glow, one instanced draw for the lot (US-T721): a squadron seen from across the
 		/// system is its sparks, and a thousand of them should cost what one does.</summary>
 		cs::Ref<UnityCompat::InstancedBatch> glows;
+		/// <summary>Every craft's trail as segments of one line list, one draw for the lot (US-T822), shown by the same
+		/// tiers as its glow; the frame's segments are staged in trailSegments and trailColors (grow-only).</summary>
+		cs::Ref<LineStrip> trails;
+		cs::List<Vector3> trailSegments;
+		cs::List<Color> trailColors;
 
 		/// <summary>A flight deck's lights: the frames round its stern and bow mouths and its glide path.</summary>
 		class DeckView final

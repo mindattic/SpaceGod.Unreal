@@ -37,6 +37,11 @@ namespace SpaceGod::Views
 		/// <summary>Sets points (local to Root) with a per-point alpha ramp from <paramref name="alphaStart"/> to <paramref name="alphaEnd"/>.</summary>
 		void SetPoints(const cs::List<Vector3>& points, int count, Color color, float alphaStart = 1.0f, float alphaEnd = 1.0f);
 
+		/// <summary>Draws <paramref name="count"/> points as separate segments (points[2i] to points[2i+1], each point its own
+		/// colour) in one line list, so many strips cost one draw (US-T822). The buffers only grow: segments past
+		/// <paramref name="count"/> collapse to nothing, so a steady count allocates nothing per frame.</summary>
+		void SetSegments(const cs::List<Vector3>& points, const cs::List<Color>& pointColors, int count);
+
 		void SetTint(Color tint);
 
 		/// <summary>Distance from <paramref name="local"/> (in Root's frame) to the nearest point on the drawn

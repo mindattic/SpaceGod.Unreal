@@ -58,6 +58,37 @@ namespace SpaceGod::Views
 		mesh->SetBounds(Bounds(Vector3::zero(), Vector3::one() * 1e9f));
 	}
 
+	void LineStrip::SetSegments(const cs::List<Vector3>& points, const cs::List<Color>& pointColors, int count)
+	{
+		count &= ~1;
+		int have = allocated ? vertices.Count() : 0;
+		if (count > have)
+		{
+			int grown = (Mathf::Max(count, have + have / 2) + 1) & ~1;
+			vertices = cs::List<Vector3>(std::vector<Vector3>(static_cast<size_t>(grown)));
+			colors = cs::List<Color>(std::vector<Color>(static_cast<size_t>(grown)));
+			indices = cs::List<int>(std::vector<int>(static_cast<size_t>(grown)));
+			for (int i = 0; i < grown; i++) indices[i] = i;
+			mesh->Clear();
+			allocated = true;
+			have = grown;
+		}
+		for (int i = 0; i < count; i++)
+		{
+			vertices[i] = points[i];
+			colors[i] = pointColors[i];
+		}
+		for (int i = count; i < have; i++)
+		{
+			vertices[i] = Vector3::zero();
+			colors[i] = Color(0, 0, 0, 0);
+		}
+		mesh->SetVertices(vertices);
+		mesh->SetColors(colors);
+		mesh->SetIndices(indices, MeshTopology::Lines, 0, false);
+		mesh->SetBounds(Bounds(Vector3::zero(), Vector3::one() * 1e9f));
+	}
+
 	void LineStrip::SetTint(Color tint)
 	{
 		block.SetColor(ColorId, tint);
