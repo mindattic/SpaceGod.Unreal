@@ -38,6 +38,7 @@
 #include "Combat/Salvage.h"
 #include "Combat/SquadOrders.h" // US-T140
 #include "Combat/RaidDistress.h" // US-T194
+#include "Combat/TacticalWriteBack.h" // US-T809
 #include "Embodiment/ShipHelm.h" // US-T140: ShipHelm::FrameOf, where a mark is
 #include "Combat/StrandedWings.h"
 #include "Combat/Wreck.h"
@@ -1786,6 +1787,8 @@ namespace SpaceGod::Core
 			}
 		lastBattleEndJd[b->Body] = jd;
 		RecoverWings(b, jd);
+		// US-T809: a fight the player flew in writes back its morale and standing (nothing for one they had no part in).
+		TacticalWriteBack::OnResolved(world, b, jd);
 
 		cs::String winner = b->Winner >= 0 ? cs::Cat(Describe(b, b->Winner), " hold the field") : cs::String("both sides break off");
 		cs::String text = cs::Cat(b->Name, " ends: ", winner, ". Losses ", Short(b, 0), " ", lost[0], ", ", Short(b, 1), " ", lost[1]);

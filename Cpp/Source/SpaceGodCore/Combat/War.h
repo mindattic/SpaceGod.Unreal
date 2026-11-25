@@ -29,6 +29,7 @@ namespace SpaceGod::Core
 	class BuildPlan;
 	class SquadOrders;
 	class RaidDistress; // US-T194
+	class TacticalWriteBack; // US-T809
 	enum class Good : int;
 	enum class ShipClass : int;
 	enum class SurrenderTerms : int;
@@ -465,6 +466,10 @@ namespace SpaceGod::Core
 		/// <summary>The distress calls of the fights under way (US-T194): freighters set upon by raiders, and the patrols
 		/// answering them. Null until the first call (older saves).</summary>
 		cs::Ref<RaidDistress> Distress;
+
+		/// <summary>The fights the player flew in and what they wrote back (US-T809). Null until the first one ends (older
+		/// saves, and every fight nobody flew).</summary>
+		cs::Ref<TacticalWriteBack> WriteBack;
 
 		/// <summary>
 		/// A patrol interdicts the player's wanted ship (see <see cref="Law.UpdatePilot"/>): a fight off
