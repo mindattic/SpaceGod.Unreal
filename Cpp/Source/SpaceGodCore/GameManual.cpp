@@ -523,12 +523,13 @@ namespace SpaceGod::Core
 				  "eats the wrecks it touches and grows, gnaws at a hull it touches and eats into a station it reaches, and a "
 				  "big one buds in two, but each system holds only ten and none grows past a few megatonnes. The HUD brackets "
 				  "every globule in red with its size, health and range, and warns of one within 2 million km. The console "
-				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic). It came to "
-				  "Earth from the dark: a piece fell near Huntsville, Alabama around 2147, was taken in secret to an "
-				  "underground Pinnacle BioSynthetics lab, and got loose. Officially it was a lab leak of a growth factor, "
-				  "ZD-7741. It has eaten and grown ever since, and covers the old south-east of the United States from "
-				  "central Alabama into southern Kentucky, short of the Ohio; look for it from orbit, red as meat, breathing. "
-				  "The corporations fly their waste south and drop it in, and it eats that too.")),
+				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic). It was first "
+				  "met in 2734, at Barnard's Star, and nobody knows what it is or where it comes from; burned on sight since "
+				  "the Gate Protocol of 2748, it looks like a nuisance, not a threat. On Earth it is the Exclusion: in 2751, "
+				  "the Carolina Fall, a globule got past Earth's guns and came down in the old south-east of the United "
+				  "States. It covers that ground from central Alabama into southern Kentucky, short of the Ohio, walled, "
+				  "watched and burned ever since; look for it from orbit, red as meat, breathing. The corporations fly their "
+				  "waste to its edge and drop it in, and it eats that too.")),
 
 			cs::New<ManualChapter>("Trade", "Markets, cargo, contracts, the trade desk and outfitting", Keys("TRADE"),
 				T("The economy",

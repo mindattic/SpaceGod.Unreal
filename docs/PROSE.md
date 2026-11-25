@@ -509,12 +509,11 @@ proposal format and `tools/prose-outbox.ps1` are gone (never used): story arrive
 | 8 | Outbox noise | **Done**: one notice per import session |
 | 9 | Edge provenance per consumer | Open (PRS-T916) |
 
-## 8. One universe with GLMZ (US-T461)
+## 8. SpaceGod's own canon (US-T859)
 
-SpaceGod and Prose's GLMZ are one universe. Sol's Earth is GLMZ's Earth: the Ascension Tether rises from Isla Isabela
-(US-T459), and the Biomass covers the old south-east United States (US-T461, `Views/EarthBiomassView`, `sg.EarthBiomass`).
-The game's Bio Mass and GLMZ's Biomass are one organism. It came out of the dark between the stars; on Earth a piece fell
-near Huntsville, Alabama around 2147, was recovered in secret by Pinnacle BioSynthetics and got loose in its underground
-lab. The ZD-7741 lab leak is the cover story GLMZ's people know. The mapper carries this as a universe rule and the
-`concept-earth-biomass` entity, and the manual's Bio Mass entry tells it. A change to either side's Biomass lore is made
-in both (Prose `docs/universes/GLMZ.md`).
+SpaceGod is its own universe, set in 3026; its history and the rules for new canon are `docs/HISTORY.md`. Sol's Earth
+carries the Ascension Tether, "the Thread", raised from Isla Isabela in 2163-2191 and run by the Federation's Tether
+Authority (US-T459, `Views/TetherView`), and the Exclusion, the Biomass in the old south-east United States since the
+Carolina Fall of 2751 (US-T461, `Views/EarthBiomassView`, `sg.EarthBiomass`). The Biomass was met in 2734 at Barnard's
+Star; it comes from the dark between the stars, is minor and seemingly manageable, and is never given an origin. The
+mapper carries this as a universe rule and the `concept-earth-biomass` entity, and the manual's Bio Mass entry tells it.

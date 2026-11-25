@@ -1,5 +1,5 @@
 #pragma once
-// US-T461: the Biomass on SpaceGod's Earth (GLMZ's Earth).
+// US-T461: the Biomass on SpaceGod's Earth, the Exclusion.
 
 #include "UnityCompat/UnityRenderingTypes.h"
 
@@ -13,14 +13,14 @@ namespace SpaceGod
 namespace SpaceGod::Views
 {
 	/// <summary>
-	/// The Biomass (US-T461): the Bio Mass that fell to Earth near Huntsville, Alabama around 2147, recovered in secret by
-	/// Pinnacle BioSynthetics and loose from its underground lab ever since (GLMZ canon; the lab-leak story is the cover).
-	/// It covers the old south-east of the United States from central Alabama up through Tennessee into southern Kentucky,
-	/// held by the Appalachians to the east, the Tombigbee and Mississippi to the west, and slowed short of the Ohio. Drawn
-	/// as a patch of flesh on the Earth's surface (a person turned inside out: muscle, fat, purple-black, cartilage ridges,
-	/// grey-pink folds), lit like the planet, breathing about six times a minute on the simulation clock, with a haze over
-	/// it in some daylight hours. It hangs under the Earth's own transform, so it turns and scales with the planet at both
-	/// scales. Purely visual: the gameplay Bio Mass (globules, blooms, tumours) is BioMassView's.
+	/// The Biomass (US-T461), the Exclusion: the globule that got past Earth's guns in 2751, the Carolina Fall, walled,
+	/// watched and burned ever since (docs/HISTORY.md). It covers the old south-east of the United States from central
+	/// Alabama up through Tennessee into southern Kentucky, held by the Appalachians to the east, the Tombigbee and
+	/// Mississippi to the west, and slowed short of the Ohio. Drawn as a patch of flesh on the Earth's surface (a person
+	/// turned inside out: muscle, fat, purple-black, cartilage ridges, grey-pink folds), lit like the planet, breathing
+	/// about six times a minute on the simulation clock, with a haze over it in some daylight hours. It hangs under the
+	/// Earth's own transform, so it turns and scales with the planet at both scales. Purely visual: the gameplay Bio Mass
+	/// (globules, blooms, tumours) is BioMassView's.
 	/// </summary>
 	class EarthBiomassView final
 	{
@@ -30,7 +30,7 @@ namespace SpaceGod::Views
 
 		/// <summary>The patch's height over the sphere (Earth radii), and the breath's swing about it.</summary>
 		static constexpr float Lift = 0.0015f, BreathLift = 0.0003f;
-		/// <summary>Breaths a minute (sim clock), as GLMZ has it.</summary>
+		/// <summary>Breaths a minute (sim clock).</summary>
 		static constexpr double BreathsPerMinute = 6;
 
 		EarthBiomassView(UnitySpaceApp* app, const cs::Ref<Transform>& earthRoot);

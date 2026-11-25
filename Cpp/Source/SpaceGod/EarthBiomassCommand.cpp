@@ -1,5 +1,5 @@
 // US-T461: sg.EarthBiomass, the Biomass on Earth seen and screenshotted. In Sol, moves the clock to the next daylight hour over
-// Huntsville, holds the free camera over the patch from orbit (wide, then close), shoots, toggles the scale and shoots again.
+// the Exclusion, holds the free camera over the patch from orbit (wide, then close), shoots, toggles the scale and shoots again.
 //   sg.EarthBiomass [shot <dir>] [quit]
 
 #include "UnitySpaceApp.h"
