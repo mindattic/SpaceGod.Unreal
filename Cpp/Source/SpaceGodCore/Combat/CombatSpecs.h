@@ -306,6 +306,10 @@ namespace SpaceGod::Core
 		/// <summary>The hangar mouth's width and height, ship lengths, or 0 for the deck view's default size.</summary>
 		double MouthWidth = 0, MouthHeight = 0;
 
+		/// <summary>Launch tubes an assembled hull's hangar section has in rows across its mouth (US-T843), 0 for none: each a
+		/// launch-only lane of its own (see <see cref="FlightDecks.LaunchTubes"/> for the procedural pods).</summary>
+		int LaunchTubes = 0;
+
 		/// <param name="coneAxis">The hull frame's aiming direction for the hardpoint (see <see cref="ConeAxis"/>), or null for the mount's normal.</param>
 		/// <param name="coneHalfDeg">The hull frame's half-angle for it (see <see cref="ConeHalfDeg"/>), or null for its module's.</param>
 		SubsystemDef(SubsystemKind kind, double x, double y, double z, bool facesAft = false, cs::Nullable<DVec3> coneAxis = std::nullopt,

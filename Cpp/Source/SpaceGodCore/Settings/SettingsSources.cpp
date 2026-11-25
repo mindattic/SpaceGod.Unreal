@@ -104,7 +104,7 @@ namespace SpaceGod::Core
 		FireCones::RunClassConstructor(); found++;
 		FleetCoordination::RunClassConstructor(); found++;
 		FleetPatterns::RunClassConstructor(); found++;
-		FlightDecks::ServiceSeconds(); FlightDecks::AiRearms(); FlightDecks::ServiceHull(); found++;
+		FlightDecks::ServiceSeconds(); FlightDecks::AiRearms(); FlightDecks::ServiceHull(); FlightDecks::LaunchTubes(); found++;
 		LightFighterSettings::TurnPenalty(); found++;                       // Combat/FlightModels.cs
 		GateBreakers::TeamMarines(); GateBreakers::FieldRepair(); GateBreakers::FortFocus(); GateBreakers::PerNavy(); found++;
 		GatePickets::PerGate(); GatePickets::JumpWatchAu(); found++;

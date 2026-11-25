@@ -152,6 +152,17 @@ namespace SpaceGod::Core
 		return setting;
 	}
 
+	const cs::Ref<RangeSetting>& FlightDecks::LaunchTubes()
+	{
+		static const cs::Ref<RangeSetting> setting = cs::New<RangeSetting>("dogfight.launchTubes", SettingGroups::Dogfighting,
+			"Launch tubes per carrier", 0, 0, 120, 4,
+			cs::Cat("Launch tubes a carrier whose design has none of its own gets, in two flight pods off its flanks, so a whole ",
+				"wing goes out at once. Craft only launch from them and land on the flight decks. 0 for none."),
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("None") : cs::Fmt(v, "0"); }),
+			"launch tube tubes pod flight deck carrier catapult galactica");
+		return setting;
+	}
+
 	const cs::Ref<LodClass>& FlightDecks::Lod()
 	{
 		static const cs::Ref<LodClass> lod = RenderLod::Register(cs::New<LodClass>("deck", "Flight deck", cs::Func<double>([] { return 24.0; }), LodFar::None, false));
@@ -213,12 +224,12 @@ namespace SpaceGod::Core
 	{
 		if (deck == nullptr || deck->Bay == nullptr) return;
 		const auto& carrier = deck->Carrier;
-		// Of(carrier) finds the entry, or makes it in Build's order (one deck per hangar, in subsystem order).
+		// Of(carrier) finds the entry, or makes it in Build's order (one deck per hangar, in subsystem order, then the tubes).
 		if (&Of(carrier) == &None()) return;
 		auto& decks = *DeckTable()[carrier.get()].Decks;
 		for (int i = 0; i < decks.Count(); i++)
 		{
-			if (decks[i]->Bay != deck->Bay) continue;
+			if (decks[i]->Bay != deck->Bay || decks[i]->Tube != deck->Tube) continue;
 			decks[i] = deck;
 			return;
 		}
@@ -234,13 +245,73 @@ namespace SpaceGod::Core
 			cs::String side = x > 0.02 ? "starboard" : x < -0.02 ? "port" : "centreline";
 			list->Add(cs::New<FlightDeck>(carrier, s, cs::Cat(side, " deck")));
 		}
+		if (list->Count() == 0) return list;
+
+		// Launch tubes (US-T843): an assembled hangar section's own, in rows across its mouth; else the setting's flight pods.
+		double length = Max(carrier->LengthKm, 1e-6);
+		int own = 0;
+		cs::Ref<Subsystem> starboard = nullptr, port = nullptr;
+		for (const auto& deck : *list)
+		{
+			const auto& s = deck->Bay;
+			auto d = s->Def;
+			if (starboard == nullptr || d->X > starboard->Def->X) starboard = s;
+			if (port == nullptr || d->X < port->Def->X) port = s;
+			if (d->LaunchTubes <= 0 || !d->MouthAxis.has_value() || d->MouthAxis->LengthSquared() <= 1e-12) continue;
+			auto axis = d->MouthAxis->Normalized();
+			auto across = DVec3::Cross(DVec3(0, 1, 0), axis);
+			across = across.LengthSquared() > 1e-12 ? across.Normalized() : DVec3(1, 0, 0);
+			int perTier = static_cast<int>((d->MouthWidth * length + TubeWallKm) / (TubeWidthKm + TubeWallKm));
+			double x = d->X;
+			cs::String side = x > 0.02 ? "starboard" : x < -0.02 ? "port" : "centreline";
+			AddTubes(*list, carrier, s, side, d->LaunchTubes, perTier, DVec3(d->X, d->Y, d->Z), axis, across);
+			own += d->LaunchTubes;
+		}
+		int wanted = own > 0 ? 0 : static_cast<int>(LaunchTubes()->Value + 0.5);
+		if (wanted <= 0) return list;
+		double reach = Min(TubeLengthShipLengths, MaxTubeLengthKm / length);
+		int toStarboard = (wanted + 1) / 2;
+		auto sd = starboard->Def, pd = port->Def;
+		AddTubes(*list, carrier, starboard, "starboard", toStarboard, TubesPerTier,
+			DVec3(BeamShipLengths, sd->Y, Min(0.5, sd->Z + reach)), DVec3(0, 0, 1), DVec3(1, 0, 0));
+		AddTubes(*list, carrier, port, "port", wanted - toStarboard, TubesPerTier,
+			DVec3(-BeamShipLengths, pd->Y, Min(0.5, pd->Z + reach)), DVec3(0, 0, 1), DVec3(-1, 0, 0));
 		return list;
+	}
+
+	void FlightDecks::AddTubes(cs::List<cs::Ref<FlightDeck>>& list, const cs::Ref<BattleUnit>& carrier, const cs::Ref<Subsystem>& bay,
+		const cs::String& side, int count, int perTier, DVec3 mouth, DVec3 axis, DVec3 across)
+	{
+		if (count <= 0) return;
+		int first = 0;
+		for (const auto& d : list)
+			if (d->LaunchOnly()) first++;
+		double length = Max(carrier->LengthKm, 1e-6);
+		double half = Max(0.025, Min(TubeLengthShipLengths * length, MaxTubeLengthKm) * 0.5);
+		perTier = Max(1, Min(perTier, count));
+		int tiers = (count + perTier - 1) / perTier;
+		auto up = DVec3::Cross(axis, across);
+		double pitchAcross = (TubeWidthKm + TubeWallKm) / length, pitchUp = (TubeHeightKm + TubeWallKm) / length;
+		for (int k = 0; k < count; k++)
+		{
+			int col = k % perTier, tier = k / perTier;
+			auto t = cs::New<FlightDeck>(carrier, bay, cs::Cat(side, " tube ", cs::Fmt(static_cast<double>(k + 1), "0")));
+			t->Tube = first + k;
+			t->AxisLocal = axis;
+			t->MiddleLocal = mouth - axis * (half / length) + across * ((col - (perTier - 1) * 0.5) * pitchAcross)
+				+ up * ((tier - (tiers - 1) * 0.5) * pitchUp);
+			t->SternAlong = -half;
+			t->BowAlong = half;
+			t->MouthHalfWidthKm = TubeWidthKm * 0.5;
+			t->MouthHalfHeightKm = TubeHeightKm * 0.5;
+			list.Add(t);
+		}
 	}
 
 	bool FlightDecks::HasOpenDeck(const cs::Ref<BattleUnit>& carrier)
 	{
 		for (const auto& d : Of(carrier))
-			if (d->Open()) return true;
+			if (!d->LaunchOnly() && d->Open()) return true;
 		return false;
 	}
 
@@ -321,7 +392,7 @@ namespace SpaceGod::Core
 		double bestScore = cs::Double::MaxValue;
 		for (const auto& d : Of(home))
 		{
-			if (!d->Open()) continue;
+			if (d->LaunchOnly() || !d->Open()) continue;
 			double score = d->Aboard.Count() * 2 + (d->Final != nullptr ? 1 : 0) + (d->Gate() - u->Pos).Length() / 5;
 			if (score < bestScore)
 			{
@@ -650,7 +721,7 @@ namespace SpaceGod::Core
 			if (o->Side != u->Side || o->Kind != UnitKind::Ship || o->Fleeing || o->Surrendering) continue;
 			for (const auto& d : Of(o))
 			{
-				if (!d->Open() || d->Busy(u)) continue;
+				if (d->LaunchOnly() || !d->Open() || d->Busy(u)) continue;
 				if (o != u->Fighter->Carrier && o != u->Fighter->Home && StrandedWings::Room(b, o) <= 0) continue;
 				double along = 0;
 				DVec3 off;
@@ -676,7 +747,7 @@ namespace SpaceGod::Core
 			if (o->Side != u->Side || o->Kind != UnitKind::Ship || !o->Present() || o->Captured) continue;
 			for (const auto& d : Of(o))
 			{
-				if (!d->Open()) continue;
+				if (d->LaunchOnly() || !d->Open()) continue;
 				double dist = (d->Gate() - u->Pos).Length() - (o == (u->Fighter ? u->Fighter->LandsOn() : nullptr) ? 2 : 0);
 				if (dist < bestD)
 				{

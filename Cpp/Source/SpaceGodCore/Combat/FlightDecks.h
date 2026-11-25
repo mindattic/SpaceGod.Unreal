@@ -91,6 +91,10 @@ namespace SpaceGod::Core
 		/// <summary>Its mouths' half-width and half-height, km, or 0 for the deck view's default size (US-T842).</summary>
 		double MouthHalfWidthKm = 0, MouthHalfHeightKm = 0;
 
+		/// <summary>Which launch tube this is among its hull's (US-T843), or -1 for a flight deck. A tube only launches: craft
+		/// are fired out of its mouth (its bow) but never land in it, so the landing pattern and the cockpit guidance pass it by.</summary>
+		int Tube = -1;
+
 		/// <summary>Port, starboard or centreline, for the HUD.</summary>
 		cs::String Name;
 
@@ -107,6 +111,9 @@ namespace SpaceGod::Core
 
 		/// <summary>Open for traffic: its hangar stands and its hull is on the field, not taken.</summary>
 		bool Open() const;
+
+		/// <summary>A launch tube (US-T843): craft go out of it and never come in.</summary>
+		bool LaunchOnly() const { return Tube >= 0; }
 
 		/// <summary>The deck's middle, battle-local km.</summary>
 		DVec3 Middle() const;
@@ -164,6 +171,10 @@ namespace SpaceGod::Core
 
 		static const cs::Ref<RangeSetting>& ServiceHull();
 
+		/// <summary>Launch tubes a hull with hangars gets when its design has none of its own (US-T843): 0, the default, for
+		/// none. Laid in two flight pods off the hull's flanks, each a row of tubes firing forward, tier on tier.</summary>
+		static const cs::Ref<RangeSetting>& LaunchTubes();
+
 		/// <summary>The render class a hull's flight deck mouths are drawn under (principle 3): only once the hull is big on screen.</summary>
 		static const cs::Ref<LodClass>& Lod();
 
@@ -201,6 +212,12 @@ namespace SpaceGod::Core
 		/// <summary>How far off a friendly deck the cockpit starts giving landing guidance, km.</summary>
 		static constexpr double GuideKm = 12;
 
+		/// <summary>A launch tube (US-T843), true scale: its mouth's width and height, the wall between neighbours, km, how long
+		/// it runs in from its mouth (this many ship lengths, at most <see cref="MaxTubeLengthKm"/>), and tubes to a tier.</summary>
+		static constexpr double TubeWidthKm = 0.018; static constexpr double TubeHeightKm = 0.012; static constexpr double TubeWallKm = 0.006;
+		static constexpr double TubeLengthShipLengths = 0.15; static constexpr double MaxTubeLengthKm = 0.2;
+		static constexpr int TubesPerTier = 10;
+
 	private:
 		// C#'s ConditionalWeakTable<BattleUnit, FlightDeck[]> and its shared empty array (see FlightDecks.cpp).
 		static const cs::List<cs::Ref<FlightDeck>>& None();
@@ -222,6 +239,12 @@ namespace SpaceGod::Core
 
 	private:
 		static cs::Ref<cs::List<cs::Ref<FlightDeck>>> Build(const cs::Ref<BattleUnit>& carrier);
+
+		/// <summary>Adds <paramref name="count"/> launch tubes through <paramref name="bay"/> to <paramref name="list"/>, side by
+		/// side across <paramref name="across"/> and tier on tier, their mouths on <paramref name="mouth"/> and firing along
+		/// <paramref name="axis"/> (hull frame, ship lengths); at most <paramref name="perTier"/> to a tier.</summary>
+		static void AddTubes(cs::List<cs::Ref<FlightDeck>>& list, const cs::Ref<BattleUnit>& carrier, const cs::Ref<Subsystem>& bay,
+			const cs::String& side, int count, int perTier, DVec3 mouth, DVec3 axis, DVec3 across);
 
 	public:
 		/// <summary>Whether <paramref name="carrier"/> has a deck open for traffic.</summary>

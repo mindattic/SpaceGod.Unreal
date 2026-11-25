@@ -526,6 +526,7 @@ namespace SpaceGod::Core
 				def->MouthAxis = was->MouthAxis;
 				def->MouthWidth = was->MouthWidth;
 				def->MouthHeight = was->MouthHeight;
+				def->LaunchTubes = was->LaunchTubes;
 			}
 			if (m == ModuleKind::HardenedShield) def->MaxHp *= 1.4;
 			if (m == ModuleKind::TorchEngine) def->MaxHp *= 1.2;
