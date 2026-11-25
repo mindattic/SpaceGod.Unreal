@@ -11,6 +11,7 @@
 //  - Array / List parameters are taken by value (cs::List<T>), `params T[]` too; `string` is cs::String (null -> "").
 //  - Class parameters are cs::Ref<T> by value; struct parameters by value; out / ref -> T&.
 
+#include <memory>
 #include <tuple>
 #include <utility>
 
@@ -197,8 +198,8 @@ namespace SpaceGod::Core
 		/// US-T724: each fleet's sim tier from its distance to the observers (<see cref="ReportObservers"/>). Only the
 		/// sidestepping in <see cref="StepAvoidance"/> is tiered: Near fleets every frame, Mid ones about once a second, Far
 		/// ones not at all (their schedules run as ever). With no observer reported (the Bench) it is idle and nothing differs.
-		/// The schedule's event queue is charged to the Far tier, the avoidance to Near and Mid by their share of the hulls
-		/// stepped, the separation to Near.
+		/// The schedule's event queue and the tier sweep are charged to the Far tier, the Mid batch's gather and merge to Mid
+		/// (US-T725: its solve runs on a worker, see MidSidestep), the Near solve and the separation to Near.
 		/// </summary>
 		SimTiers Tiers;
 
@@ -217,6 +218,16 @@ namespace SpaceGod::Core
 		double lastAvoidanceJd = cs::Double::NaN;
 		/// <summary>US-T724: the date each hull last had its sidestep stepped, while tiers are in force (a Mid or Far hull skips frames).</summary>
 		cs::Dictionary<cs::Ref<Ship>, double> avoidedJd = cs::Dictionary<cs::Ref<Ship>, double>();
+
+		/// <summary>US-T725: the Mid tier's sidestep batch, solved on a worker task (its ownership rule is on the definition, in
+		/// Fleet.cpp). Launched at the end of one <see cref="StepAvoidance"/>, merged in hull order by the next.</summary>
+		struct MidSidestep;
+		std::shared_ptr<MidSidestep> midSidestep;
+		/// <summary>US-T725: the game thread's side of <see cref="midSidestep"/>: the batch's hulls in job order, then the Near
+		/// hulls it steered round. Never handed to the worker.</summary>
+		cs::List<cs::Ref<Ship>> midHulls = cs::List<cs::Ref<Ship>>(), midObstacles = cs::List<cs::Ref<Ship>>();
+		static void SolveMidSidestep(MidSidestep& job);
+		void MergeMidSidestep(bool apply);
 
 		/// <summary>A held hull's last reported pose (US-T151, <see cref="ReportHeld"/>); transient, never saved.</summary>
 		struct HeldPose
@@ -313,6 +324,7 @@ namespace SpaceGod::Core
 
 		/// <summary>The closest two ships may pass (km): a margin plus a few hull lengths each.</summary>
 		static double SafeDistanceKm(cs::Ref<Ship> a, cs::Ref<Ship> b);
+		static double SafeDistanceKm(double lengthKmA, double lengthKmB) { return 3 + 4 * (lengthKmA + lengthKmB); }
 
 		/// <summary>A ship at a body and able to fight there: holding orbit, or waiting at its ring.</summary>
 		static bool IsAt(cs::Ref<Ship> ship, int body);

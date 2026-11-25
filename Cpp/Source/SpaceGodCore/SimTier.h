@@ -101,6 +101,10 @@ namespace SpaceGod::Core
 		/// <summary>Adds <paramref name="ms"/> of game-thread time spent on <paramref name="tier"/> this frame.</summary>
 		void Charge(SimTier tier, double ms) { frameMs[static_cast<int>(tier)] += ms; }
 
+		/// <summary>US-T725: the worker-thread milliseconds the last batch of <paramref name="tier"/> took off the game thread
+		/// (reported beside the tier's game-thread time, never counted against its budget).</summary>
+		void ReportWorker(SimTier tier, double ms) { stats.WorkerMs[static_cast<int>(tier)] = ms; }
+
 		/// <summary>Closes a frame: its per-tier time is checked against <see cref="BudgetMs"/> and folded into the figures.</summary>
 		void EndFrame();
 
@@ -115,6 +119,7 @@ namespace SpaceGod::Core
 			double LastMs[SimTierCount] = {};
 			double AvgMs[SimTierCount] = {};
 			double WorstMs[SimTierCount] = {};
+			double WorkerMs[SimTierCount] = {};
 			int64_t OverBudget[SimTierCount] = {};
 			int64_t Frames = 0;
 			int Promotions = 0, Demotions = 0;

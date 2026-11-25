@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <chrono>
+#include <future>
 #include <vector>
 
 #include "Astro.h"
@@ -73,7 +74,7 @@ namespace SpaceGod::Core
 		return evadingFrom.TryGetValue(ship->Controller(), s) ? s : nullptr;
 	}
 
-	double Fleet::SafeDistanceKm(cs::Ref<Ship> a, cs::Ref<Ship> b) { return 3 + 4 * (a->LengthKm() + b->LengthKm()); }
+	double Fleet::SafeDistanceKm(cs::Ref<Ship> a, cs::Ref<Ship> b) { return SafeDistanceKm(a->LengthKm(), b->LengthKm()); }
 
 	bool Fleet::IsAt(cs::Ref<Ship> ship, int body)
 	{
@@ -463,6 +464,41 @@ namespace SpaceGod::Core
 			(s->Phase == ShipPhase::Parked || s->Phase == ShipPhase::Transit || s->Phase == ShipPhase::Queued || s->Phase == ShipPhase::Lurk || s->Phase == ShipPhase::Adrift);
 	}
 
+	/// <summary>
+	/// US-T725: one Mid batch's sidestep, solved on a worker task. Ownership rule: the game thread fills Hulls, Obstacles and
+	/// HorizonDays (plain values: no Ship, Fleet, Ephemeris or UObject is reachable from the job) and then launches Task; from
+	/// then until Task is ready the worker alone reads the inputs and writes Out and WorkerMs, and the game thread touches
+	/// nothing in the job. The game thread waits on Task before it reads Out (MergeMidSidestep, the next frame) and merges in
+	/// hull order, so the result never depends on the worker's timing. Task is declared last, so a job dropped while its worker
+	/// still runs (a Fleet torn down) waits for it before the arrays go.
+	/// </summary>
+	struct Fleet::MidSidestep
+	{
+		struct Hull
+		{
+			DVec3 Pos, Vel, Off, OffVel;
+			double LengthKm = 0, MaxAccel = 0, Dt = 0;
+		};
+		struct Obstacle
+		{
+			DVec3 Pos, Vel;
+			double LengthKm = 0;
+		};
+		struct Result
+		{
+			DVec3 Off, OffVel;
+			bool Settled = false;
+			/// <summary>The hull (an index into Hulls) or obstacle (Hulls.size() + its index) it turned from; -1 none.</summary>
+			int From = -1;
+		};
+		std::vector<Hull> Hulls;
+		std::vector<Obstacle> Obstacles;
+		double HorizonDays = 0;
+		std::vector<Result> Out;
+		double WorkerMs = 0;
+		std::future<void> Task;
+	};
+
 	void Fleet::StepAvoidance(double jd)
 	{
 		double dt = cs::Double::IsNaN(lastAvoidanceJd) ? 0 : jd - lastAvoidanceJd;
@@ -470,8 +506,10 @@ namespace SpaceGod::Core
 		if (!AvoidCollisions || coarse || dt <= 0) return;
 		auto started = std::chrono::steady_clock::now();
 		bool tiered = Tiers.Active();
-		int midStepped = 0;
+		double sweepMs = 0, midMs = 0;
 		auto list = cs::List<cs::Ref<Ship>>();
+		// US-T725: the Mid fleets due a step this frame: sidestepped on a worker (MidSidestep), not in the solve below.
+		auto mid = cs::List<cs::Ref<Ship>>();
 		// A held ship (the one the player is flying) isn't where its schedule says: nobody steers round that ghost.
 		if (!tiered)
 			for (const auto& s : ships) if (Manoeuvrable(s) && (IsHeld == nullptr || !IsHeld(s))) list.Add(s);
@@ -487,9 +525,11 @@ namespace SpaceGod::Core
 				int key = ship->Controller()->Id;
 				if (Tiers.DueRetier(k, count)) Tiers.Retier(key, BaseStateOf(ship, jd).HelioKm);
 				if (!Tiers.Steps(key)) continue;
-				if (Tiers.TierOf(key) == SimTier::Mid) midStepped++;
-				list.Add(ship);
+				if (Tiers.TierOf(key) == SimTier::Mid) mid.Add(ship);
+				else list.Add(ship);
 			}
+			// US-T725: sorting every fleet into its tier is the galaxy-wide sweep, charged to Far.
+			sweepMs = MsSince(started);
 		}
 		int n = list.Count();
 		auto pos = cs::NewArray<DVec3>(n);
@@ -508,6 +548,12 @@ namespace SpaceGod::Core
 			vel[i] = HelioVelocityOf(s, jd) + e.second;
 		}
 		evadingFrom.Clear();
+		if (midSidestep != nullptr)
+		{
+			auto merging = std::chrono::steady_clock::now();
+			MergeMidSidestep(tiered);
+			midMs += MsSince(merging);
+		}
 		for (int i = 0; i < n; i++)
 		{
 			for (int j = i + 1; j < n; j++)
@@ -687,11 +733,162 @@ namespace SpaceGod::Core
 			for (auto kv : avoidedJd) if (!Manoeuvrable(kv.first) || (IsHeld != nullptr && IsHeld(kv.first))) stale.Add(kv.first);
 			for (const auto& s : stale) avoidedJd.Remove(s);
 		}
-		// US-T724: the solve's time, shared between Near and Mid by the hulls each put into it.
+		if (mid.Count() > 0)
+		{
+			// US-T725: the Mid batch goes to a worker as plain values, the Near hulls (where this frame's solve found them) as
+			// things to steer round; the next frame merges what comes back.
+			auto gathering = std::chrono::steady_clock::now();
+			auto job = std::make_shared<MidSidestep>();
+			job->HorizonDays = AvoidanceHorizonDays;
+			for (const auto& s : mid)
+			{
+				double sdt = dt, was = 0;
+				if (avoidedJd.TryGetValue(s, was)) sdt = jd - was;
+				avoidedJd[s] = jd;
+				std::pair<DVec3, DVec3> e{};
+				evasion.TryGetValue(s, e);
+				job->Hulls.push_back({ BaseStateOf(s, jd).HelioKm + e.first, HelioVelocityOf(s, jd) + e.second, e.first, e.second,
+					s->LengthKm(), s->AccelG() * Astro::GravityKmPerDay2, sdt });
+			}
+			for (int i = 0; i < n; i++) job->Obstacles.push_back({ pos[i], vel[i], list[i]->LengthKm() });
+			midHulls = mid;
+			midObstacles = list;
+			auto* solving = job.get();
+			job->Task = std::async(std::launch::async, [solving] { SolveMidSidestep(*solving); });
+			midSidestep = job;
+			midMs += MsSince(gathering);
+		}
+		// US-T724/US-T725: game-thread time by tier: the sweep Far, the Mid batch's gather and merge Mid, the solve Near.
 		double ms = MsSince(started);
-		double midShare = n > 0 ? static_cast<double>(midStepped) / n : 0;
-		Tiers.Charge(SimTier::Near, ms * (1 - midShare));
-		Tiers.Charge(SimTier::Mid, ms * midShare);
+		Tiers.Charge(SimTier::Far, sweepMs);
+		Tiers.Charge(SimTier::Mid, midMs);
+		Tiers.Charge(SimTier::Near, ms - sweepMs - midMs);
+	}
+
+	void Fleet::SolveMidSidestep(MidSidestep& job)
+	{
+		// The pass StepAvoidance makes, over the batch alone: each pair turns aside by its share, a Near hull is steered round
+		// the way a held one is (the whole sidestep the Mid hull's), then each eases toward its target.
+		auto started = std::chrono::steady_clock::now();
+		int n = static_cast<int>(job.Hulls.size());
+		double horizon = job.HorizonDays;
+		job.Out.assign(static_cast<size_t>(n), MidSidestep::Result());
+		std::vector<DVec3> target(static_cast<size_t>(n));
+		std::vector<bool> threatened(static_cast<size_t>(n)), nearby(static_cast<size_t>(n));
+		// The closest pass of r closing at dv within the horizon; false when out of reach.
+		auto pass = [horizon](DVec3 r, DVec3 dv, double safe, DVec3& miss, double& dmin, double& tca)
+		{
+			double reach = safe + dv.Length() * horizon;
+			if (r.LengthSquared() > reach * reach) return false;
+			double v2 = dv.LengthSquared();
+			tca = v2 > 1e-12 ? cs::Math::Max(0.0, cs::Math::Min(horizon, -DVec3::Dot(r, dv) / v2)) : 0;
+			miss = r + dv * tca;
+			dmin = miss.Length();
+			return true;
+		};
+		auto awayFrom = [](DVec3 miss, double dmin, DVec3 dv)
+		{
+			if (dmin > 1e-6) return miss / dmin;
+			auto side = DVec3::Cross(dv.LengthSquared() > 0 ? dv : DVec3::UnitX, DVec3::UnitZ);
+			return side.LengthSquared() > 1e-12 ? side.Normalized() : DVec3::UnitY;
+		};
+		for (int i = 0; i < n; i++)
+		{
+			const auto& a = job.Hulls[static_cast<size_t>(i)];
+			for (int j = i + 1; j < n; j++)
+			{
+				const auto& b = job.Hulls[static_cast<size_t>(j)];
+				double safe = SafeDistanceKm(a.LengthKm, b.LengthKm) * 1.25;
+				DVec3 miss;
+				double dmin = 0, tca = 0;
+				if (!pass(b.Pos - a.Pos, b.Vel - a.Vel, safe, miss, dmin, tca)) continue;
+				if (dmin >= safe)
+				{
+					if (dmin < safe * 1.6) nearby[static_cast<size_t>(i)] = nearby[static_cast<size_t>(j)] = true;
+					continue;
+				}
+				auto away = awayFrom(miss, dmin, b.Vel - a.Vel);
+				double push = (safe - dmin) * (1 - 0.5 * tca / horizon);
+				target[static_cast<size_t>(i)] = target[static_cast<size_t>(i)] - away * (push * b.LengthKm / (a.LengthKm + b.LengthKm));
+				target[static_cast<size_t>(j)] = target[static_cast<size_t>(j)] + away * (push * a.LengthKm / (a.LengthKm + b.LengthKm));
+				threatened[static_cast<size_t>(i)] = threatened[static_cast<size_t>(j)] = true;
+				job.Out[static_cast<size_t>(i)].From = j;
+				job.Out[static_cast<size_t>(j)].From = i;
+			}
+			for (size_t k = 0; k < job.Obstacles.size(); k++)
+			{
+				const auto& o = job.Obstacles[k];
+				double safe = SafeDistanceKm(a.LengthKm, o.LengthKm) * 1.25;
+				DVec3 miss;
+				double dmin = 0, tca = 0;
+				if (!pass(o.Pos - a.Pos, o.Vel - a.Vel, safe, miss, dmin, tca)) continue;
+				if (dmin >= safe)
+				{
+					if (dmin < safe * 1.6) nearby[static_cast<size_t>(i)] = true;
+					continue;
+				}
+				double push = (safe - dmin) * (1 - 0.5 * tca / horizon);
+				target[static_cast<size_t>(i)] = target[static_cast<size_t>(i)] - awayFrom(miss, dmin, o.Vel - a.Vel) * push;
+				threatened[static_cast<size_t>(i)] = true;
+				job.Out[static_cast<size_t>(i)].From = n + static_cast<int>(k);
+			}
+		}
+		constexpr double omega = 4 / 0.0104;
+		for (int i = 0; i < n; i++)
+		{
+			const auto& h = job.Hulls[static_cast<size_t>(i)];
+			auto& out = job.Out[static_cast<size_t>(i)];
+			bool isThreatened = threatened[static_cast<size_t>(i)], isNear = nearby[static_cast<size_t>(i)];
+			auto goal = isThreatened ? h.Off + target[static_cast<size_t>(i)] : isNear ? h.Off : DVec3::Zero;
+			if (!isThreatened && !isNear && h.Off.LengthSquared() < 1e-8 && h.OffVel.LengthSquared() < 1e-8)
+			{
+				out.Settled = true;
+				continue;
+			}
+			auto off = h.Off;
+			auto v = h.OffVel;
+			if (omega * h.Dt > 1)
+			{
+				off = DVec3::Lerp(off, goal, cs::Math::Min(1.0, omega * h.Dt * 0.5));
+				v = DVec3::Zero;
+			}
+			else
+			{
+				double step = cs::Math::Min(h.Dt, 0.002);
+				for (double done = 0; done < h.Dt - 1e-12; done += step)
+				{
+					double d = cs::Math::Min(step, h.Dt - done);
+					auto acc = (goal - off) * (omega * omega) - v * (2 * omega);
+					if (acc.Length() > h.MaxAccel) acc = acc.Normalized() * h.MaxAccel;
+					v = v + acc * d;
+					off = off + v * d;
+				}
+			}
+			out.Off = off;
+			out.OffVel = v;
+		}
+		job.WorkerMs = MsSince(started);
+	}
+
+	void Fleet::MergeMidSidestep(bool apply)
+	{
+		auto job = std::move(midSidestep);
+		midSidestep = nullptr;
+		job->Task.wait();
+		int n = midHulls.Count();
+		// In hull order, on the game thread; a hull that stopped flying free (or that the player took) since keeps nothing.
+		for (int i = 0; apply && i < n; i++)
+		{
+			const auto& s = midHulls[i];
+			if (!Manoeuvrable(s) || (IsHeld != nullptr && IsHeld(s))) continue;
+			const auto& r = job->Out[static_cast<size_t>(i)];
+			if (r.Settled) evasion.Remove(s);
+			else evasion[s] = std::make_pair(r.Off, r.OffVel);
+			if (r.From >= 0) evadingFrom[s] = r.From < n ? midHulls[r.From] : midObstacles[r.From - n];
+		}
+		Tiers.ReportWorker(SimTier::Mid, job->WorkerMs);
+		midHulls.Clear();
+		midObstacles.Clear();
 	}
 
 	void Fleet::ReportHeld(const cs::Ref<Ship>& ship, DVec3 helioKm, DVec3 velocityKmS, double jd)

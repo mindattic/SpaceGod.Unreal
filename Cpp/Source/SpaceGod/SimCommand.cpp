@@ -67,11 +67,11 @@ namespace
 		out.Logf(TEXT("sg.Sim: promotions %d, demotions %d"), st.Promotions, st.Demotions);
 		for (int t = 0; t < SimTierCount; t++)
 		{
-			out.Logf(TEXT("  %-4s fleets %5d  stepped %5d  last %6.3f ms  avg %6.3f ms  worst %7.3f ms  budget %5.2f ms  over %lld%s"),
-				UTF8_TO_TCHAR(SimTierName(static_cast<SimTier>(t))), st.Fleets[t], st.Stepped[t], st.LastMs[t], st.AvgMs[t], st.WorstMs[t],
+			out.Logf(TEXT("  %-4s fleets %5d  stepped %5d  last %6.3f ms  avg %6.3f ms  worst %7.3f ms  worker %6.3f ms  budget %5.2f ms  over %lld%s"),
+				UTF8_TO_TCHAR(SimTierName(static_cast<SimTier>(t))), st.Fleets[t], st.Stepped[t], st.LastMs[t], st.AvgMs[t], st.WorstMs[t], st.WorkerMs[t],
 				tiers.BudgetMs[t], static_cast<long long>(st.OverBudget[t]), st.AvgMs[t] > tiers.BudgetMs[t] ? TEXT("  OVER BUDGET") : TEXT(""));
 		}
-		out.Logf(TEXT("sg.Sim: Far is the schedule's event queue (every fleet), Near/Mid the sidestepping shared by hulls stepped, Near the separation too"));
+		out.Logf(TEXT("sg.Sim: ms are game-thread time: Far the schedule's event queue and the tier sweep, Mid its batch's gather and merge (the solve runs on a worker: worker ms, last batch), Near the sidestep solve and the separation"));
 	}
 
 	FAutoConsoleCommand GSimCommand(TEXT("sg.Sim"),
