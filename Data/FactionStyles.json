@@ -1,0 +1,117 @@
+{
+  "comment": "US-T845: how each faction builds its hulls (the ModularAssembler's FactionStyle), kept per scale so a capital never takes a fighter's kit set. A style matches by faction name; one with only a kind is the fallback for that PolityKind; none matching: neutral. palette.colour is the USC unified colour (Grey, Red, Blue, Green, Purple, White, Black); primary and trim tint it. markings.format takes {prefix} and {number} (the seed, digits wide).",
+  "styles": [
+    {
+      "id": "sol",
+      "faction": "Sol Federation",
+      "fighter": { "packs": [ "usc" ], "families": [ "HyperFalcon", "SpaceExcalibur", "AstroEagle" ], "length": 0.5, "wings": 0.6, "armament": 0.6, "variety": 0.25 },
+      "capital": { "packs": [ "usc" ], "families": [ "GalacticLeopard" ], "length": 0.65, "wings": 0.4, "armament": 0.7, "variety": 0.2 },
+      "palette": { "colour": "Blue", "primary": "#3A6FD8", "trim": "#E8ECF2" },
+      "markings": { "prefix": "SFS", "format": "{prefix}-{number}", "digits": 3, "decal": "sol_star" }
+    },
+    {
+      "id": "belt",
+      "faction": "Belt Consortium",
+      "fighter": { "packs": [ "usc" ], "families": [ "StriderOx", "MeteorMantis" ], "length": 0.35, "wings": 0.3, "armament": 0.55, "variety": 0.5 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar" ], "length": 0.45, "wings": 0.25, "armament": 0.55, "variety": 0.55 },
+      "palette": { "colour": "Red", "primary": "#FF9940", "trim": "#4A4038" },
+      "markings": { "prefix": "BCS", "format": "{prefix} {number}", "digits": 4, "decal": "belt_ring" }
+    },
+    {
+      "id": "reach",
+      "faction": "Outer Reach Compact",
+      "fighter": { "packs": [ "usc" ], "families": [ "NightAye", "SpaceSphinx", "GalaxyRaptor" ], "length": 0.6, "wings": 0.75, "armament": 0.5, "variety": 0.3 },
+      "capital": { "packs": [ "usc" ], "families": [ "VoidWhale" ], "length": 0.75, "wings": 0.6, "armament": 0.55, "variety": 0.3 },
+      "palette": { "colour": "Purple", "primary": "#B880FF", "trim": "#1E1A2A" },
+      "markings": { "prefix": "ORS", "format": "{prefix}-{number}", "digits": 3, "decal": "reach_crescent" }
+    },
+    {
+      "id": "independent",
+      "faction": "Independent",
+      "fighter": { "packs": [ "usc", "starsparrow" ], "families": [ "StarSparrow", "LightFox", "ProtonLegacy" ], "length": 0.4, "wings": 0.45, "armament": 0.35, "variety": 0.6 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar", "VoidWhale" ], "length": 0.4, "wings": 0.3, "armament": 0.3, "variety": 0.6 },
+      "palette": { "colour": "White", "primary": "#D9D9C7", "trim": "#5A5A50" },
+      "markings": { "prefix": "MV", "format": "{prefix} {number}", "digits": 4, "decal": "" }
+    },
+    {
+      "id": "blackbanner",
+      "faction": "Black Banner",
+      "fighter": { "packs": [ "usc", "starsparrow" ], "families": [ "CosmicShark", "StarSparrow", "GalaxyRaptor" ], "length": 0.35, "wings": 0.55, "armament": 0.8, "variety": 0.8 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar", "GalacticLeopard" ], "length": 0.35, "wings": 0.4, "armament": 0.8, "variety": 0.85 },
+      "palette": { "colour": "Black", "primary": "#F23833", "trim": "#1A1A1A" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 2, "decal": "black_banner" }
+    },
+    {
+      "id": "accord",
+      "faction": "Centauri Accord",
+      "fighter": { "packs": [ "usc" ], "families": [ "AstroEagle", "HyperFalcon", "SpaceSphinx" ], "length": 0.55, "wings": 0.65, "armament": 0.55, "variety": 0.25 },
+      "capital": { "packs": [ "usc" ], "families": [ "GalacticLeopard", "VoidWhale" ], "length": 0.6, "wings": 0.5, "armament": 0.6, "variety": 0.25 },
+      "palette": { "colour": "Green", "primary": "#4DE0BF", "trim": "#F0F4F2" },
+      "markings": { "prefix": "CAS", "format": "{prefix}-{number}", "digits": 3, "decal": "accord_twin" }
+    },
+    {
+      "id": "combine",
+      "faction": "Toliman Combine",
+      "fighter": { "packs": [ "usc" ], "families": [ "StriderOx", "ProtonLegacy" ], "length": 0.4, "wings": 0.3, "armament": 0.4, "variety": 0.4 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar" ], "length": 0.55, "wings": 0.2, "armament": 0.35, "variety": 0.4 },
+      "palette": { "colour": "Grey", "primary": "#FFC74D", "trim": "#3A3530" },
+      "markings": { "prefix": "TCV", "format": "{prefix} {number}", "digits": 4, "decal": "combine_gear" }
+    },
+    {
+      "id": "kentaurus",
+      "faction": "Kentaurus Free Traders",
+      "fighter": { "packs": [ "usc", "starsparrow" ], "families": [ "LightFox", "StarSparrow" ], "length": 0.4, "wings": 0.45, "armament": 0.35, "variety": 0.55 },
+      "capital": { "packs": [ "usc" ], "families": [ "VoidWhale" ], "length": 0.45, "wings": 0.3, "armament": 0.3, "variety": 0.5 },
+      "palette": { "colour": "White", "primary": "#C7D6EB", "trim": "#40506A" },
+      "markings": { "prefix": "KFT", "format": "{prefix} {number}", "digits": 4, "decal": "" }
+    },
+    {
+      "id": "longdark",
+      "faction": "Long Dark",
+      "fighter": { "packs": [ "usc" ], "families": [ "NightAye", "CosmicShark" ], "length": 0.45, "wings": 0.6, "armament": 0.75, "variety": 0.75 },
+      "capital": { "packs": [ "usc" ], "families": [ "VoidWhale", "CraizanStar" ], "length": 0.5, "wings": 0.45, "armament": 0.75, "variety": 0.8 },
+      "palette": { "colour": "Black", "primary": "#D94099", "trim": "#140F18" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 2, "decal": "long_dark_eye" }
+    },
+    {
+      "id": "survey",
+      "faction": "Survey Service",
+      "fighter": { "packs": [ "usc" ], "families": [ "AstroEagle", "LightFox" ], "length": 0.55, "wings": 0.5, "armament": 0.2, "variety": 0.2 },
+      "capital": { "packs": [ "usc" ], "families": [ "VoidWhale" ], "length": 0.6, "wings": 0.35, "armament": 0.2, "variety": 0.2 },
+      "palette": { "colour": "White", "primary": "#B3D9F2", "trim": "#F28C28" },
+      "markings": { "prefix": "SSV", "format": "{prefix}-{number}", "digits": 3, "decal": "survey_compass" }
+    },
+    {
+      "id": "state",
+      "kind": "State",
+      "fighter": { "packs": [ "usc" ], "families": [ "HyperFalcon", "AstroEagle" ], "length": 0.5, "wings": 0.55, "armament": 0.6, "variety": 0.3 },
+      "capital": { "packs": [ "usc" ], "families": [ "GalacticLeopard" ], "length": 0.6, "wings": 0.4, "armament": 0.6, "variety": 0.3 },
+      "palette": { "colour": "Grey", "primary": "", "trim": "" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 3, "decal": "" }
+    },
+    {
+      "id": "company",
+      "kind": "Company",
+      "fighter": { "packs": [ "usc" ], "families": [ "StriderOx" ], "length": 0.4, "wings": 0.3, "armament": 0.4, "variety": 0.4 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar" ], "length": 0.5, "wings": 0.2, "armament": 0.35, "variety": 0.4 },
+      "palette": { "colour": "White", "primary": "", "trim": "" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 4, "decal": "" }
+    },
+    {
+      "id": "freetraders",
+      "kind": "FreeTraders",
+      "fighter": { "packs": [ "usc", "starsparrow" ], "families": [ "StarSparrow", "LightFox" ], "length": 0.4, "wings": 0.45, "armament": 0.35, "variety": 0.6 },
+      "capital": { "packs": [ "usc" ], "families": [ "VoidWhale", "CraizanStar" ], "length": 0.4, "wings": 0.3, "armament": 0.3, "variety": 0.6 },
+      "palette": { "colour": "White", "primary": "", "trim": "" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 4, "decal": "" }
+    },
+    {
+      "id": "pirateclan",
+      "kind": "PirateClan",
+      "fighter": { "packs": [ "usc", "starsparrow" ], "families": [ "CosmicShark", "GalaxyRaptor" ], "length": 0.4, "wings": 0.55, "armament": 0.8, "variety": 0.8 },
+      "capital": { "packs": [ "usc" ], "families": [ "CraizanStar" ], "length": 0.4, "wings": 0.4, "armament": 0.8, "variety": 0.85 },
+      "palette": { "colour": "Black", "primary": "", "trim": "" },
+      "markings": { "prefix": "", "format": "{number}", "digits": 2, "decal": "" }
+    }
+  ]
+}

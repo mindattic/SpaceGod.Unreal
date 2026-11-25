@@ -6,21 +6,26 @@
 #include "ModelViewer.h"
 #include "SpaceGodLog.h"
 
+#include "Assembly/FactionStyles.h"
 #include "Assembly/ModularAssembler.h"
 #include "Combat/VehicleData.h"
 #include "Rendering/DesignMeshes.h"
 #include "Rendering/EnginePorts.h"
 #include "Rendering/HullLighting.h"
+#include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
 #include "Rendering/ShipModels.h"
+#include "Rendering/UscKit.h"
 #include "Ships.h"
 
 #include "HAL/IConsoleManager.h"
+#include "Materials/MaterialInterface.h"
 #include "Misc/Paths.h"
 
 #include <algorithm>
 #include <cmath>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 using namespace SpaceGod::Core;
@@ -109,16 +114,127 @@ namespace
 		return root;
 	}
 
+	// US-T845: faction style profiles (Data/FactionStyles.json), each faction's palette over the USC unified colour.
+	const FactionStyleBook& AssembleStyleBook()
+	{
+		static const FactionStyleBook book = []
+		{
+			FString file = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT(".."), TEXT("Data/FactionStyles.json")));
+			return FactionStyleBook::Load(cs::String(TCHAR_TO_UTF8(*file)));
+		}();
+		return book;
+	}
+
+	bool AssembleStyledInstance(const cs::String& leaf)
+	{
+		static std::unordered_map<cs::String, bool> known;
+		auto it = known.find(leaf);
+		if (it != known.end()) return it->second;
+		bool ok = LoadObject<UMaterialInterface>(nullptr, *FString::Printf(TEXT("%s/Materials/%s.%s"), UTF8_TO_TCHAR(UscKit::Root), UTF8_TO_TCHAR(leaf.c_str()),
+			UTF8_TO_TCHAR(leaf.c_str())), nullptr, LOAD_NoWarn | LOAD_Quiet) != nullptr;
+		known.emplace(leaf, ok);
+		return ok;
+	}
+
+	/// A USC atlas in a style's palette: its unified colour's instance with a light wash of the primary, as UscKit's
+	/// faction livery does. One shared material per atlas and style.
+	cs::Ref<Material> AssembleStyledMaterial(const cs::String& atlas, const FactionStyleProfile& profile)
+	{
+		static std::unordered_map<cs::String, cs::Ref<Material>> cache;
+		cs::String key = cs::Cat(atlas, "|", profile.Id);
+		auto it = cache.find(key);
+		if (it != cache.end() && Alive(it->second)) return it->second;
+		bool pirate = profile.Palette.Colour == "Black";
+		cs::String colour = profile.Palette.Colour;
+		if (!AssembleStyledInstance(cs::Cat("MI_USC_", atlas, "_", colour)))
+			colour = pirate && AssembleStyledInstance(cs::Cat("MI_USC_", atlas, "_Red")) ? cs::String("Red") : cs::String("Grey");
+		cs::String leaf = cs::Cat("MI_USC_", atlas, "_", colour);
+		auto m = Materials::MarkShared(cs::New<Material>(Shader::Find(HullLighting::LitVariant(cs::Cat(UscKit::Root, "/Materials/", leaf))),
+			cs::Cat("Assembled_", atlas, "_", profile.Id)));
+		Color tint = Color::white();
+		if (profile.Palette.Primary.Set)
+		{
+			Color f(static_cast<float>(profile.Palette.Primary.R), static_cast<float>(profile.Palette.Primary.G), static_cast<float>(profile.Palette.Primary.B));
+			float peak = Mathf::Max(f.r, Mathf::Max(f.g, f.b));
+			if (peak > 1e-3f) f = f * (1.0f / peak);
+			tint = Color::Lerp(Color::white(), f, pirate ? 0.25f : 0.18f);
+			if (pirate) tint = tint * 0.85f;
+		}
+		m->SetColor("Tint", tint);
+		m->SetColor("_Tint", Color::white());
+		cache[key] = m;
+		return m;
+	}
+
+	/// Repaints the USC parts BuildModel drew with their own mesh (its bodies, one per placement) in the style's palette.
+	void AssemblePaint(const ModularDesign& design, const KitCatalogue& catalogue, const std::vector<cs::Ref<GameObject>>& bodies, const FactionStyleProfile& profile)
+	{
+		for (size_t i = 0; i < design.Parts.size() && i < bodies.size(); i++)
+		{
+			const KitPart& part = catalogue.Parts()[design.Parts[i].Part];
+			if (part.Pack() != "usc" || part.Asset.empty() || !DesignMeshes::FitOf(part).Ok) continue;
+			if (auto mr = GetComponent<MeshRenderer>(bodies[i])) mr->SetSharedMaterial(AssembleStyledMaterial(part.Atlas, profile));
+		}
+	}
+
+	/// sg.Assemble <class> <seed> lineup: every faction's take on the class, side by side along +X under one root.
+	void AssembleLineup(ShipClass cls, uint64 seed)
+	{
+		const KitCatalogue& catalogue = Catalogue();
+		const FactionStyleBook& book = AssembleStyleBook();
+		if (!book.Loaded())
+		{
+			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble: %s"), UTF8_TO_TCHAR(book.Problem().c_str()));
+			return;
+		}
+		auto root = NewGameObject(cs::Cat("Lineup ", ToString(cls), " ", seed));
+		double x = 0, lastHalf = 0;
+		int shown = 0;
+		for (const auto& profile : book.Profiles())
+		{
+			if (profile.Faction.empty()) continue;
+			ModularDesign design = ModularAssembler::Assemble(catalogue, cls, seed, profile.For(cls));
+			if (!design.Problem.empty())
+			{
+				UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble: %s: %s"), UTF8_TO_TCHAR(profile.Id.c_str()), UTF8_TO_TCHAR(design.Problem.c_str()));
+				continue;
+			}
+			double half = std::max(0.5 * (design.Max.X - design.Min.X), 1.0);
+			if (shown > 0) x += lastHalf + half + 0.25 * std::max(design.LengthM, 1.0);
+			lastHalf = half;
+			int imported = 0;
+			std::vector<cs::Ref<GameObject>> bodies;
+			auto model = BuildModel(design, catalogue, imported, bodies);
+			AssemblePaint(design, catalogue, bodies, profile);
+			cs::String hull = profile.HullNumber(seed);
+			model->name = cs::Cat(profile.Faction, " ", hull);
+			model->transform->SetParent(root->transform, false);
+			model->transform->localPosition = Vector3(static_cast<float>(x), 0, 0);
+			shown++;
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: %-24s %-10s %s set, %s, %d parts, %d drawn with their own mesh"), UTF8_TO_TCHAR(profile.Faction.c_str()),
+				UTF8_TO_TCHAR(hull.c_str()), UTF8_TO_TCHAR(design.Family.c_str()), UTF8_TO_TCHAR(profile.Palette.Colour.c_str()), static_cast<int>(design.Parts.size()), imported);
+		}
+		if (shown == 0 || !ModelViewer::ShowBuilt(root, cs::Cat(ToString(cls), " #", seed, " lineup")))
+		{
+			Destroy(root);
+			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble: no lineup shown (%s)"), shown == 0 ? TEXT("no style built") : TEXT("no model viewer, start the game first"));
+			return;
+		}
+		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: lineup of %d faction styles shown in the model viewer"), shown);
+	}
+
 	void Assemble(const TArray<FString>& args)
 	{
 		ShipClass cls{};
 		if (args.Num() < 2 || !ParseClass(args[0], cls))
 		{
-			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported], e.g. sg.Assemble Carrier 42"));
+			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported] [faction=<style id>] [lineup], e.g. sg.Assemble Carrier 42"));
 			return;
 		}
 		uint64 seed = FCString::Strtoui64(*args[1], nullptr, 10);
 		FactionStyle style;
+		FString factionId;
+		bool lineup = false;
 		for (int i = 2; i < args.Num(); i++)
 		{
 			FString key, value;
@@ -126,6 +242,31 @@ namespace
 			if (key.Equals(TEXT("family"), ESearchCase::IgnoreCase)) style.Families.push_back(TCHAR_TO_UTF8(*value));
 			else if (key.Equals(TEXT("pack"), ESearchCase::IgnoreCase)) style.Packs.push_back(TCHAR_TO_UTF8(*value.ToLower()));
 			else if (key.Equals(TEXT("imported"), ESearchCase::IgnoreCase)) style.ImportedOnly = true;
+			else if (key.Equals(TEXT("faction"), ESearchCase::IgnoreCase)) factionId = value;
+			else if (key.Equals(TEXT("lineup"), ESearchCase::IgnoreCase)) lineup = true;
+		}
+		if (lineup)
+		{
+			AssembleLineup(cls, seed);
+			return;
+		}
+		const FactionStyleProfile* profile = nullptr;
+		if (!factionId.IsEmpty())
+		{
+			profile = AssembleStyleBook().Find(TCHAR_TO_UTF8(*factionId));
+			if (!profile)
+			{
+				UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble: no faction style '%s' in Data/FactionStyles.json %s"), *factionId,
+					UTF8_TO_TCHAR(AssembleStyleBook().Problem().c_str()));
+				return;
+			}
+			FactionStyle given = style;
+			style = profile->For(cls);
+			if (!given.Families.empty()) style.Families = given.Families;
+			if (!given.Packs.empty()) style.Packs = given.Packs;
+			style.ImportedOnly = style.ImportedOnly || given.ImportedOnly;
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: %s style, hull number %s, %s"), UTF8_TO_TCHAR(profile->Id.c_str()),
+				UTF8_TO_TCHAR(profile->HullNumber(seed).c_str()), UTF8_TO_TCHAR(profile->Palette.Colour.c_str()));
 		}
 
 		const KitCatalogue& catalogue = Catalogue();
@@ -150,6 +291,7 @@ namespace
 		int imported = 0;
 		std::vector<cs::Ref<GameObject>> bodies;
 		auto model = BuildModel(design, catalogue, imported, bodies);
+		if (profile) AssemblePaint(design, catalogue, bodies, *profile);
 		cs::String name = cs::Cat(ToString(cls), " #", design.Seed);
 		if (!ModelViewer::ShowBuilt(model, name))
 		{
@@ -159,6 +301,8 @@ namespace
 		}
 		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: shown in the model viewer, %d of %d parts drawn with their own mesh, the rest as boxes"), imported,
 			static_cast<int>(design.Parts.size()));
+		// The merged mesh draws in the neutral grey, so a styled hull keeps its repainted parts.
+		if (profile) return;
 
 		// US-T839: the parts swap to the design merged into one mesh once it is built; the nozzle marks stay on the parts.
 		std::weak_ptr<GameObject> shown = model;
@@ -181,7 +325,7 @@ namespace
 	FAutoConsoleCommand GAssembleCommand(
 		TEXT("sg.Assemble"),
 		TEXT("US-T765: assembles a hull from the kit parts (Data/ModularParts.json) for a class and seed and shows it in the model viewer. "
-			"sg.Assemble <class> <seed> [family=<kit set>] [pack=<usc|starsparrow|ssc>] [imported]"),
+			"sg.Assemble <class> <seed> [family=<kit set>] [pack=<usc|starsparrow|ssc>] [imported] [faction=<style id>] [lineup] (US-T845: Data/FactionStyles.json)"),
 		FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& args) { Assemble(args); }));
 }
 }
