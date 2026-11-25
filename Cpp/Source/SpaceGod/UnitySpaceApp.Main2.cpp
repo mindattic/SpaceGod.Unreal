@@ -14,6 +14,7 @@
 #include "BodyOrientation.h"
 #include "Ephemeris.h"
 #include "Fleet.h"
+#include "NewGameSetup.h"
 #include "OrbitalElements.h"
 #include "RenderBudget.h" // US-T719
 #include "Views/ShipViewPool.h" // US-T720
@@ -989,13 +990,19 @@ namespace SpaceGod
 		while (noticeHistory.Count() > NoticesKept) noticeHistory.RemoveAt(0);
 	}
 
+	double UnitySpaceApp::GameStartJd() const
+	{
+		Core::NewGameSetup setup;
+		return Core::NewGameSetup::Restore(Galaxy->SetupRecord, setup) && !std::isnan(setup.StartJd) ? setup.StartJd : Core::NewGameSetup::DefaultStartJd;
+	}
+
 	void UnitySpaceApp::ResetToNow()
 	{
-		// A reset can rebuild the galaxy out from under the piloted ship (the HUD's Now button lands here too).
+		// A reset can rebuild the galaxy out from under the piloted ship (the HUD's Start button lands here too).
 		if (CoopAtControls()) { ShowToast("Release the helm or seat (P) before resetting the time"); return; } // US-T44 (US-T43): was AtControls() (in co-op: anyone's)
-		// Nor under the hull's own FTL drive: the crossing holds the old galaxy's systems (the Now button reaches here too).
+		// Nor under the hull's own FTL drive: the crossing holds the old galaxy's systems (the Start button reaches here too).
 		if (InFtlCruise()) { ShowToast("Not under FTL: wait until the drive drops out before resetting the time"); return; }
-		double now = CoopNow.has_value() ? *CoopNow : Core::Astro::JulianDate(cs::DateTime::UtcNow()); // US-T44 (US-T43): in co-op the asker's now
+		double now = CoopNow.has_value() ? *CoopNow : GameStartJd(); // US-T44 (US-T43): in co-op the asker's; US-T863: the game's own start, never the wall clock's date
 		if (CoopSends("reset", Coop::Wire::D(now))) return; // US-T44 (US-T43): into the frames
 		bool backwards = now < Clock->Jd;
 		// Rebuilding the systems mid-trip would leave the trip pointing at the old ones: land first.
@@ -1008,7 +1015,11 @@ namespace SpaceGod
 			int index = Galaxy->Systems.IndexOf(ActiveSystem);
 			auto cameraAt = SpaceCamera->ScenePosition;
 			auto cameraRotation = SpaceCamera->Rotation;
-			Galaxy = Core::Galaxy::CreateDefault(now);
+			// US-T863: the same game's galaxy again, from its seed, keeping how it began.
+			auto old = Galaxy;
+			Galaxy = Core::Galaxy::CreateDefault(now, old->Seed);
+			Galaxy->SetupRecord = old->SetupRecord;
+			Galaxy->DifficultyRecord = old->DifficultyRecord;
 			Rendering::Materials::DestroyOwned(Interstellar->Root->transform);
 			UnityCompat::Destroy(Interstellar->Root);
 			Interstellar = cs::New<Views::InterstellarView>(Galaxy, worldRoot);
@@ -1017,7 +1028,7 @@ namespace SpaceGod
 			SpaceCamera->SetPose(cameraAt, cameraRotation);
 			GalaxyRebuilt.Invoke();
 		}
-		ShowToast("Time reset to now");
+		ShowToast(cs::Cat("Time back to the game's start, ", Core::NewGameSetup::FormatDate(now)));
 		RewindAfterLoad(); // US-T504: a reset is not replayed, so it starts a new timeline as a load does (no keyframes of the old galaxy, no years of session time)
 	}
 

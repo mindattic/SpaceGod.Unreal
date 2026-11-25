@@ -1,5 +1,5 @@
 #pragma once
-// US-T459: the Ascension Tether, GLMZ's space elevator, on SpaceGod's Earth.
+// US-T459: the Ascension Tether, SpaceGod's space elevator, on Earth.
 
 #include "UnityCompat/UnityRenderingTypes.h"
 #include "DVec3.h"
@@ -21,7 +21,8 @@ namespace SpaceGod::Views
 	class LineStrip;
 
 	/// <summary>
-	/// The Ascension Tether (US-T459), "the Thread": GLMZ's one space elevator, run by the Apex Tether Authority. One
+	/// The Ascension Tether (US-T459), "the Thread": the one space elevator, raised 2163-2191 and run by the Federation's
+	/// Tether Authority (docs/HISTORY.md). One
 	/// carbon-nanotube ribbon, 104,000 km long, rises from the Anchor Station on the northern tip of Isla Isabela in the
 	/// Galapagos (0.383 N, 91.117 W) straight up past geostationary orbit to its counterweight, and turns with the Earth.
 	/// The ribbon cannot be seen without augmentation, so it is drawn as a faint line one pixel wide at any range. What

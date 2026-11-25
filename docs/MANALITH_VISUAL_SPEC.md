@@ -1,5 +1,7 @@
 # Manalith visual spec (shared: Unity.GridGame and SpaceGod)
 
+In SpaceGod the Manalith is a non-canon easter egg (US-T860): see docs/HISTORY.md.
+
 One spec for the Manalith / Midnight Geode satellite, so GridGame (Unity, GG-T679) and SpaceGod (Unreal, US-T458)
 draw the same thing. This file is meant to be identical in both repos (GG-T680). Change a value here and in the
 other repo in the same breath.

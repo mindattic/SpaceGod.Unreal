@@ -96,7 +96,7 @@ namespace SpaceGod::Views
 
 		cs::Ref<Texture2D>& FleshTexture()
 		{
-			// A person turned inside out (GLMZ): crimson muscle, sheets of yellow fat, purple-black liver and clot, grey-pink
+			// A person turned inside out: crimson muscle, sheets of yellow fat, purple-black liver and clot, grey-pink
 			// folds like brain matter, pale veins, and white cartilage ridges breaking the surface. Shared by every Earth view.
 			static cs::Ref<Texture2D> tex;
 			if (tex) return tex;

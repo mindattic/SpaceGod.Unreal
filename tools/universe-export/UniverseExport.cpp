@@ -52,6 +52,7 @@
 #include "Systems/Graveyards.h"
 #include "Systems/InterstellarWars.h"
 #include "Systems/JumpGate.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/Polities.h"
 #include "Systems/SpaceFeatures.h"
 #include "Systems/StarDiscovery.h"
@@ -352,7 +353,7 @@ namespace
 			if (args.Pilots) PilotsAll();
 			if (args.Society) People();
 			Politics();
-			SharedUniverse();
+			EarthBiomass();
 			Prune();
 			Manifest();
 		}
@@ -535,6 +536,7 @@ namespace
 		void System(const cs::Ref<StarSystem>& s)
 		{
 			if (s->IsVoidBase && VoidStationName(s->Name)) { VoidStation(s->Name, s); return; }
+			if (ManalithSystem::Gateless(s->Name)) return; // US-T860: Nightglass is a non-canon easter egg, never exported.
 			std::string sys = SysSlug(s->Name);
 			std::string id = "system-" + sys;
 			placeByName[Lower(s->Name)] = id;
@@ -1010,7 +1012,7 @@ namespace
 		void ChartedStars()
 		{
 			auto one = [&](const NearbyStar& n, bool discovered) {
-				if (VoidStationName(n.Name) || placeByName.count(Lower(n.Name))) return;
+				if (VoidStationName(n.Name) || ManalithSystem::Gateless(n.Name) || placeByName.count(Lower(n.Name))) return;
 				std::string id = "charted-star-" + Slug(n.Name);
 				placeByName[Lower(n.Name)] = id;
 				Entity e{ id, "star", n.Name,
@@ -1318,19 +1320,18 @@ namespace
 				}), e.Relations.end());
 		}
 
-		void SharedUniverse()
+		void EarthBiomass()
 		{
-			// US-T461: the Biomass on Earth, the one place GLMZ's canon and the game's Bio Mass meet (EarthBiomassView draws it).
-			Entity e{ "concept-earth-biomass", "concept", "The Biomass (Earth)",
-				"The Bio Mass on Earth: a living mass of flesh across the old south-east United States, from central Alabama "
-				"through Tennessee into southern Kentucky, short of the Ohio. It fell near Huntsville, Alabama around 2147, was "
-				"recovered in secret by Pinnacle BioSynthetics and got loose in its underground lab; officially a ZD-7741 lab "
-				"leak. It eats whatever it touches, breathes about six times a minute, and the corporations dump their waste in it." };
+			// US-T461: the Biomass on Earth, the Exclusion (EarthBiomassView draws it); its story is docs/HISTORY.md's.
+			Entity e{ "concept-earth-biomass", "concept", "The Exclusion (the Biomass on Earth)",
+				"The Biomass on Earth: a living mass of flesh across the old south-east United States, from central Alabama "
+				"through Tennessee into southern Kentucky, short of the Ohio. A globule got past Earth's guns and came down "
+				"there in 2751, the Carolina Fall; it has been walled, watched and burned ever since and has never got out. It "
+				"eats whatever it touches, breathes about six times a minute, and the corporations dump their waste in it." };
 			e.Details.S("kind", "biomass").S("body", "Earth").N("centreLatDeg", 34.7).N("centreLonDeg", -86.6).N("areaKm2", 78000)
-				.I("arrivedYear", 2147).S("coverStory", "ZD-7741 lab leak, Pinnacle BioSynthetics, Huntsville")
-				.S("glmz", "The Biomass (Prose GLMZ place c55d61df-8b58-fc6b-a3b3-6bf72d04321b)");
+				.I("arrivedYear", 2751).S("event", "the Carolina Fall");
 			e.Relations = { { "planet-sol-earth", "located-on" } };
-			e.Tags = { "concept", "biomass", "glmz", "earth" };
+			e.Tags = { "concept", "biomass", "earth" };
 			Add(std::move(e), false);
 		}
 
@@ -1375,7 +1376,7 @@ namespace
 			"Sol is kept as it really is; beyond Sol every system and void station is its own wild, painted place with a biome.",
 			"Every feature reads right at real scale and at game scale.",
 			"Void stations are lawless: no state ever holds one.",
-			"SpaceGod shares one universe with Prose's GLMZ (US-T461): Sol's Earth is GLMZ's Earth, and the Bio Mass is GLMZ's Biomass, one organism. It came out of the dark between the stars; on Earth a piece fell near Huntsville, Alabama around 2147, was recovered in secret by Pinnacle BioSynthetics and got loose in its underground lab (the ZD-7741 lab leak is the cover story), and it has covered the old south-east United States ever since. A change to either side's Biomass lore is made in both.",
+			"SpaceGod is its own universe, set in 3026; its history is the game's docs/HISTORY.md. The Biomass was met in 2734 at Barnard's Star and comes from the dark between the stars; it is minor and seemingly manageable, burned on sight everywhere, and never given an origin. On Earth it is the Exclusion: the Carolina Fall of 2751 in the old south-east United States, walled and burned ever since.",
 		};
 		for (size_t i = 0; i < std::size(rules); i++) o << "      " << Esc(rules[i]) << (i + 1 < std::size(rules) ? ",\n" : "\n");
 		o << "    ]\n  },\n  \"entities\": [\n";

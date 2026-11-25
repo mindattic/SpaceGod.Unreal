@@ -219,7 +219,7 @@ namespace SpaceGod
 		Core::NewGameSetup setup;
 		bool setUp = GameLaunch::TakeSetup(setup);
 		if (setUp && !std::isnan(setup.StartJd)) Clock = cs::New<SimClock>(setup.StartJd);
-		else Clock = std::isnan(StartJd) ? SimClock::StartingNow() : cs::New<SimClock>(StartJd); // US-T45: was SimClock::StartingNow()
+		else Clock = cs::New<SimClock>(std::isnan(StartJd) ? Core::NewGameSetup::DefaultStartJd : StartJd); // US-T45, US-T861: 3026-01-01 unless pinned
 		Clock->SetWarp(SimClock::StartingWarp()->Index);
 		scaleModel = cs::New<ScaleModel>();
 		scaleModel->SetBlend(1);
@@ -317,13 +317,13 @@ namespace SpaceGod
 			bodyViews[i] = cs::New<Views::BodyView>((*Catalog())[i], systemRoot);
 			if ((*Catalog())[i]->ParentIndex >= 0) orbitLines[i] = cs::New<Views::LineStrip>(cs::Cat("Orbit ", (*Catalog())[i]->Name), systemRoot);
 		}
-		// US-T459: GLMZ's Ascension Tether rises from the Galapagos (Sol's Earth only).
+		// US-T459: the Ascension Tether rises from the Galapagos (Sol's Earth only).
 		{
 			cs::Ref<BodyDefinition> earth;
 			if (Catalog()->Root()->Name == "Sun" && Catalog()->TryGet("Earth", earth))
 			{
 				bodyViews[earth->Index]->AttachTether(this, systemRoot);
-				bodyViews[earth->Index]->AttachBiomass(this); // US-T461: the Biomass, GLMZ's, on the old south-east US
+				bodyViews[earth->Index]->AttachBiomass(this); // US-T461: the Biomass, the Exclusion, on the old south-east US
 			}
 		}
 		shipViews = cs::List<cs::Ref<Views::ShipView>>(); // C#: null (the old views went with systemRoot)

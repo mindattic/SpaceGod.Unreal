@@ -1,12 +1,12 @@
 #pragma once
 // US-T247: the New Game setup page's choices. Not a port of a C# file.
 //
-// A new game picked from the main menu's setup page starts on a chosen date (today, or a picked day), from a galaxy seed
+// A new game picked from the main menu's setup page starts on a chosen date (1 January 3026, or a picked day), from a galaxy seed
 // (random or typed, shown so it can be shared: the same seed is the same galaxy, Galaxy::Seed), in one of four starting
 // situations, at the difficulty in Settings > Gameplay (Difficulty). The game keeps what was chosen in its galaxy
 // (Galaxy::SetupRecord) so every save of it carries it, and the save header shows it (SaveHeader::Setup), so Load Game's line
-// says how the game began. Quick Start, a console command's or a script's new game have no setup: today, the default seed,
-// the god view by Earth, as before (and so the Bench and every scripted run are unchanged).
+// says how the game began. Quick Start, a console command's or a script's new game have no setup: 1 January 3026, the
+// default seed, the god view by Earth (the Bench and the screenshot runs pin their own start).
 
 #include "Cs/Cs.h"
 
@@ -36,11 +36,17 @@ namespace SpaceGod::Core
 		/// <summary>The house account a freighter captain starts with, credits.</summary>
 		static constexpr double FreighterPurse = 250000;
 
-		/// <summary>The years a start date may be picked in (the ephemeris holds well over these centuries).</summary>
-		static constexpr int FirstYear = 1900;
-		static constexpr int LastYear = 2300;
+		/// <summary>The day a game without a picked day starts: 3026-01-01 12:00 UTC, the year the game is set in
+		/// (docs/HISTORY.md).</summary>
+		static constexpr double DefaultStartJd = 2826284.0;
 
-		/// <summary>The day the game starts, as a Julian date (12:00 UTC that day); NaN starts it the moment it opens (today).</summary>
+		/// <summary>The years a start date may be picked in (Kepler elements and the lunar theory hold over these
+		/// centuries).</summary>
+		static constexpr int FirstYear = 1900;
+		static constexpr int LastYear = 3100;
+
+		/// <summary>The day the game starts, as a Julian date (12:00 UTC that day); NaN starts it on
+		/// <see cref="DefaultStartJd"/>.</summary>
 		double StartJd = cs::Double::NaN;
 
 		/// <summary>The galaxy's seed (Galaxy::CreateDefault).</summary>
@@ -73,7 +79,7 @@ namespace SpaceGod::Core
 		static cs::String FormatDate(double jd);
 
 		/// <summary>The choices as a galaxy keeps them (Galaxy::SetupRecord): "FighterPatrol 4821 2461348.5", the start NaN
-		/// when the game began on the day it was started.</summary>
+		/// when no day was picked.</summary>
 		cs::String Record() const;
 
 		/// <summary>Reads what <see cref="Record"/> wrote; false (and <paramref name="out"/> as a game without a setup) for an

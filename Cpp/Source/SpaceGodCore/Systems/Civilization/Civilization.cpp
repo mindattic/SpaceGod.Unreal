@@ -362,11 +362,14 @@ namespace SpaceGod::Core
 	void Civilization::Update(Galaxy& galaxy, double jd)
 	{
 		if (cs::Double::IsNaN(jd)) return;
-		if (cs::Double::IsNaN(nextDayJd))
+		bool opening = cs::Double::IsNaN(nextDayJd);
+		if (opening)
 		{
 			nextDayJd = cs::Math::Floor(jd);
 			nextMonthJd = nextDayJd;
+			OpenedJd = nextDayJd;
 		}
+		int foundedBefore = Orgs.Count();
 		if (jd < nextDayJd) return;
 		if (jd - nextDayJd > MaxCatchUpDays) nextDayJd = cs::Math::Floor(jd);
 		while (nextDayJd <= jd)
@@ -380,6 +383,14 @@ namespace SpaceGod::Core
 			Day(galaxy, day);
 			nextDayJd = day + 1;
 		}
+		// US-T863: what the opening day founds is old: founded 10 to 159 years before, never before the house that owns it.
+		if (opening)
+			for (int i = foundedBefore; i < Orgs.Count(); i++)
+			{
+				const auto& o = Orgs[i];
+				double back = o->FoundedJd - 365.25 * (10 + H(HashText(o->Name), static_cast<std::uint32_t>(o->Id), 0x0F6Du) % 150u);
+				o->FoundedJd = o->Owner != nullptr && o->Owner->FoundedJd > back && o->Owner->FoundedJd < o->FoundedJd ? o->Owner->FoundedJd : back;
+			}
 		Prune();
 	}
 
@@ -618,6 +629,7 @@ namespace SpaceGod::Core
 
 	SG_SERIALIZE(Civilization, "SpaceGod.Core.Civilization",
 		SG_F(NextId), SG_F(Events), SG_F(Worlds), SG_F(Orgs), SG_F(Tally), SG_F(nextDayJd), SG_F(nextMonthJd), SG_F(personaUpTo),
+		SG_OPT(OpenedJd), // US-T863
 		SG_OPT(Kinship), // US-T277, absent from saves made before it
 		SG_OPT(Politics), // US-T278
 		SG_OPT(Strife), // US-T280

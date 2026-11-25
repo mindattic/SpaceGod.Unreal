@@ -46,6 +46,7 @@
 #include "Law/Outlaws.h"
 #include "Sensors/Sensors.h"
 #include "Systems/LaneUpkeep.h"
+#include "Systems/Civilization/CivHash.h"
 #include "Systems/Polities.h"
 #include "Systems/StrategicCommand.h"
 
@@ -377,6 +378,12 @@ namespace SpaceGod::Core
 			Co("Kraken Hydrocarbon Company", "KHC", "Kraken Port", w->Reach, false),
 			Co("Meridian Free Traders", "MFT", "Tycho City", w->Independents, false),
 			Co("Long Haul Carrying Company", "LHC", "Ares Prime", w->Independents, false) });
+		// Their charters' years (docs/HISTORY.md).
+		for (const auto& [name, year] : cs::List<std::pair<cs::String, int>>{ { "Kepler Freight Lines", 2238 }, { "Ares Haulage", 2622 },
+				{ "Jovian Bulk Carriers", 2368 }, { "Vesta Ore and Haulage", 2319 }, { "Kraken Hydrocarbon Company", 2401 },
+				{ "Meridian Free Traders", 2526 }, { "Long Haul Carrying Company", 2611 } })
+			for (const auto& c : w->Companies->All)
+				if (c->Name == name) c->FoundedJd = cs::Math::Min(startJd, Astro::JulianDate(cs::DateTime(year, 7, 1, 12, 0, 0, cs::DateTimeKind::Utc)));
 		w->AddFreeShips(startJd, cs::List<cs::String>{ "Kestrel's Folly", "Wanderlust", "Solitaire", "Driftwood", "Errant", "Idle Hours" },
 			cs::List<cs::String>{ "Prospector Nine", "Lucky Strike" }, cs::List<cs::String>{ "Far Horizon", "Stargazer" });
 		int haven = (*w->Catalog())["Deimos"]->Index;
@@ -1223,7 +1230,10 @@ namespace SpaceGod::Core
 			cs::Ref<Settlement> port = nullptr;
 			for (const auto& s : Economy->Settlements)
 				if (s->Name == home) port = s;
-			made.Add(std::pair<cs::Ref<Company>, bool>(Companies->Found(name, tag, CompaniesT::LiveryFor(made.Count()), port, flag, Companies->FoundingCapital, jd), mining));
+			auto c = Companies->Found(name, tag, CompaniesT::LiveryFor(made.Count()), port, flag, Companies->FoundingCapital, jd);
+			// A world's opening companies are old ones: chartered 40 to 199 years before.
+			c->FoundedJd = jd - 365.25 * (40 + Civ::HashText(name) % 160u);
+			made.Add(std::pair<cs::Ref<Company>, bool>(c, mining));
 		}
 		for (const auto& ship : Fleet->Ships())
 		{

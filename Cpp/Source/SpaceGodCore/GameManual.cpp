@@ -28,7 +28,7 @@ namespace SpaceGod::Core
 				  "diplomat's, or take nothing at all and let it play out."),
 				T("The main menu",
 				  "SpaceGod's logo sits over the list, Earth turns below it and now and then a ship crosses the sky. Continue "
-				  "loads the latest save, New Game opens the setup page (below), Quick Start starts at once at the current date "
+				  "loads the latest save, New Game opens the setup page (below), Quick Start starts at once on 1 January 3026 "
 				  "beside Earth, Load Game opens the saves (each line says how its game began), Co-op hosts a game for friends "
 				  "to join (Host Co-op) or joins one by its address (Join Co-op), Settings opens every tunable, Help opens this "
 				  "manual, Credits rolls the credits and Quit leaves. "
@@ -36,8 +36,8 @@ namespace SpaceGod::Core
 				  "Extras holds the guided tutorial, the dogfight demos (a light or a heavy fighter) and the showcase tour. The "
 				  "bottom-right corner names the build: its version, build number and commit."), // US-T245
 				T("Setting up a new game",
-				  "New Game asks how the game starts. Start date: today, or pick a day (yyyy-mm-dd, 1900 to 2300) and the worlds "
-				  "stand where they did, or will, that day. Galaxy seed: a random number, or type your own (a word works too); the "
+				  "New Game asks how the game starts. Start date: 1 January 3026, or pick a day (yyyy-mm-dd, 1900 to 3100) and "
+				  "the worlds stand where they did, or will, that day. Galaxy seed: a random number, or type your own (a word works too); the "
 				  "same seed makes the same galaxy beyond the real stars near Sol, so share it with a friend. Starting as: the god "
 				  "view by Earth (the classic start), a fighter pilot on patrol (at the helm of a home-side fighter near Earth), a "
 				  "freighter captain with a small purse (your own freighter at Earth and 250,000 cr in the house account), or a "
@@ -72,9 +72,9 @@ namespace SpaceGod::Core
 				  "exports, shortages and defences. For a ship: status, speed, ETA, cargo and trade profit, or hull, shields, "
 				  "lost hardpoints, fighters aboard and orders. The selected ship's flight path is drawn, lanes included."),
 				T("Time",
-				  "The clock starts at the current date and runs from real time up to a year a second. Space pauses (easing "
-				  "to a stop), comma and period slow and speed the warp, and T brings it back to now. Watching a battle or "
-				  "taking a helm drops to real time."),
+				  "The clock starts on the game's start date and runs from real time up to a year a second. Space pauses (easing "
+				  "to a stop), comma and period slow and speed the warp, and T (or the Start button) brings it back to the day the "
+				  "game began. Watching a battle or taking a helm drops to real time."),
 				T("Gameplay and realistic scale",
 				  "G switches scale. At gameplay scale worlds are drawn large and close so a system can be read at a glance; "
 				  "at realistic scale everything drops back to its true size and distance, and most things become icons. "
@@ -523,12 +523,13 @@ namespace SpaceGod::Core
 				  "eats the wrecks it touches and grows, gnaws at a hull it touches and eats into a station it reaches, and a "
 				  "big one buds in two, but each system holds only ten and none grows past a few megatonnes. The HUD brackets "
 				  "every globule in red with its size, health and range, and warns of one within 2 million km. The console "
-				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic). It came to "
-				  "Earth from the dark: a piece fell near Huntsville, Alabama around 2147, was taken in secret to an "
-				  "underground Pinnacle BioSynthetics lab, and got loose. Officially it was a lab leak of a growth factor, "
-				  "ZD-7741. It has eaten and grown ever since, and covers the old south-east of the United States from "
-				  "central Alabama into southern Kentucky, short of the Ohio; look for it from orbit, red as meat, breathing. "
-				  "The corporations fly their waste south and drop it in, and it eats that too.")),
+				  "command sg.BioMass spawns one beside your hull, at game scale (sg.BioMass real for realistic). It was first "
+				  "met in 2734, at Barnard's Star, and nobody knows what it is or where it comes from; burned on sight since "
+				  "the Gate Protocol of 2748, it looks like a nuisance, not a threat. On Earth it is the Exclusion: in 2751, "
+				  "the Carolina Fall, a globule got past Earth's guns and came down in the old south-east of the United "
+				  "States. It covers that ground from central Alabama into southern Kentucky, short of the Ohio, walled, "
+				  "watched and burned ever since; look for it from orbit, red as meat, breathing. The corporations fly their "
+				  "waste to its edge and drop it in, and it eats that too.")),
 
 			cs::New<ManualChapter>("Trade", "Markets, cargo, contracts, the trade desk and outfitting", Keys("TRADE"),
 				T("The economy",
@@ -849,7 +850,7 @@ namespace SpaceGod::Core
 				  "from one seat to another is instant: the old one goes back to its crew, the new one is yours that frame, and "
 				  "the view is there in a blink. Each key has one owner at a time: at a seat the craft has the keys and the mouse "
 				  "(F is flight assist, T a lock, Backspace up to the helm) and the camera only follows it, the wheel zooming the "
-				  "chase; in command the same keys work the camera (F focus, T back to now, Backspace home). A key or button "
+				  "chase; in command the same keys work the camera (F focus, T back to the game's start, Backspace home). A key or button "
 				  "still held as you take or leave a seat is ignored until you let it go, so a burn held as you hand the helm back "
 				  "does not swim the camera off."),
 				T("Manning a gun",
@@ -1144,6 +1145,51 @@ namespace SpaceGod::Core
 				  "from there, hulls lost since back in the fight. It is free, then rests ten seconds, and it never goes back "
 				  "past where the last rewind left you, nor past a craft launched or landed, your own hull's fate or a change "
 				  "of seat, which it cannot undo yet.")), // US-T409, US-T410
+
+			cs::New<ManualChapter>("History", "Nine centuries off Earth, from 2100 to the game's start on 1 January 3026", Keys(), // US-T862
+				T("2100-2160: The Long Recovery",
+				  "Earth climbs out of the climate century poorer and hotter but not broken. Space is cheap and dull: heavy "
+				  "launchers fly daily, orbit is a business, and a few thousand people live off Earth. Shackleton Station on the "
+				  "Moon is crewed for good in 2118, the Orbital Accords of 2146 put everything above 100 km under one registry, "
+				  "and in 2157 the first humans land on Mars to stay."),
+				T("2160-2290: The Cislunar Age",
+				  "The Ascension Tether, the Thread, rises from the Galapagos and reaches geostationary orbit in 2191, cutting the "
+				  "price of space twentyfold; it still runs today. Earth Orbital grows at geostationary orbit, Tycho City is founded "
+				  "on the Moon in 2204, Kepler Freight Lines is chartered in 2238, the fusion torch flies in 2251, Ares Prime is "
+				  "founded on Mars in 2266, and stations reach Venus and Mercury in the 2280s."),
+				T("2290-2420: The Expansion",
+				  "Fusion opens the whole system. Ceres Hub is founded in 2296 and the Belt rush follows; Ganymede and Callisto are "
+				  "settled from 2341, Stickney Depot becomes the Martian fuel port, and Kraken Port on Titan is founded in 2394 to "
+				  "pump its seas. The Sol Authority governs it all from Earth, the inner worlds well and the outer ones badly."),
+				T("2420-2560: The Charter Wars",
+				  "The Belt strikes in 2423 and declares the Belt Consortium at Ceres Hub in 2431; the First Charter War ends with it "
+				  "recognised. The Sol Authority becomes the Sol Federation in 2452. The outer moons sign the Outer Reach Compact at "
+				  "Kraken Port in 2489, and the Second Charter War (2503-2531), the first true fleet actions, ends in exhaustion. "
+				  "Crews who took no side become the Independents."),
+				T("2560-2700: The Lightless Crossing",
+				  "Sleeper ships leave for the nearest stars; Lantern reaches Alpha Centauri in 2611 and its children found the first "
+				  "settlement there in the 2640s. The cruise drive of 2614 puts Mars a day from Earth and Saturn a week, and the "
+				  "solar system becomes one economy."),
+				T("2700-2810: The Gate Century",
+				  "The first jump gate opens to Proxima in 2709, and hyperlanes soon link every star within twenty light-years. In "
+				  "2734 a survey ship at Barnard's Star meets the Biomass, a living mass that drifts in from between the stars and "
+				  "creeps toward gates. Since the Gate Protocol of 2748 every gun shoots it on sight; one globule fell on Earth in "
+				  "2751 and has been walled off and burned ever since. It is a nuisance now, not a terror."),
+				T("2810-2960: The Long Frontier",
+				  "Each power builds its own lanes and hundreds of colonies are founded. The Frontier Charter of 2822 gives a gate "
+				  "builder a century's charter at its far end, and the carrying companies grow rich. The Black Banner rises in the "
+				  "2840s as a confederation of lane raiders. The Federation and the Compact fight the short Gate War (2870-2874), and "
+				  "from the 2900s navies build carriers, because a gate fight is won in its first minutes."),
+				T("2960-3026: The Threshold",
+				  "In 2968 humanity's power use passes 10^16 watts: a Type I civilization, just. Colonies spread faster than ever and "
+				  "the frontier is thinly held. In 3009 the Compact refuses to renew the Frontier Charter for Federation companies, "
+				  "and in 3019 the two go to war for the third time. The war is still on when the game begins on 1 January 3026."),
+				T("The powers in 3026",
+				  "The Sol Federation (2452, from the Sol Authority and the Orbital Accords) holds Earth, the Moon, Mars, the inner "
+				  "system and its own frontier, seated at Earth Orbital. The Belt Consortium (2431), seated at Ceres Hub, is rich on "
+				  "trade and neutral when that pays. The Outer Reach Compact (2489), seated at Kraken Port, holds Saturn and the "
+				  "outer system and is at war with the Federation. The Independents (2520s) are free traders and unaligned crews, "
+				  "nobody's navy. The Black Banner (2840s) is the pirate confederation of the long lanes, raiding everyone.")),
 
 			cs::New<ManualChapter>(EveryKeyTitle, "The whole reference card: every key and control, by what it is for", cs::List<cs::String>() /* C#: null */),
 		};

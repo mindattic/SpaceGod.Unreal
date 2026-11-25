@@ -218,7 +218,7 @@ namespace SpaceGod::Input
 				{ KeyAction::CycleShips, "cycleShips", "Command: next ship", Command, EdgeKind, { Key::Tab }, "Cycle the ships forward." },
 				{ KeyAction::CycleBackward, "cycleBackward", "Command: previous ship", Command, EdgeKind, { InputBinding(Key::Tab, S) }, "Cycle the ships back." },
 				{ KeyAction::WatchBattle, "watchBattle", "Command: watch a battle", Command, EdgeKind, { Key::B }, "Watch a battle." },
-				{ KeyAction::ResetTime, "resetTime", "Command: back to now", Command, EdgeKind, { Key::T }, "Time back to now." },
+				{ KeyAction::ResetTime, "resetTime", "Command: back to the game's start", Command, EdgeKind, { Key::T }, "Time back to the day this game began." },
 				{ KeyAction::Reorient, "reorient", "Command: auto-reorient", Command, EdgeKind, { Key::R }, "Auto-reorient on or off." },
 				{ KeyAction::News, "news", "Command: news feed", Command, EdgeKind, { Key::X }, "The news feed." },
 

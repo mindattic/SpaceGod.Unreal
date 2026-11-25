@@ -141,7 +141,9 @@ namespace SpaceGod::Core
 				}
 			f->Strength = total > 0 ? cs::Math::Min(1.0, held / total * 3) : 0;
 			f->Funds += held * 0.01;
-			if (held <= 0 && jd - f->FoundedJd > 720) { f->EndedJd = jd; continue; }
+			// US-T863: a faith backdated at the opening has its grace from the opening day, not from its founding.
+			double since = cs::Double::IsNaN(civ.OpenedJd) ? f->FoundedJd : cs::Math::Max(f->FoundedJd, civ.OpenedJd);
+			if (held <= 0 && jd - since > 720) { f->EndedJd = jd; continue; }
 			std::uint32_t h = H(static_cast<std::uint32_t>(f->Id), DayOf(jd), 0x5C15u);
 			// Schism: a faith spread wide splits; the far worlds go their own way.
 			if (worlds >= 3 && farthest != nullptr && civ.OrgsOf(OrgKind::Faith).Count() < MaxFaiths && Roll(h, 0.02))

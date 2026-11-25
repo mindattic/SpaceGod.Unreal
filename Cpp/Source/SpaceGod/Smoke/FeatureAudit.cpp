@@ -146,8 +146,9 @@ namespace SpaceGod::Smoke::FeatureAudit
 			Result("time.warp-alt", w3 != w0 && app->Clock->Warp().Label == w0, cs::Cat("'=' ", w0, " -> ", w3, ", '-' -> ", app->Clock->Warp().Label));
 
 			Tap(Key::T);
-			double hours = cs::Math::Abs((app->Clock->Utc() - cs::DateTime::UtcNow()).TotalHours());
-			Result("time.reset", hours < 1, cs::Cat("T: clock ", app->Clock->Utc().ToString("yyyy-MM-dd HH:mm"), " UTC, ", cs::Fmt(hours, "F2"), " h from now"));
+			// US-T863: T puts the clock back to the day this game began, not the wall clock's date.
+			double hours = cs::Math::Abs(app->Clock->Jd - app->GameStartJd()) * 24;
+			Result("time.reset", hours < 1, cs::Cat("T: clock ", app->Clock->Utc().ToString("yyyy-MM-dd HH:mm"), " UTC, ", cs::Fmt(hours, "F2"), " h from the game's start"));
 		}
 
 		// ---------------------------------------------------------------- view

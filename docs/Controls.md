@@ -93,7 +93,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Watch a battle | B (command only; at the controls B is the boarding panel and Shift+B locks an attacker) | command | dev menu > Combat |
 | Pause | Space, Pause | anywhere | - |
 | Time warp slower / faster | `,` `.`; also `-` `=` and numpad - + | anywhere | dev menu > Time and scale |
-| Back to now | T | command | dev menu > Time and scale |
+| Back to the game's start | T, top bar Start | command | dev menu > Time and scale |
 | Gameplay / realistic scale | G, or backtick | anywhere | dev menu > Time and scale |
 | Auto-reorient | R (tap) | command | - |
 | Orbits / labels / hyperlanes / satellites | O / L / N / K | anywhere | - |
