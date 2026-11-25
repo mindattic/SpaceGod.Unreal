@@ -123,6 +123,14 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& PlayerOptions::CameraFeel()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("gameplay.cameraFeel", Gameplay, "Camera feel", 100, 0, 200, 10,
+			"How much the view leans into turns and G, lags behind the hull, kicks wide on the boost and jolts on a hit (0% holds it still).",
+			Percent(), "camera feel lean head look g force lag boost fov hit jolt motion");
+		return value;
+	}
+
 	const cs::Ref<ToggleSetting>& PlayerOptions::PauseOnFocusLoss()
 	{
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.pauseOnFocusLoss", Gameplay, "Pause when the window loses focus", false,
@@ -195,7 +203,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); PauseOnFocusLoss(); Clock(); Dates();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); PauseOnFocusLoss(); Clock(); Dates();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -259,6 +267,11 @@ namespace SpaceGod
 	float PlayerOptions::ShakeScale()
 	{
 		return ScriptedRun() ? 1.0f : cs::Math::Max(0.0f, cs::Math::Min(1.0f, static_cast<float>(CameraShake()->Value / 100.0)));
+	}
+
+	float PlayerOptions::FeelScale()
+	{
+		return ScriptedRun() ? 1.0f : cs::Math::Max(0.0f, cs::Math::Min(2.0f, static_cast<float>(CameraFeel()->Value / 100.0)));
 	}
 
 	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }

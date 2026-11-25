@@ -51,6 +51,8 @@ namespace SpaceGod
 		static const cs::Ref<Core::ToggleSetting>& LayoutWithSituation();
 		/// US-T555: every camera shake at this strength (0% to 100%, 100% as it always was).
 		static const cs::Ref<Core::RangeSetting>& CameraShake();
+		/// US-T840: the camera feel (head-look, G lean, boost kick, hit jolt, chase lag) at this strength (0% off to 200%).
+		static const cs::Ref<Core::RangeSetting>& CameraFeel();
 		/// US-T555: the pause menu opens when the window loses focus, outside co-op. Off by default.
 		static const cs::Ref<Core::ToggleSetting>& PauseOnFocusLoss();
 		/// US-T617: times of day in 24-hour (as always) or 12-hour form.
@@ -111,6 +113,8 @@ namespace SpaceGod
 		static float FlashScale();
 		/// What a camera shake is multiplied by: Camera shake as 0..1 (1 in a scripted run).
 		static float ShakeScale();
+		/// What the camera feel is multiplied by: Camera feel as 0..2 (1 in a scripted run).
+		static float FeelScale();
 		/// Pause when the window loses focus is on (never in a scripted run).
 		static bool PausesOnFocusLoss();
 

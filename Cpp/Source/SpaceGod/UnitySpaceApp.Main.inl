@@ -164,6 +164,20 @@ private:
 	/// <summary>US-T170: a hauler helm's own flare-and-chaff magazine, full each time a hull's helm is taken.</summary>
 	Core::HelmFlares helmFlares;
 
+	/// <summary>US-T840: the render camera's own turn over the aim (pitch, yaw, roll, degrees, eased): the head looking into
+	/// the turn and leaning with the G pulled. <see cref="StepCameraFeel"/> steps it; the aim never moves.</summary>
+	static constexpr float HeadLookS = 0.08f, HeadLookMaxDeg = 6.0f, LeanDegPerG = 0.6f, LeanMaxDeg = 4.0f, FeelTurnHz = 5.0f, BoostFovKickDeg = 8.0f;
+	Vector3 feelTurnDeg = Vector3::zero();
+	Quaternion feelLastAim = Quaternion::identity();
+	Core::DVec3 feelLastVelKmS;
+	const void* feelVelOwner = nullptr;
+	const void* feelHitUnit = nullptr;
+	double feelHitHull = -1, feelHitShield = 0, feelBoostWas = -1;
+	bool feelBoostDraining = false;
+
+	/// <summary>US-T840: the camera feel's turn this frame, its boost FOV kick and hit shake, and the chase lag's pull (US-T841).</summary>
+	Quaternion StepCameraFeel(float dt, bool feeling);
+
 	/// <summary>The feel set up for <paramref name="owner"/> (a new one: reset to <paramref name="profile"/>).</summary>
 	void FeelFor(const std::shared_ptr<void>& owner, const Core::FlightFeelProfile& profile);
 

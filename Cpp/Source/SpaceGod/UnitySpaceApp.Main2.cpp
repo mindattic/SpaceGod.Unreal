@@ -41,6 +41,9 @@
 #include "Combat/War.h"
 #include "Combat/WeakPatches.h"
 #include "Combat/Wreck.h"
+#include "Embodiment/CraftPower.h" // US-T840: the boost pool's FOV kick
+#include "Embodiment/FighterSeat.h"
+#include "Embodiment/MountedTurret.h"
 #include "Economy/Companies.h"
 #include "Economy/Economy.h"
 #include "Economy/Propulsion.h"
@@ -1442,6 +1445,103 @@ namespace SpaceGod
 
 	// ---------------------------------------------------------------- views
 
+	Quaternion UnitySpaceApp::StepCameraFeel(float dt, bool feeling)
+	{
+		// US-T840: a turn laid over the render camera only, never SpaceCamera->Rotation (the aim), so the crosshair stays on
+		// the nose: the head looks into the turn and leans with the G the flown hull pulls, the view kicks wide as the boost
+		// lights, and a hit taken jolts it. Settings > Gameplay > Camera feel scales it all; 0 holds it still.
+		const float feel = PlayerOptions::FeelScale();
+		auto seat = Travel->Active ? nullptr : HeldSeat();
+		bool flown = feeling && !RidingLane() && seat != nullptr;
+		const void* owner = nullptr;
+		Core::DVec3 vel, gravity;
+		cs::Ref<Core::BattleUnit> unit;
+		if (auto f = cs::As<Core::FighterSeat>(seat))
+		{
+			unit = f->Unit;
+			if (unit != nullptr) { owner = unit.get(); vel = unit->Vel; }
+		}
+		else if (auto m = cs::As<Core::MountedTurret>(seat)) unit = m->Unit;
+		else if (seat != nullptr && IsPiloting() && Piloted.Ship != nullptr)
+		{
+			owner = Piloted.Ship.get();
+			vel = pilotVelKmS();
+			gravity = helmFlight->Gravity;
+			unit = PilotUnit();
+		}
+		if (!flown) owner = nullptr;
+
+		// The felt acceleration, g in scene axes: the velocity's change beyond gravity's pull. A new hull, a seat change or a
+		// jump (a teleport, a gate, a frame change) is a discontinuity, not a G: it starts over and drops the chase lag.
+		bool fresh = owner == nullptr || owner != feelVelOwner || !(dt > 0);
+		auto felt = Vector3::zero();
+		if (!fresh)
+		{
+			auto g = ToVector(((vel - feelLastVelKmS) / dt - gravity).SwapYZ()) * (1.0f / 0.00980665f);
+			if (g.magnitude() > 30.0f) fresh = true;
+			else felt = g;
+		}
+		if (fresh && owner != nullptr) SpaceCamera->ResetChaseLag();
+		SpaceCamera->ChaseAcceleration = felt; // US-T841: the chase's spring lag pulls against it
+		SpaceCamera->ChaseFeel = feel;
+
+		auto target = Vector3::zero();
+		if (!fresh && feel > 0)
+		{
+			// Degrees a second about the aim's own right, up and forward.
+			auto turn = Vector3::zero();
+			float angle = 0;
+			Vector3 axis;
+			(Quaternion::Inverse(feelLastAim) * SpaceCamera->Rotation).ToAngleAxis(angle, axis);
+			if (angle > 180.0f) angle -= 360.0f;
+			float rate = angle / dt;
+			if (Mathf::Abs(angle) > 1e-3f && Mathf::Abs(rate) < 720.0f) turn = axis * rate;
+			auto local = Quaternion::Inverse(SpaceCamera->Rotation) * felt;
+			float lookPitch = Mathf::Clamp(turn.x * HeadLookS, -HeadLookMaxDeg, HeadLookMaxDeg);
+			float lookYaw = Mathf::Clamp(turn.y * HeadLookS, -HeadLookMaxDeg, HeadLookMaxDeg);
+			// Pulling up presses the head down, thrust pushes it back, a turn throws it to the outside.
+			float leanPitch = Mathf::Clamp((local.y - 0.5f * local.z) * LeanDegPerG, -LeanMaxDeg, LeanMaxDeg);
+			float leanRoll = Mathf::Clamp(local.x * LeanDegPerG, -LeanMaxDeg, LeanMaxDeg);
+			target = Vector3(lookPitch + leanPitch, lookYaw, leanRoll) * feel;
+		}
+		feelTurnDeg = Vector3::Lerp(feelTurnDeg, target, 1.0f - Mathf::Exp(-dt * FeelTurnHz));
+		feelLastAim = SpaceCamera->Rotation;
+		feelVelOwner = owner;
+		feelLastVelKmS = vel;
+
+		// The boost lighting: its pool starts to drain.
+		auto power = flown ? Core::CraftPower::Read(seat) : Core::PowerReadout();
+		bool draining = power.Shares && feelBoostWas >= 0 && power.Boost < feelBoostWas - 1e-6;
+		if (draining && !feelBoostDraining && feel > 0) fovKick = Mathf::Max(fovKick, BoostFovKickDeg * feel);
+		feelBoostDraining = draining;
+		feelBoostWas = power.Shares ? power.Boost : -1;
+
+		// A hit on the held hull or seat: its hull or shields knocked down since last frame.
+		double hull = -1, shield = 0;
+		if (unit != nullptr && unit->Combat != nullptr && unit->Combat->Spec != nullptr && unit->Combat->Spec->Hull > 0)
+		{
+			const auto& c = unit->Combat;
+			hull = c->Hull / c->Spec->Hull;
+			if (c->Spec->Shield > 0)
+			{
+				double sum = 0;
+				for (const auto& s : c->Subsystems) sum += s->Shield;
+				shield = sum / c->Spec->Shield;
+			}
+		}
+		if (hull >= 0 && unit.get() == feelHitUnit && feel > 0 && !HoldRewindJustResumed())
+		{
+			double struck = 8 * cs::Math::Max(0.0, feelHitHull - hull) + 2 * cs::Math::Max(0.0, feelHitShield - shield);
+			if (struck > 1e-4) flightFeel.Kick(feel * cs::Math::Min(1.5, 0.3 + struck));
+		}
+		feelHitUnit = hull >= 0 ? unit.get() : nullptr;
+		feelHitHull = hull;
+		feelHitShield = shield;
+
+		if (feelTurnDeg.sqrMagnitude() < 1e-8f) return Quaternion::identity();
+		return Quaternion::Euler(feelTurnDeg.x, feelTurnDeg.y, feelTurnDeg.z);
+	}
+
 	void UnitySpaceApp::UpdateClipPlanes(float dt)
 	{
 		// Going through a gate, the ring passes close by, nearer than anything else.
@@ -1462,7 +1562,7 @@ namespace SpaceGod
 		const double shakeScale = PlayerOptions::ShakeScale(); // US-T555: Settings > Gameplay > Camera shake
 		if (!Travel->Active && shakeScale * (cs::Math::Abs(flightFeel.ShakeYawDeg) + cs::Math::Abs(flightFeel.ShakePitchDeg) + cs::Math::Abs(flightFeel.ShakeRollDeg)) > 1e-4)
 			shake = Quaternion::Euler(static_cast<float>(flightFeel.ShakePitchDeg * shakeScale), static_cast<float>(flightFeel.ShakeYawDeg * shakeScale), static_cast<float>(flightFeel.ShakeRollDeg * shakeScale));
-		UnityCamera->transform->SetPositionAndRotation(Vector3::zero(), SpaceCamera->Rotation * shake);
+		UnityCamera->transform->SetPositionAndRotation(Vector3::zero(), SpaceCamera->Rotation * StepCameraFeel(dt, feeling) * shake);
 
 		// The view widens with the pace of what is flown, more on the afterburner (kicked wide as it lights) and under the
 		// cruise drive, by its role's feel (US-T170): a fighter's snaps out, a capital ship's barely swells.
