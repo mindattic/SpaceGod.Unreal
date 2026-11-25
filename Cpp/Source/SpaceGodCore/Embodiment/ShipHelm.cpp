@@ -16,6 +16,7 @@
 #include "Combat/Dogfighting.h"
 #include "Combat/FlightModels.h"
 #include "Combat/HaulerFlight.h"
+#include "Combat/Outfitting.h"
 #include "Combat/PilotFlight.h"
 #include "Combat/PilotTuning.h"
 #include "Combat/War.h"
@@ -204,6 +205,12 @@ namespace SpaceGod::Core
 			hull = HullDynamics(hull.MassKt, hull.MainAccel * engines, hull.RetroAccel * engines, hull.LateralAccel * engines,
 				hull.VerticalAccel * engines, hull.PitchYawAngularAccel, hull.RollAngularAccel);
 			input.BoostRecharge = engines;
+		}
+		// A small craft's boost is the pool the pips refill (US-T738), at the helm as in a fighter's seat (US-T832).
+		if (Loadout::IsSmallCraft(ship->Spec->Class))
+		{
+			input.BoostPoolS = BoostPool::PoolSeconds(FlightModelRegistry::Default()->FamilyOf(ship->Spec->Class));
+			input.BoostRefillS = BoostPool::RefillSecondsAt(engines);
 		}
 		// The turn-and-burn (US-T87): held, the nose swings onto the retrograde while the hull slides on along its track.
 		// A capital ship's is the broadside stance instead (US-T81): the helm lays it beam-on to the locked hull (or holds

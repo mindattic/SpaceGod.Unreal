@@ -6,6 +6,8 @@
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h"
+#include "Combat/FlightModels.h"
+#include "Combat/Outfitting.h"
 #include "Embodiment/FighterSeat.h"
 #include "Embodiment/MountedTurret.h"
 #include "Embodiment/ShipHelm.h"
@@ -107,6 +109,11 @@ namespace SpaceGod::Core
 		{
 			auto craft = f->Unit->Fighter != nullptr ? FighterCraft::Of(f->Unit->Fighter->Role) : FighterCraft::Interceptor();
 			r.BoostPoolS = BoostPool::PoolSeconds(craft->Family());
+			r.BoostRefillS = BoostPool::RefillSecondsAt(r.EnginesFactor);
+		}
+		else if (auto h = cs::As<ShipHelm>(seat); h != nullptr && h->Ship != nullptr && Loadout::IsSmallCraft(h->Ship->Spec->Class))
+		{
+			r.BoostPoolS = BoostPool::PoolSeconds(FlightModelRegistry::Default()->FamilyOf(h->Ship->Spec->Class));
 			r.BoostRefillS = BoostPool::RefillSecondsAt(r.EnginesFactor);
 		}
 		return r;
