@@ -299,7 +299,8 @@ namespace SpaceGod::Core
 		SG_F(Aboard), SG_F(Bay), SG_F(BowAlong), SG_F(Carrier), SG_F(Final), SG_F(MiddleLocal), SG_F(Name),
 		SG_F(NextLaunch), SG_F(SternAlong),
 		SG_OPT(AxisLocal), SG_OPT(MouthHalfHeightKm), SG_OPT(MouthHalfWidthKm), // US-T842: decks off the keel, absent from older saves
-		SG_OPT(Tube)) // US-T843: launch tubes, absent from older saves (-1, a deck)
+		SG_OPT(Tube), // US-T843: launch tubes, absent from older saves (-1, a deck)
+		SG_OPT(Queue)) // US-T780: a real bay's landing queue, absent from older saves
 
 	SG_SERIALIZE(GroupOrder, "Unity.SpaceGod.Core.GroupOrder",
 		SG_F(Body), SG_F(Kind), SG_F(SinceJd))

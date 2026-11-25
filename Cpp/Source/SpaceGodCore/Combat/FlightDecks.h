@@ -110,6 +110,10 @@ namespace SpaceGod::Core
 		/// <summary>Battle seconds before the launch lane is clear for the next craft.</summary>
 		double NextLaunch = 0;
 
+		/// <summary>A real bay's landing queue (US-T780), first come first served: craft inbound to it, the front wave (as
+		/// many as it has spots free) cleared from the gate as they reach it, the waves behind holding astern of it.</summary>
+		cs::List<cs::Ref<BattleUnit>> Queue;
+
 		FlightDeck(cs::Ref<BattleUnit> carrier, cs::Ref<Subsystem> bay, cs::String name);
 
 		/// <summary>Open for traffic: its hangar stands and its hull is on the field, not taken.</summary>
@@ -117,6 +121,27 @@ namespace SpaceGod::Core
 
 		/// <summary>A launch tube (US-T843): craft go out of it and never come in.</summary>
 		bool LaunchOnly() const { return Tube >= 0; }
+
+		/// <summary>A real bay (US-T780): a deck through a hangar with a mouth of its own, open at that end only. Craft land
+		/// in through the mouth, are trapped and taxi to a spot inside, and launch back out of the same mouth.</summary>
+		bool RealBay() const { return Tube < 0 && AxisLocal.LengthSquared() > 1e-12; }
+
+		/// <summary>Which way a landing craft flies down the deck's axis: +1 in through the stern mouth (a keel deck, or a real
+		/// bay facing aft), -1 in through the bow (a real bay facing forward or abeam).</summary>
+		double Sense() const;
+
+		/// <summary>Where along the axis the mouth craft land through lies, km from the middle.</summary>
+		double MouthAlong() const { return Sense() > 0 ? SternAlong : BowAlong; }
+
+		/// <summary>Spots on the deck: <see cref="FlightDecks.Spots"/>, or on a real bay as many as its length holds
+		/// (<see cref="FlightDecks.MaxBaySpots"/> at most).</summary>
+		int SpotCount() const;
+
+		/// <summary>Where <paramref name="craft"/> stands in the landing queue, joining it at the back if it is not in it yet.</summary>
+		int QueuePlace(const cs::Ref<BattleUnit>& craft);
+
+		/// <summary>Craft the deck has on its hands: aboard (taxiing or down), on the glide path and queued to land.</summary>
+		int Traffic();
 
 		/// <summary>The deck's middle, battle-local km.</summary>
 		DVec3 Middle() const;
@@ -146,6 +171,9 @@ namespace SpaceGod::Core
 		/// <summary>Whether <paramref name="craft"/> has to hold off: another is on the glide path, or every spot is taken.</summary>
 		bool Busy(const cs::Ref<BattleUnit>& craft);
 	private:
+		/// <summary>Drops from the queue every craft no longer inbound to this deck (shot down, cleared, called off).</summary>
+		void PruneQueue();
+
 		FlightDeck() = default; // ObjectGraph loads (docs/PERSISTENCE.md): no side effects
 		SG_SERIALIZABLE(FlightDeck); // ObjectGraph registration (Persistence/Registrations)
 	};
@@ -232,6 +260,11 @@ namespace SpaceGod::Core
 		static constexpr double JoinAheadKm = 4; static constexpr double JoinUpKm = 0.6; static constexpr double JoinSpreadKm = 0.8;
 		static constexpr double JoinCaptureKm = 0.4; static constexpr double JoinHoldSeconds = 12;
 
+		/// <summary>Recovery into a real bay (US-T780): the speed a craft is trapped down to inside the mouth and taxis at, km/s
+		/// relative to the deck; how far astern of the one ahead each wave of the landing queue holds, km; and the most spots a
+		/// bay has.</summary>
+		static constexpr double TaxiKmS = 0.03; static constexpr double WaveSpacingKm = 0.5; static constexpr int MaxBaySpots = 8;
+
 	private:
 		// C#'s ConditionalWeakTable<BattleUnit, FlightDeck[]> and its shared empty array (see FlightDecks.cpp).
 		static const cs::List<cs::Ref<FlightDeck>>& None();
@@ -291,6 +324,11 @@ namespace SpaceGod::Core
 		/// <summary>US-T180: it still has a working gun (an unguided, damaging mount in the guns group) to fight on with.</summary>
 		static bool HasGuns(const cs::Ref<ShipCombat>& c);
 
+		/// <summary>US-T780: whether <paramref name="home"/> can take one more craft in to rearm now. Its wing comes home in
+		/// waves: while every open real bay has as much traffic as spots, the rest fight on. Always, on a hull with an open
+		/// deck that is not a real bay.</summary>
+		static bool RearmRoom(const cs::Ref<BattleUnit>& home);
+
 		// ---------------------------------------------------------------- inbound
 
 		/// <summary>The deck <paramref name="u"/> is flying to on its home (kept once chosen while it stays open), or null when
@@ -323,6 +361,10 @@ namespace SpaceGod::Core
 		static bool Fly(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, double dt);
 
 	private:
+		/// <summary><see cref="Fly"/> on a real bay (US-T780): down the glide path to its one mouth, trapped inside it down to
+		/// <see cref="TaxiKmS"/> (the glide path clear for the next), taxied to its spot; launching, back out of the mouth.</summary>
+		static bool FlyBay(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, const cs::Ref<DeckVisit>& v, double dt);
+
 		/// <summary>Puts a craft down on its spot: inside the hull now (<see cref="BattleUnit.Docked"/>), back in its hangar's
 		/// count (<see cref="FighterAI.TakeAboard"/>), and its turnaround begins.</summary>
 		static void Touchdown(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, const cs::Ref<DeckVisit>& v);

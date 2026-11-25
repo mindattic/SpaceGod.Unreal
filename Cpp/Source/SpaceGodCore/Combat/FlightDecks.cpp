@@ -67,7 +67,50 @@ namespace SpaceGod::Core
 	DVec3 FlightDeck::Stern() const { return At(SternAlong, DVec3::Zero); }
 	DVec3 FlightDeck::Bow() const { return At(BowAlong, DVec3::Zero); }
 
-	DVec3 FlightDeck::Gate() const { return At(SternAlong - FlightDecks::ApproachKm, DVec3::Zero); }
+	DVec3 FlightDeck::Gate() const
+	{
+		if (RealBay()) return At(MouthAlong() - Sense() * FlightDecks::ApproachKm, DVec3::Zero);
+		return At(SternAlong - FlightDecks::ApproachKm, DVec3::Zero);
+	}
+
+	double FlightDeck::Sense() const
+	{
+		if (!RealBay()) return 1;
+		const auto& mouth = Bay->Def->MouthAxis;
+		return mouth.has_value() && mouth->Z < 0 ? 1 : -1;
+	}
+
+	int FlightDeck::SpotCount() const
+	{
+		if (!RealBay()) return FlightDecks::Spots;
+		int fits = static_cast<int>((BowAlong - SternAlong) / FlightDecks::SpotSpacingKm) - 1;
+		return Max(FlightDecks::Spots, Min(fits, FlightDecks::MaxBaySpots));
+	}
+
+	void FlightDeck::PruneQueue()
+	{
+		Queue.RemoveAll([this](const cs::Ref<BattleUnit>& q)
+		{
+			auto v = q != nullptr && q->Fighter != nullptr ? q->Fighter->Deck : nullptr;
+			return q == nullptr || q->Dead || v == nullptr || v->Deck.get() != this || v->Stage != DeckStage::Inbound;
+		});
+	}
+
+	int FlightDeck::QueuePlace(const cs::Ref<BattleUnit>& craft)
+	{
+		PruneQueue();
+		int i = Queue.IndexOf(craft);
+		if (i >= 0) return i;
+		Queue.Add(craft);
+		return Queue.Count() - 1;
+	}
+
+	int FlightDeck::Traffic()
+	{
+		PruneQueue();
+		Busy(nullptr);
+		return Aboard.Count() + Queue.Count() + (Final != nullptr && !Aboard.Contains(Final) ? 1 : 0);
+	}
 
 	DVec3 FlightDeck::Axis() const
 	{
@@ -107,7 +150,13 @@ namespace SpaceGod::Core
 		offset = DVec3(DVec3::Dot(d, right), DVec3::Dot(d, up), 0);
 	}
 
-	double FlightDeck::SpotAlong(int i) const { return (i - (FlightDecks::Spots - 1) * 0.5) * FlightDecks::SpotSpacingKm; }
+	double FlightDeck::SpotAlong(int i) const
+	{
+		if (!RealBay()) return (i - (FlightDecks::Spots - 1) * 0.5) * FlightDecks::SpotSpacingKm;
+		// A real bay fills from its far end, the first craft in taxiing deepest.
+		double s = Sense();
+		return (s > 0 ? BowAlong : SternAlong) - s * (i + 1) * FlightDecks::SpotSpacingKm;
+	}
 
 	bool FlightDeck::Busy(const cs::Ref<BattleUnit>& craft)
 	{
@@ -117,7 +166,10 @@ namespace SpaceGod::Core
 			auto visit = Final->Fighter ? Final->Fighter->Deck : nullptr;
 			if (Final->Dead || (visit ? visit->Deck.get() : nullptr) != this || Final->Fighter->Deck->Stage != DeckStage::Final) Final = nullptr;
 		}
-		return (Final != nullptr && Final != craft) || Aboard.Count() >= FlightDecks::Spots;
+		if (!RealBay()) return (Final != nullptr && Final != craft) || Aboard.Count() >= FlightDecks::Spots;
+		// A real bay's aboard counts craft trapped and taxiing in, which can still be shot down.
+		Aboard.RemoveAll([](const cs::Ref<BattleUnit>& a) { return a == nullptr || a->Dead; });
+		return (Final != nullptr && Final != craft) || Aboard.Count() >= SpotCount();
 	}
 
 	// ---------------------------------------------------------------- FlightDecks: settings
@@ -347,12 +399,23 @@ namespace SpaceGod::Core
 		auto home = f->LandsOn();
 		if (home == nullptr || !home->Present() || home->Captured || home->Fleeing || home->Surrendering || !HasOpenDeck(home)) return false;
 		auto c = u->Combat;
-		if (c->HullFraction() < ServiceHull()->Value) return true;
+		bool wants = c->HullFraction() < ServiceHull()->Value;
 		// US-T180: racks empty, a craft with its guns still working stays in the fight and strafes and dogfights on them;
 		// only a bomber (its torpedoes are its whole point) or one with no guns left flies home for more. Flying home for
 		// every pair of missiles kept half of each squadron out of the fight.
-		if (!f->Bomber && HasGuns(c)) return false;
-		return OutOfOrdnance(c);
+		if (!wants) wants = (f->Bomber || !HasGuns(c)) && OutOfOrdnance(c);
+		// US-T780: one already on its way in keeps going; the rest wait for the wave ahead to clear the bays.
+		return wants && (f->Deck != nullptr || RearmRoom(home));
+	}
+
+	bool FlightDecks::RearmRoom(const cs::Ref<BattleUnit>& home)
+	{
+		for (const auto& d : Of(home))
+		{
+			if (d->LaunchOnly() || !d->Open()) continue;
+			if (!d->RealBay() || d->Traffic() < d->SpotCount()) return true;
+		}
+		return false;
 	}
 
 	bool FlightDecks::HasGuns(const cs::Ref<ShipCombat>& c)
@@ -394,6 +457,7 @@ namespace SpaceGod::Core
 		{
 			if (d->LaunchOnly() || !d->Open()) continue;
 			double score = d->Aboard.Count() * 2 + (d->Final != nullptr ? 1 : 0) + (d->Gate() - u->Pos).Length() / 5;
+			if (d->RealBay()) score += d->Queue.Count();
 			if (score < bestScore)
 			{
 				bestScore = score;
@@ -410,6 +474,7 @@ namespace SpaceGod::Core
 		visit->Deck = best;
 		visit->Stage = DeckStage::Inbound;
 		f->Deck = visit;
+		if (best->RealBay()) best->QueuePlace(u);
 		return best;
 	}
 
@@ -418,6 +483,35 @@ namespace SpaceGod::Core
 		auto c = deck->Carrier;
 		DVec3 axis, right, up;
 		deck->Basis(axis, right, up);
+		if (deck->RealBay())
+		{
+			// A real bay (US-T780): the same swing round the hull as off the keel, to the gate off its one mouth.
+			double s = deck->Sense();
+			double along = 0, centreAlong = 0;
+			DVec3 off, centreOff;
+			deck->Frame(u->Pos, along, off);
+			deck->Frame(c->Pos, centreAlong, centreOff);
+			double gateAlong = deck->MouthAlong() - s * ApproachKm - centreAlong;
+			along -= centreAlong;
+			off = off - centreOff;
+			if ((along - gateAlong) * s > GateCaptureKm)
+			{
+				double keel = cs::Math::Abs(DVec3::Dot(right, c->Forward));
+				double beam = c->LengthKm * (keel * 0.5 + (1 - keel) * BeamShipLengths) + RoundHullKm;
+				double side = off.X != 0 ? cs::Math::Sign(off.X) : -centreOff.X >= 0 ? 1 : -1;
+				return c->Pos + right * (side * beam) + up * (off.Y * 0.5) + axis * gateAlong;
+			}
+			// Queued: the front wave, as many as the bay has spots free, flies to the gate and is cleared there one at a time;
+			// each wave behind holds on its own circle further out, its craft spaced round it, and moves up as the bay fills.
+			int spots = deck->SpotCount();
+			int place = deck->QueuePlace(u);
+			int front = Max(1, spots - deck->Aboard.Count());
+			if (place < front && !deck->Busy(u)) return deck->Gate();
+			int rank = place < front ? 0 : 1 + (place - front) / spots;
+			int slot = place < front ? place : (place - front) % spots;
+			double a = b->Seconds * 0.12 + slot * (2 * cs::Math::PI / spots);
+			return deck->Gate() - axis * (s * (HoldAsternKm + rank * WaveSpacingKm)) + (right * cs::Math::Cos(a) + up * cs::Math::Sin(a)) * HoldRadiusKm;
+		}
 		// Coming in from ahead of the gate it swings round the hull's flank to come up astern, never through the hull.
 		if (deck->AxisLocal.LengthSquared() <= 1e-12)
 		{
@@ -459,6 +553,8 @@ namespace SpaceGod::Core
 		if (v == nullptr || v->Deck != deck || v->Stage != DeckStage::Inbound || deck->Busy(u)) return false;
 		double rel = (u->Vel - deck->Carrier->Vel).Length();
 		if ((deck->Gate() - u->Pos).Length() > Max(GateCaptureKm, rel * dt * 1.5)) return false;
+		// A real bay (US-T780) clears its front wave only, in whatever order it reaches the gate.
+		if (deck->RealBay() && deck->QueuePlace(u) >= Max(1, deck->SpotCount() - deck->Aboard.Count())) return false;
 		ClearToLand(u, deck);
 		return true;
 	}
@@ -469,8 +565,14 @@ namespace SpaceGod::Core
 		v->Stage = DeckStage::Final;
 		deck->Frame(u->Pos, v->Along, v->Offset);
 		v->SpotAlong = deck->SpotAlong(deck->Aboard.Count());
-		// Never cleared from inside the bay: it comes in through the stern mouth.
-		if (v->Along > deck->SternAlong) v->Along = deck->SternAlong;
+		// Never cleared from inside the bay: it comes in through the stern mouth (a real bay's one mouth, US-T780).
+		if (deck->RealBay())
+		{
+			double s = deck->Sense();
+			if ((v->Along - deck->MouthAlong()) * s > 0) v->Along = deck->MouthAlong();
+			deck->Queue.Remove(u);
+		}
+		else if (v->Along > deck->SternAlong) v->Along = deck->SternAlong;
 		deck->Final = u;
 	}
 
@@ -480,6 +582,7 @@ namespace SpaceGod::Core
 		if (v == nullptr) return;
 		if (v->Deck->Final == u) v->Deck->Final = nullptr;
 		v->Deck->Aboard.Remove(u);
+		v->Deck->Queue.Remove(u);
 		u->Fighter->Deck = nullptr;
 	}
 
@@ -497,6 +600,7 @@ namespace SpaceGod::Core
 			return false;
 		}
 		auto spec = u->Combat->Spec;
+		if (deck->RealBay()) return FlyBay(b, u, v, dt);
 		if (v->Stage == DeckStage::Final)
 		{
 			double k = 1 - cs::Math::Exp(-dt / LineUpSeconds);
@@ -534,6 +638,49 @@ namespace SpaceGod::Core
 		return true;
 	}
 
+	bool FlightDecks::FlyBay(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, const cs::Ref<DeckVisit>& v, double dt)
+	{
+		auto deck = v->Deck;
+		auto c = deck->Carrier;
+		auto spec = u->Combat->Spec;
+		auto axis = deck->Axis();
+		double s = deck->Sense();
+		double mouth = deck->MouthAlong();
+		if (v->Stage == DeckStage::Final)
+		{
+			// Through the mouth it is trapped: the glide path is free for the next one in, and it holds its spot aboard.
+			bool inside = (v->Along - mouth) * s >= 0;
+			if (inside && deck->Final == u)
+			{
+				deck->Final = nullptr;
+				if (!deck->Aboard.Contains(u)) deck->Aboard.Add(u);
+				v->SpotAlong = deck->SpotAlong(deck->Aboard.IndexOf(u));
+			}
+			double left = Max(0.0, (v->SpotAlong - v->Along) * s);
+			double close = Min(FinalSpeedKmS, Max(MinCloseKmS, left * 0.2));
+			if (inside) close = Min(close, TaxiKmS);
+			v->Offset = v->Offset - v->Offset * (1 - cs::Math::Exp(-dt / LineUpSeconds));
+			double step = Min(left, close * dt);
+			v->Along += s * step;
+			u->Pos = deck->At(v->Along, v->Offset);
+			u->Vel = c->Vel + axis * (left > step ? s * close : 0.0);
+			Battle::TurnToward(u, axis * s, Max(spec->TurnRateDegS, 30.0), dt);
+			if (left - step <= 1e-6) Touchdown(b, u, v);
+			return true;
+		}
+		// Launching: down the bay and back out of its mouth at the craft's own thrust, nose outward.
+		double out = -s;
+		double top = Max(spec->MaxSpeed, MinCloseKmS);
+		v->Speed = Min(top, v->Speed + Max(spec->Accel, 0.02) * dt);
+		v->Along += out * v->Speed * dt;
+		v->Offset = v->Offset - v->Offset * (1 - cs::Math::Exp(-dt / LineUpSeconds));
+		u->Pos = deck->At(v->Along, v->Offset);
+		u->Vel = c->Vel + axis * (out * v->Speed);
+		u->Forward = axis * out;
+		if ((v->Along - mouth) * out >= ExitKm) ClearOfBow(b, u, v);
+		return true;
+	}
+
 	void FlightDecks::Touchdown(const cs::Ref<Battle>& /*b*/, const cs::Ref<BattleUnit>& u, const cs::Ref<DeckVisit>& v)
 	{
 		auto deck = v->Deck;
@@ -544,7 +691,7 @@ namespace SpaceGod::Core
 		if (!deck->Aboard.Contains(u)) deck->Aboard.Add(u);
 		u->Docked = true;
 		u->Vel = deck->Carrier->Vel;
-		u->Forward = deck->Axis();
+		u->Forward = deck->RealBay() ? deck->Axis() * -deck->Sense() : deck->Axis();
 		FighterAI::TakeAboard(deck->Carrier, u);
 	}
 
@@ -596,9 +743,21 @@ namespace SpaceGod::Core
 			auto c = deck->Carrier;
 			if (c->Dead) continue;
 			int spot = cs::Math::Max(0, deck->Aboard.IndexOf(u));
-			u->Pos = deck->At(deck->SpotAlong(spot), DVec3::Zero);
+			bool bay = deck->RealBay();
+			if (bay)
+			{
+				// A real bay (US-T780): it taxis up to its spot as the ones ahead of it launch, nose to the mouth.
+				double to = deck->SpotAlong(spot), step = TaxiKmS * dt;
+				v->Along = to > v->Along ? Min(to, v->Along + step) : Max(to, v->Along - step);
+				u->Pos = deck->At(v->Along, DVec3::Zero);
+				u->Forward = deck->Axis() * -deck->Sense();
+			}
+			else
+			{
+				u->Pos = deck->At(deck->SpotAlong(spot), DVec3::Zero);
+				u->Forward = deck->Axis();
+			}
 			u->Vel = c->Vel;
-			u->Forward = deck->Axis();
 			if (!deck->Open() || !c->Present()) continue;
 			v->Service = Min(1.0, v->Service + dt / Max(1.0, ServiceSeconds()->Value));
 			Service(u, v->Service);
@@ -618,12 +777,18 @@ namespace SpaceGod::Core
 			}
 			v->Stowing = 0;
 			if (v->Service < 1 || b->Seconds < deck->NextLaunch) continue;
+			// Its one mouth is one way at a time: nothing launches out of a real bay while a craft is on the glide path in.
+			if (bay)
+			{
+				deck->Busy(nullptr);
+				if (deck->Final != nullptr) continue;
+			}
 			if (!TakeOff(c, u)) continue;
 			deck->NextLaunch = b->Seconds + LaunchIntervalSeconds;
 			deck->Aboard.Remove(u);
 			u->Docked = false;
 			v->Stage = DeckStage::Launching;
-			v->Along = deck->SpotAlong(spot);
+			if (!bay) v->Along = deck->SpotAlong(spot);
 			v->Speed = 0;
 			v->After = FighterPhase::Launch;
 			v->Relaunch = true;
@@ -705,10 +870,13 @@ namespace SpaceGod::Core
 			v->Release = Max(b->Seconds + (best->Tube % TubesPerTier) * TubeRippleSeconds, best->NextLaunch);
 			best->NextLaunch = v->Release + TubeCycleSeconds;
 		}
+		// A real bay (US-T780) launches back out of its one mouth, the column queued up the bay behind the first.
+		double out = best->RealBay() ? -best->Sense() : 1;
+		if (best->RealBay()) v->Along = -out * bestCount * LaunchSpacingKm;
 		craft->Fighter->Deck = v;
 		craft->Pos = best->At(v->Along, DVec3::Zero);
 		craft->Vel = carrier->Vel;
-		craft->Forward = best->Axis();
+		craft->Forward = best->RealBay() ? best->Axis() * out : best->Axis();
 		return true;
 	}
 
@@ -758,9 +926,16 @@ namespace SpaceGod::Core
 				double along = 0;
 				DVec3 off;
 				d->Frame(u->Pos, along, off);
-				if (along < d->SternAlong - ApproachKm - GateCaptureKm || along > d->SternAlong) continue;
+				// A real bay (US-T780) takes it in through its one mouth, whichever way that faces.
+				double s = d->Sense();
+				if (d->RealBay())
+				{
+					double in = (along - d->MouthAlong()) * s;
+					if (in < -(ApproachKm + GateCaptureKm) || in > 0) continue;
+				}
+				else if (along < d->SternAlong - ApproachKm - GateCaptureKm || along > d->SternAlong) continue;
 				if (off.Length() > CaptureOffAxisKm) continue;
-				if (DVec3::Dot(u->Forward, d->Axis()) < cs::Math::Cos(CaptureAlignDeg * Astro::Deg2Rad)) continue;
+				if (DVec3::Dot(u->Forward, d->Axis() * s) < cs::Math::Cos(CaptureAlignDeg * Astro::Deg2Rad)) continue;
 				if ((u->Vel - o->Vel).Length() > CaptureSpeedKmS) continue;
 				return d;
 			}
@@ -801,7 +976,10 @@ namespace SpaceGod::Core
 		{
 			switch (v->Stage)
 			{
-				case DeckStage::Final: return cs::Cat("AUTO-LAND ", where, " ", Metres(v->SpotAlong - v->Along), " to the spot (boost aborts)");
+				case DeckStage::Final:
+					if (deck->RealBay() && (v->Along - deck->MouthAlong()) * deck->Sense() >= 0)
+						return cs::Cat("TRAPPED ", where, ": taxiing, ", Metres(cs::Math::Abs(v->SpotAlong - v->Along)), " to the spot");
+					return cs::Cat("AUTO-LAND ", where, " ", Metres(cs::Math::Abs(v->SpotAlong - v->Along)), " to the spot (boost aborts)");
 				case DeckStage::OnDeck:
 					return deck->Open() && !deck->Carrier->Fleeing
 						? cs::Cat("ON DECK ", where, ": refuel, rearm, repair ", Pct(v->Service), (v->Service >= 1 ? ", launching" : ""))
@@ -815,11 +993,12 @@ namespace SpaceGod::Core
 		deck->Frame(u->Pos, along, off);
 		double range = (deck->Gate() - u->Pos).Length();
 		double rel = (u->Vel - deck->Carrier->Vel).Length();
-		double nose = cs::Math::Acos(Max(-1.0, Min(1.0, DVec3::Dot(u->Forward, deck->Axis())))) * Astro::Rad2Deg;
+		double s = deck->Sense();
+		double nose = cs::Math::Acos(Max(-1.0, Min(1.0, DVec3::Dot(u->Forward, deck->Axis() * s)))) * Astro::Rad2Deg;
 		cs::StringBuilder sb;
 		sb.Append("DECK ").Append(where).Append(' ');
 		sb.Append(cs::Fmt(range, "0.0")).Append(" km");
-		if (along > deck->SternAlong) sb.Append(": come round astern");
+		if ((along - deck->MouthAlong()) * s > 0) sb.Append(deck->RealBay() ? ": come round to the mouth" : ": come round astern");
 		else
 		{
 			sb.Append(": ").Append(Metres(cs::Math::Abs(off.X))).Append(off.X > 0 ? " right" : " left");
