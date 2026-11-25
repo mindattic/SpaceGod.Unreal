@@ -9,6 +9,8 @@
 namespace SpaceGod::Core
 {
 	class SubsystemDef;
+	class KitCatalogue;
+	struct ModularDesign;
 
 	/// <summary>
 	/// The vehicle data file (US-T452, docs/Vehicles.md), written by the game's sg.ExportVehicles and edited by SpaceGod.Studio:
@@ -34,6 +36,38 @@ namespace SpaceGod::Core
 			double Exhaust[3] = { 0, 0, -1 };
 			double Radius = 0.02;
 		};
+
+		/// <summary>A mount an assembled hull's parts give (US-T766), in the model frame (hull lengths, nose +Z, up +Y): the
+		/// middle of the socket, its outward unit normal and the patch's two sides.</summary>
+		struct Mount
+		{
+			DVec3 Pos;
+			DVec3 Axis = DVec3(0, 1, 0);
+			double Width = 0, Height = 0;
+			/// Index into the design's parts.
+			int Part = -1;
+		};
+
+		/// <summary>
+		/// What an assembled hull (US-T765, <see cref="ModularDesign"/>) gives in place of the file's rows and the built-in
+		/// tables (US-T766): an engine port on each engine part's exhaust socket, a gun mount on each turret's top socket (a
+		/// mount) or muzzle (a barrel), a hangar mouth on each hangar section's largest free face, and the bridge tower.
+		/// Pure, no engine types; work it out once per design, off the game thread if need be.
+		/// </summary>
+		struct Geometry
+		{
+			std::vector<Port> Engines;
+			std::vector<Mount> Guns, Hangars, Bridges;
+		};
+
+		/// <summary>The ports and mounts of <paramref name="design"/>, assembled from <paramref name="catalogue"/>.</summary>
+		static Geometry FromDesign(const ModularDesign& design, const KitCatalogue& catalogue);
+
+		/// <summary>Puts <paramref name="layout"/>'s hardpoints (a design's own, as just declared) on the geometry's mounts:
+		/// each weapon (bar a spinal mount) on the nearest of the least-used gun mounts, its cone axis the mount's normal;
+		/// each Engine on a nozzle, each Hangar on a mouth, an unburied Bridge on the tower. A kind the geometry has no
+		/// mount for keeps its declared place. Returns the hardpoints it set.</summary>
+		static int ApplyGeometry(const Geometry& geometry, const cs::List<cs::Ref<SubsystemDef>>& layout);
 
 		/// <summary>Where the file is read from; call before anything reads a hull design (an empty path: no file). Later
 		/// calls, once loaded, change nothing.</summary>

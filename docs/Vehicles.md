@@ -232,6 +232,15 @@ the loaded file's bytes (FNV-1a, 16 hex digits, or `builtin` with none); a co-op
 and the host refuses a client whose hash differs from its own ("refused vehicle data differs"). The bench prints the
 hash it ran on (`vehicle data: ... hash ...`) on stderr.
 
+**Assembled hulls (US-T766).** A hull built from kit parts (US-T765, `ModularDesign`) takes its ports from the parts'
+own sockets instead of the file or the tables: `VehicleData::FromDesign` gives an engine port on each engine part's
+`exhaust` socket, a gun mount on each turret's `top` (a mount) or `muzzle` (a barrel), a hangar mouth on each hangar
+section's largest free face and the bridge tower, all in this model frame; `VehicleData::ApplyGeometry` then puts a
+layout's hardpoints on them (each weapon, bar a spinal mount, on the nearest of the least-used gun mounts with the
+mount's normal as its cone axis, keel-laid guns keeping theirs; Engine, Hangar and an unburied Bridge on theirs). The
+model's engine parts mark their nozzles (`EnginePorts`), so the flames leave from them. No sim ship flies an assembled
+design yet, so the bench is untouched.
+
 `sg.VehicleData` logs where the file was loaded from, how many vehicles and layouts it overrode, and any entry it
 ignored.
 

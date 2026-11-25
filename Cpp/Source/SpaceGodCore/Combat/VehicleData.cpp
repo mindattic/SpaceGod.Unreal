@@ -2,9 +2,11 @@
 
 #include "Combat/VehicleData.h"
 
+#include "Assembly/ModularAssembler.h"
 #include "Combat/CombatSpecs.h"
 #include "Shared/Json/JsonObject.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -250,6 +252,163 @@ namespace SpaceGod::Core
 			break;
 		}
 		applied += set;
+		return set;
+	}
+
+	namespace
+	{
+		DVec3 GeometryPoint(const ModularPlacement& p, const DVec3& local, double length) { return p.ToDesign(local) * (1 / length); }
+
+		DVec3 GeometryAxis(const ModularPlacement& p, const DVec3& local)
+		{
+			DVec3 a = p.Turn(local);
+			return a.LengthSquared() > 1e-12 ? a.Normalized() : DVec3(0, 1, 0);
+		}
+
+		VehicleData::Mount GeometryMount(const ModularPlacement& p, const KitSocket& s, double length, int part)
+		{
+			VehicleData::Mount m;
+			m.Pos = GeometryPoint(p, s.Pos, length);
+			m.Axis = GeometryAxis(p, s.Normal);
+			m.Width = s.Size[0] * p.Scale / length;
+			m.Height = s.Size[1] * p.Scale / length;
+			m.Part = part;
+			return m;
+		}
+
+		/// Weapons laid along the keel: the hull aims them, so a mount gives them a place and never a cone axis.
+		bool GeometryFixed(SubsystemKind kind)
+		{
+			return kind == SubsystemKind::FighterGuns || kind == SubsystemKind::Railgun || kind == SubsystemKind::Torpedo ||
+				kind == SubsystemKind::BoardingPods || kind == SubsystemKind::Drill;
+		}
+
+		/// The least-used spot, the nearest to <paramref name="at"/> among those; -1 with none.
+		int GeometryPick(const DVec3& at, const std::vector<DVec3>& spots, std::vector<int>& use)
+		{
+			int best = -1;
+			for (int k = 0; k < static_cast<int>(spots.size()); k++)
+				if (best < 0 || use[k] < use[best] || (use[k] == use[best] && (spots[k] - at).LengthSquared() < (spots[best] - at).LengthSquared()))
+					best = k;
+			if (best >= 0) use[best]++;
+			return best;
+		}
+	}
+
+	VehicleData::Geometry VehicleData::FromDesign(const ModularDesign& design, const KitCatalogue& catalogue)
+	{
+		Geometry g;
+		double length = design.LengthM;
+		if (!(length > 0)) return g;
+		const auto& parts = catalogue.Parts();
+		int count = static_cast<int>(design.Parts.size());
+		for (int i = 0; i < count; i++)
+		{
+			const ModularPlacement& p = design.Parts[i];
+			if (p.Part < 0 || p.Part >= static_cast<int>(parts.size())) continue;
+			const KitPart& part = parts[p.Part];
+			if (p.Slot == "engine")
+			{
+				const KitSocket* s = part.Socket("exhaust");
+				if (!s) continue;
+				Port port;
+				DVec3 at = GeometryPoint(p, s->Pos, length), out = GeometryAxis(p, s->Normal);
+				port.Pos[0] = at.X;
+				port.Pos[1] = at.Y;
+				port.Pos[2] = at.Z;
+				port.Exhaust[0] = out.X;
+				port.Exhaust[1] = out.Y;
+				port.Exhaust[2] = out.Z;
+				port.Radius = 0.5 * std::sqrt(std::max(s->Size[0], 0.0) * std::max(s->Size[1], 0.0)) * p.Scale / length;
+				if (port.Radius > 0) g.Engines.push_back(port);
+			}
+			else if (p.Slot == "turret")
+			{
+				const KitSocket* s = part.Socket("muzzle");
+				if (!s) s = part.Socket("top");
+				if (s) g.Guns.push_back(GeometryMount(p, *s, length, i));
+			}
+			else if (p.Slot == "hangar")
+			{
+				// The mouth: the largest face nothing mates to.
+				const KitSocket* mouth = nullptr;
+				for (const auto& s : part.Sockets)
+				{
+					if (s.Name == p.Socket) continue;
+					bool used = false;
+					for (const auto& c : design.Parts)
+						if (&c != &p && c.Parent == i && c.ParentSocket == s.Name) used = true;
+					if (!used && (!mouth || s.Size[0] * s.Size[1] > mouth->Size[0] * mouth->Size[1])) mouth = &s;
+				}
+				if (mouth) g.Hangars.push_back(GeometryMount(p, *mouth, length, i));
+			}
+			else if (p.Slot == "bridge")
+			{
+				Mount m;
+				m.Pos = GeometryPoint(p, (part.Min + part.Max) * 0.5, length);
+				m.Axis = GeometryAxis(p, DVec3(0, 1, 0));
+				m.Width = (part.Max.X - part.Min.X) * p.Scale / length;
+				m.Height = (part.Max.Y - part.Min.Y) * p.Scale / length;
+				m.Part = i;
+				g.Bridges.push_back(m);
+			}
+		}
+		return g;
+	}
+
+	int VehicleData::ApplyGeometry(const Geometry& geometry, const cs::List<cs::Ref<SubsystemDef>>& layout)
+	{
+		auto spotsOf = [](const std::vector<Mount>& mounts)
+		{
+			std::vector<DVec3> spots;
+			spots.reserve(mounts.size());
+			for (const auto& m : mounts) spots.push_back(m.Pos);
+			return spots;
+		};
+		std::vector<DVec3> nozzles;
+		nozzles.reserve(geometry.Engines.size());
+		for (const auto& e : geometry.Engines) nozzles.push_back(DVec3(e.Pos[0], e.Pos[1], e.Pos[2]));
+		std::vector<DVec3> guns = spotsOf(geometry.Guns), hangars = spotsOf(geometry.Hangars), bridges = spotsOf(geometry.Bridges);
+		std::vector<int> nozzleUse(nozzles.size()), gunUse(guns.size()), hangarUse(hangars.size()), bridgeUse(bridges.size());
+
+		int set = 0;
+		for (int i = 0; i < layout.Count(); i++)
+		{
+			const auto& d = layout[i];
+			if (!d) continue;
+			DVec3 at(d->X, d->Y, d->Z), to;
+			int k = -1;
+			if (d->Kind == SubsystemKind::Engine)
+			{
+				if ((k = GeometryPick(at, nozzles, nozzleUse)) >= 0) to = nozzles[k];
+			}
+			else if (d->Kind == SubsystemKind::Hangar)
+			{
+				if ((k = GeometryPick(at, hangars, hangarUse)) >= 0) to = hangars[k];
+			}
+			else if (d->Kind == SubsystemKind::Bridge)
+			{
+				if (!d->Buried && (k = GeometryPick(at, bridges, bridgeUse)) >= 0) to = bridges[k];
+			}
+			else if (d->IsWeapon() && !d->Spinal)
+			{
+				if ((k = GeometryPick(at, guns, gunUse)) >= 0)
+				{
+					to = guns[k];
+					if (!GeometryFixed(d->Kind))
+					{
+						const DVec3& axis = geometry.Guns[k].Axis;
+						d->ConeAxis = cs::Nullable<DVec3>(axis);
+						d->FacesAft = axis.Z < -0.7;
+					}
+				}
+			}
+			if (k < 0) continue;
+			d->X = to.X;
+			d->Y = to.Y;
+			d->Z = to.Z;
+			set++;
+		}
 		return set;
 	}
 }

@@ -7,6 +7,8 @@
 #include "SpaceGodLog.h"
 
 #include "Assembly/ModularAssembler.h"
+#include "Combat/VehicleData.h"
+#include "Rendering/EnginePorts.h"
 #include "Rendering/HullLighting.h"
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
@@ -19,6 +21,7 @@
 #include "HAL/IConsoleManager.h"
 #include "Misc/Paths.h"
 
+#include <algorithm>
 #include <cmath>
 #include <unordered_map>
 
@@ -158,6 +161,12 @@ namespace
 				body->transform->localScale = Vector3::Max(ToVector(part.Max - part.Min), Vector3::one() * 0.01f);
 				Draw(body, cube, ShipModels::ProceduralMaterial());
 			}
+
+			// US-T766: the flames leave from the engine parts' own nozzles, riding with the part.
+			if (p.Slot == "engine")
+				if (const KitSocket* nozzle = part.Socket("exhaust"))
+					EnginePorts::Mark(go->transform, ToVector(nozzle->Pos), ToVector(nozzle->Normal),
+						0.5f * Mathf::Sqrt(static_cast<float>(std::max(nozzle->Size[0], 0.0) * std::max(nozzle->Size[1], 0.0))));
 		}
 		return root;
 	}
@@ -194,6 +203,11 @@ namespace
 		for (const auto& p : design.Parts)
 			UE_LOG(LogSpaceGod, Verbose, TEXT("sg.Assemble:   %-7s %-40s on %3d %-9s scale %.2f at (%.1f, %.1f, %.1f)%s"), UTF8_TO_TCHAR(p.Slot.c_str()),
 				UTF8_TO_TCHAR(p.PartId.c_str()), p.Parent, UTF8_TO_TCHAR(p.ParentSocket.c_str()), p.Scale, p.Pos.X, p.Pos.Y, p.Pos.Z, p.Mirrored ? TEXT(" mirrored") : TEXT(""));
+
+		VehicleData::Geometry geometry = VehicleData::FromDesign(design, catalogue);
+		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: ports from the parts: %d engine nozzles, %d gun mounts, %d hangar mouths, %d bridge"),
+			static_cast<int>(geometry.Engines.size()), static_cast<int>(geometry.Guns.size()), static_cast<int>(geometry.Hangars.size()),
+			static_cast<int>(geometry.Bridges.size()));
 
 		int imported = 0;
 		auto model = BuildModel(design, catalogue, imported);
