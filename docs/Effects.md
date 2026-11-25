@@ -63,7 +63,11 @@ nozzle was then, that long ago), and enough of them are made to keep the trail w
 ## Performance and limits
 
 - **Budgets** (`EffectsTune`): at most 5,000 clouds, 3,000 sparks and embers, 400 flashes alive; one hull at most 260
-  clouds; past a budget the oldest go first.
+  clouds; past a budget the oldest go first. These are the standard sizes: the render budget's **World effects budget**
+  setting (`lod.worldEffects`, `WorldFx::EffectsBudget`, US-T796; 25% to 200%, default 100%) scales all four, beside
+  BattleFx's own **Battle effects budget** (`lod.battleEffects`) for beams, tracers, flak and fireballs. A fleet hull
+  throws exhaust, vapour and venting only while the render budget (US-T719) draws its full model (`ShipView::Shown`),
+  so the full-model cap bounds those emitters too.
 - **LOD by apparent size**: a hull under 7 px long on screen throws no clouds; between 7 and 220 px its rate falls to 18%
   with clouds up to 1.9 times bigger, so a far hull's trail is a few big puffs rather than many tiny ones. Clouds under
   0.6 px are not drawn. A hull moving more than 60 of its lengths a second (high time warp) or jumping more than 6 of

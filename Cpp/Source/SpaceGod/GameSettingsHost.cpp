@@ -20,6 +20,7 @@
 #include "Input/KeyBindings.h" // US-T249
 #include "Rendering/Pipeline/RenderBackend.h"
 #include "Views/BattleFx.h"
+#include "Views/WorldFx.h" // US-T796
 #include "UnityCompat/UnityTypes.h"
 #include "Settings/SettingsRegistry.h"
 #include "Settings/GameSetting.h"
@@ -84,7 +85,7 @@ namespace SpaceGod
 			RenderPipelineSettings::Exposure(); RenderPipelineSettings::ExposureCompensation(); RenderPipelineSettings::SunBrightness();
 			RenderPipelineSettings::RayTracing();
 		});
-		SettingsRegistry::AddDeclarationSource([] { Views::BattleFx::EffectsBudget(); });
+		SettingsRegistry::AddDeclarationSource([] { Views::BattleFx::EffectsBudget(); Views::WorldFx::EffectsBudget(); });
 		SettingsRegistry::AddDeclarationSource([] { GameConsole::Declare(); }); // US-T620: Developer > Console
 	}
 

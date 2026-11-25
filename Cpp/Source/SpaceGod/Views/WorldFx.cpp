@@ -8,6 +8,7 @@
 #include "Rendering/Materials.h"
 #include "Rendering/Pipeline/RenderBackend.h"
 #include "UI/UiMotion.h"
+#include "Settings/GameSetting.h"
 
 #include <algorithm>
 #include <cmath>
@@ -32,6 +33,18 @@ namespace SpaceGod::Views
 
 		Color Scaled(Color c, float k) { return Color(c.r * k, c.g * k, c.b * k, c.a); }
 	}
+
+	const cs::Ref<RangeSetting>& WorldFx::EffectsBudget()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("lod.worldEffects", SettingGroups::RenderBudget,
+			"World effects budget", 1.0, 0.25, 2.0, 0.25,
+			"How many exhaust clouds, smoke, sparks, debris embers and flashes are kept at once, as a share of the standard (5,000 clouds, 3,000 sparks and embers, 400 flashes, 260 clouds behind any one hull); the oldest give way first. Lower is faster in a big fight.",
+			cs::Func<cs::String, double>([](double v) { return cs::Fmt(v * 100, "0") + "%"; }),
+			"effects exhaust smoke sparks debris explosions particles budget performance");
+		return value;
+	}
+
+	int WorldFx::Cap(int standard) const { return Mathf::Max(1, static_cast<int>(static_cast<float>(standard) * budget)); }
 
 	WorldFx::WorldFx(UnitySpaceApp* app_, const cs::Ref<Transform>& parent)
 		: app(app_)
@@ -100,19 +113,22 @@ namespace SpaceGod::Views
 
 	void WorldFx::AddCloud(const Cloud& c)
 	{
-		if (static_cast<int>(clouds.size()) >= Tune::MaxClouds) clouds.erase(clouds.begin(), clouds.begin() + Tune::MaxClouds / 16);
+		int cap = Cap(Tune::MaxClouds), n = static_cast<int>(clouds.size());
+		if (n >= cap) clouds.erase(clouds.begin(), clouds.begin() + (n - cap + Mathf::Max(1, cap / 16)));
 		clouds.push_back(c);
 	}
 
 	void WorldFx::AddSpark(const Spark& s)
 	{
-		if (static_cast<int>(sparks.size()) >= Tune::MaxSparks) sparks.erase(sparks.begin(), sparks.begin() + Tune::MaxSparks / 16);
+		int cap = Cap(Tune::MaxSparks), n = static_cast<int>(sparks.size());
+		if (n >= cap) sparks.erase(sparks.begin(), sparks.begin() + (n - cap + Mathf::Max(1, cap / 16)));
 		sparks.push_back(s);
 	}
 
 	void WorldFx::AddFlash(const Flash& f)
 	{
-		if (static_cast<int>(flashes.size()) >= Tune::MaxFlashes) flashes.erase(flashes.begin());
+		int cap = Cap(Tune::MaxFlashes), n = static_cast<int>(flashes.size());
+		if (n >= cap) flashes.erase(flashes.begin(), flashes.begin() + (n - cap + 1));
 		flashes.push_back(f);
 	}
 
@@ -134,6 +150,7 @@ namespace SpaceGod::Views
 			for (auto& f : flashes) f.Born += shift;
 			for (auto& kv : emitters) kv.second.Has = false;
 		}
+		budget = static_cast<float>(EffectsBudget()->Value);
 		now = app->HoldRewindFxClock(real);
 		rewinding = now != real;
 		dt = rewinding ? 0.0f : frameDt;
@@ -172,7 +189,7 @@ namespace SpaceGod::Views
 		e.Has = true;
 		if (!had || !(dt > 0) || h.Px < Tune::EmitMinPx) return;
 		if (e.Vel.magnitude() > Tune::MaxEmitLengthsPerS * len) return; // high warp: strung out, not a trail
-		if (e.Live >= Tune::MaxCloudsPerEmitter) return;
+		if (e.Live >= Cap(Tune::MaxCloudsPerEmitter)) return;
 
 		float near01 = Mathf::Clamp01((h.Px - Tune::EmitMinPx) / (Tune::EmitFullPx - Tune::EmitMinPx));
 		float rateShare = Mathf::Lerp(Tune::FarRateShare, 1.0f, near01);

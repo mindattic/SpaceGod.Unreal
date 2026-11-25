@@ -22,6 +22,11 @@ namespace SpaceGod
 	class UnitySpaceApp;
 }
 
+namespace SpaceGod::Core
+{
+	class RangeSetting;
+}
+
 namespace SpaceGod::Views
 {
 	/// <summary>One nozzle or jet as an emitter sees it this frame: in scene units, its level 0..1.</summary>
@@ -58,6 +63,10 @@ namespace SpaceGod::Views
 	{
 	public:
 		WorldFx(UnitySpaceApp* app, const cs::Ref<Transform>& parent);
+
+		/// <summary>The render budget's share for these effects (US-T796): EffectsTune's cloud, spark and flash pools and
+		/// each hull's clouds are this share of their standard sizes (1 the standard).</summary>
+		static const cs::Ref<Core::RangeSetting>& EffectsBudget();
 
 		/// <summary>The frame's clock: call once a frame before any emitter, then the emitters, then <see cref="Draw"/>.</summary>
 		void Begin(float dt);
@@ -140,6 +149,8 @@ namespace SpaceGod::Views
 		std::vector<Flash> flashes;
 		std::unordered_map<const void*, Emitter> emitters;
 		float now = 0, dt = 0;
+		/// <summary>This frame's <see cref="EffectsBudget"/>, read once in Begin.</summary>
+		float budget = 1;
 		bool rewinding = false;
 		int fxEndsSeen = 0;
 		uint32_t rng = 0x9E3779B9u;
@@ -156,6 +167,8 @@ namespace SpaceGod::Views
 		Vector3 RandDir();
 		Vector3 Scatter(Vector3 dir, float spread);
 
+		/// <summary>A pool's cap: <paramref name="standard"/> times this frame's budget, at least 1.</summary>
+		int Cap(int standard) const;
 		void AddCloud(const Cloud& c);
 		void AddSpark(const Spark& s);
 		void AddFlash(const Flash& f);

@@ -11,7 +11,8 @@ namespace SpaceGod::Views
 	struct EffectsTune
 	{
 		// ---- budgets: past these the oldest go first (performance)
-		/// <summary>The most clouds (exhaust, vapour, smoke) drawn at once, and the most sparks, embers and flashes.</summary>
+		/// <summary>The most clouds (exhaust, vapour, smoke) drawn at once, and the most sparks, embers and flashes, at the
+		/// standard budget (WorldFx::EffectsBudget scales these and MaxCloudsPerEmitter).</summary>
 		static constexpr int MaxClouds = 5000, MaxSparks = 3000, MaxFlashes = 400;
 		/// <summary>The most clouds one hull may keep alive at once (so one capital cannot take the whole budget).</summary>
 		static constexpr int MaxCloudsPerEmitter = 260;
