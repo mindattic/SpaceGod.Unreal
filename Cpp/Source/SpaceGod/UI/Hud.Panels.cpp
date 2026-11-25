@@ -51,6 +51,7 @@
 #include "Systems/GateNetwork.h"
 #include "Systems/InterstellarTraffic.h"
 #include "Systems/JumpGate.h"
+#include "Systems/Kardashev.h"
 #include "Systems/Polities.h"
 #include "Systems/StarSystemSpec.h" // HabitableZone
 
@@ -70,6 +71,34 @@ namespace SpaceGod::UI
 	{
 		/// US-T237: the name the Prose keys of the active system's things are made from ("" between systems: no text matches).
 		cs::String LoreSystem(const cs::Ref<StarSystem>& system) { return system != nullptr ? system->Name : cs::String(); }
+
+		/// US-T815: a polity's Kardashev reading for the navigator, read again at most once a second.
+		struct KardashevNavEntry
+		{
+			const Faction* Who = nullptr;
+			float At = -10.0f;
+			KardashevReading Reading;
+		};
+
+		const KardashevReading& KardashevOnNavigator(const Polities& polities, const cs::Ref<Faction>& f)
+		{
+			static std::vector<KardashevNavEntry> cache;
+			KardashevNavEntry* entry = nullptr;
+			for (auto& e : cache)
+				if (e.Who == f.get()) { entry = &e; break; }
+			if (entry == nullptr)
+			{
+				cache.push_back(KardashevNavEntry{ f.get() });
+				entry = &cache.back();
+			}
+			float now = Time::unscaledTime;
+			if (now - entry->At > 1.0f || now < entry->At)
+			{
+				entry->Reading = Kardashev::Of(polities, f);
+				entry->At = now;
+			}
+			return entry->Reading;
+		}
 	}
 
 	// ---------------------------------------------------------------- between the stars
@@ -607,6 +636,12 @@ namespace SpaceGod::UI
 			cs::String polity = PolityText(faction);
 			int cut = cs::Strings::IndexOf(polity, ",  ");
 			rows.Add(NavigatorRow{ cut < 0 ? polity : cs::Strings::Substring(polity, 0, cut), cut < 0 ? cs::String() : cs::Strings::Substring(polity, cut + 3), Target::None(), 1, Color::Lerp(fc, Color::gray(), 0.35f) });
+			if (!faction->IsPirate && app->World()->Polities != nullptr)
+			{
+				const KardashevReading& energy = KardashevOnNavigator(*app->World()->Polities, faction);
+				if (energy.Watts() > 0)
+					rows.Add(NavigatorRow{ cs::Cat("Kardashev ", cs::Fmt(energy.Index, "0.00")), Kardashev::Power(energy.Watts()), Target::None(), 1, Color::Lerp(fc, Color::gray(), 0.35f) });
+			}
 			for (const auto& ship : app->Fleet()->Ships())
 			{
 				if (ship->Faction != faction || ship->IsEscort() || ship->Destroyed) continue;

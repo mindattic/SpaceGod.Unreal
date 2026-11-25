@@ -906,6 +906,9 @@ namespace SpaceGod::UI
 		Line(y, x, w, cs::Cat(report->Systems, (report->Systems == 1 ? " system held, " : " systems held, "), report->Ports, (report->Ports == 1 ? " port, " : " ports, "),
 			People(report->Population)), Color::white());
 		Line(y, x, w, cs::Cat("Treasury ", cs::Fmt(report->Treasury, "N0"), " cr   ·   unrest ", cs::Fmt(report->Unrest * 100, "0"), "%"), Color::white());
+		const auto* nextTier = Core::Kardashev::Next(report->Energy.Index); // US-T815
+		Line(y, x, w, cs::Cat("Kardashev ", cs::Fmt(report->Energy.Index, "0.00"), "   ·   ", Core::Kardashev::Power(report->Energy.Watts()),
+			nextTier != nullptr ? cs::Cat("   ·   ", nextTier->Name, " at ", cs::Fmt(nextTier->Index, "0.00")) : cs::String("   ·   every hull open")), Color::white());
 		Line(y, x, w, cs::Cat("Navy: ", report->Warships, " hulls in ", report->Groups, " groups (", report->GateFleets, " gate, ", report->StrikeGroups, " jump strike), strength ", cs::Fmt(report->Strength, "N0"), "; ",
 			report->Commanded, " under your orders", (report->Campaigns > 0 ? cs::Cat(", ", report->Campaigns, " on campaign") : cs::String())), Color::white());
 		cs::List<cs::String> warNames;

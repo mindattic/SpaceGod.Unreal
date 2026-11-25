@@ -17,6 +17,7 @@
 #include "Rendering/ShipModels.h"
 #include "Rendering/UscKit.h"
 #include "Ships.h"
+#include "Systems/Kardashev.h"
 
 #include "HAL/IConsoleManager.h"
 #include "Materials/MaterialInterface.h"
@@ -223,6 +224,27 @@ namespace
 		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: lineup of %d faction styles shown in the model viewer"), shown);
 	}
 
+	/// US-T815: sg.Assemble ... kardashev=<index> builds as a civilisation at that index would: a class whose milestone it
+	/// has not reached is refused, and a capital class past its own is built heavier (Kardashev::Tiered).
+	bool AssembleAtKardashev(const TArray<FString>& args, ShipClass cls, FactionStyle& style)
+	{
+		for (int i = 2; i < args.Num(); i++)
+		{
+			FString key, value;
+			if (!args[i].Split(TEXT("="), &key, &value) || !key.Equals(TEXT("kardashev"), ESearchCase::IgnoreCase)) continue;
+			double index = FCString::Atod(*value);
+			if (!Core::Kardashev::Unlocked(cls, index))
+			{
+				UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble: %s opens at Kardashev %.2f, not %.2f"), UTF8_TO_TCHAR(ToString(cls)),
+					Core::Kardashev::UnlockIndex(cls), index);
+				return false;
+			}
+			style = Core::Kardashev::Tiered(style, cls, index);
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: at Kardashev %.2f, length %.2f, armament %.2f"), index, style.Length, style.Armament);
+		}
+		return true;
+	}
+
 	void Assemble(const TArray<FString>& args)
 	{
 		ShipClass cls{};
@@ -271,6 +293,7 @@ namespace
 				UTF8_TO_TCHAR(profile->HullNumber(seed).c_str()), UTF8_TO_TCHAR(profile->Palette.Colour.c_str()));
 		}
 
+		if (!AssembleAtKardashev(args, cls, style)) return;
 		const KitCatalogue& catalogue = Catalogue();
 		ModularDesign design = ModularAssembler::Assemble(catalogue, cls, seed, style);
 		if (!design.Problem.empty())

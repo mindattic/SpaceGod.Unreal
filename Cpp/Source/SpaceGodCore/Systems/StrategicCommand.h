@@ -3,6 +3,7 @@
 
 #include "Cs/Cs.h"
 #include "Persistence/Serializable.h"
+#include "Systems/Kardashev.h"
 
 namespace SpaceGod::Core
 {
@@ -298,6 +299,8 @@ namespace SpaceGod::Core
 		/// <summary>Its groups by kind of force (U.SPC-T474, see <see cref="FleetDoctrine"/>): gate fleets and jump strike groups.</summary>
 		int GateFleets = 0, StrikeGroups = 0;
 		double Population = 0, Treasury = 0, Strength = 0, Unrest = 0, MarineQuality = 0, Morale = 0, CrewLost = 0;
+		/// <summary>What it burns and its Kardashev index (US-T815).</summary>
+		KardashevReading Energy;
 		cs::List<cs::Ref<::SpaceGod::Core::Faction>> AtWarWith = cs::List<cs::Ref<::SpaceGod::Core::Faction>>();
 		cs::List<GroupLine> Fleet = cs::List<GroupLine>();
 	};

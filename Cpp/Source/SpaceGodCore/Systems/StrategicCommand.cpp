@@ -722,6 +722,7 @@ namespace SpaceGod::Core
 			unrestWeight += s->Population;
 		}
 		r->Unrest = unrestWeight > 0 ? r->Unrest / unrestWeight : 0;
+		r->Energy = Kardashev::Of(*polities, f);
 		for (const auto& g : polities->Factions())
 			if (g != f && !g->IsPirate && polities->Diplomacy->Get(f, g) == Relation::War) r->AtWarWith.Add(g);
 		for (const auto& w : polities->Worlds())
