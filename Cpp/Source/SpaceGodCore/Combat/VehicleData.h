@@ -65,7 +65,8 @@ namespace SpaceGod::Core
 
 		/// <summary>Puts <paramref name="layout"/>'s hardpoints (a design's own, as just declared) on the geometry's mounts:
 		/// each weapon (bar a spinal mount) on the nearest of the least-used gun mounts, its cone axis the mount's normal;
-		/// each Engine on a nozzle, each Hangar on a mouth, an unburied Bridge on the tower. A kind the geometry has no
+		/// each Engine on a nozzle, each Hangar on a mouth (its normal and size kept for its flight deck, US-T842), an
+		/// unburied Bridge on the tower. A kind the geometry has no
 		/// mount for keeps its declared place. Returns the hardpoints it set.</summary>
 		static int ApplyGeometry(const Geometry& geometry, const cs::List<cs::Ref<SubsystemDef>>& layout);
 

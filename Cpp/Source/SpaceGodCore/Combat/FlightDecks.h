@@ -84,6 +84,13 @@ namespace SpaceGod::Core
 		/// <summary>The mouths' distance from the deck's middle along its axis, km (stern negative, bow positive).</summary>
 		double SternAlong = 0, BowAlong = 0;
 
+		/// <summary>The deck's axis in the hull's frame (right, up, forward), toward its bow mouth (US-T842), or zero for the
+		/// hull's keel: every deck through a hangar without a mouth of its own, and every deck from an older save.</summary>
+		DVec3 AxisLocal;
+
+		/// <summary>Its mouths' half-width and half-height, km, or 0 for the deck view's default size (US-T842).</summary>
+		double MouthHalfWidthKm = 0, MouthHalfHeightKm = 0;
+
 		/// <summary>Port, starboard or centreline, for the HUD.</summary>
 		cs::String Name;
 

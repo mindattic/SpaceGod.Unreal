@@ -384,7 +384,14 @@ namespace SpaceGod::Core
 			}
 			else if (d->Kind == SubsystemKind::Hangar)
 			{
-				if ((k = GeometryPick(at, hangars, hangarUse)) >= 0) to = hangars[k];
+				if ((k = GeometryPick(at, hangars, hangarUse)) >= 0)
+				{
+					const auto& mouth = geometry.Hangars[k];
+					to = hangars[k];
+					d->MouthAxis = cs::Nullable<DVec3>(mouth.Axis);
+					d->MouthWidth = mouth.Width;
+					d->MouthHeight = mouth.Height;
+				}
 			}
 			else if (d->Kind == SubsystemKind::Bridge)
 			{

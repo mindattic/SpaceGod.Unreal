@@ -297,7 +297,8 @@ namespace SpaceGod::Core
 
 	SG_SERIALIZE(FlightDeck, "Unity.SpaceGod.Core.FlightDeck",
 		SG_F(Aboard), SG_F(Bay), SG_F(BowAlong), SG_F(Carrier), SG_F(Final), SG_F(MiddleLocal), SG_F(Name),
-		SG_F(NextLaunch), SG_F(SternAlong))
+		SG_F(NextLaunch), SG_F(SternAlong),
+		SG_OPT(AxisLocal), SG_OPT(MouthHalfHeightKm), SG_OPT(MouthHalfWidthKm)) // US-T842: decks off the keel, absent from older saves
 
 	SG_SERIALIZE(GroupOrder, "Unity.SpaceGod.Core.GroupOrder",
 		SG_F(Body), SG_F(Kind), SG_F(SinceJd))
@@ -377,7 +378,8 @@ namespace SpaceGod::Core
 
 	SG_SERIALIZE(SubsystemDef, "Unity.SpaceGod.Core.SubsystemDef",
 		SG_F(Buried), SG_F(ConeAxis), SG_F(ConeHalfDeg), SG_F(FacesAft), SG_F(Kind), SG_F(MaxHp), SG_F(Rating),
-		SG_F(Spinal), SG_F(Weapon), SG_F(X), SG_F(Y), SG_F(Z))
+		SG_F(Spinal), SG_F(Weapon), SG_F(X), SG_F(Y), SG_F(Z),
+		SG_OPT(MouthAxis), SG_OPT(MouthHeight), SG_OPT(MouthWidth)) // US-T842: assembled hulls' hangar mouths, absent from older saves
 
 	SG_SERIALIZE(Treaty, "Unity.SpaceGod.Core.Treaty",
 		SG_F(A), SG_F(B), SG_F(Ceded), SG_F(Jd), SG_F(Terms), SG_F(TruceUntilJd), SG_F(Winner))

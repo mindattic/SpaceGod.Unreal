@@ -299,6 +299,13 @@ namespace SpaceGod::Core
 		/// with its muzzle at the bow, that the hull itself lays on the target and a spinal power plant feeds.</summary>
 		bool Spinal = false;
 
+		/// <summary>A hangar's mouth on an assembled hull (US-T842): the mouth's outward unit normal in the hull frame (right,
+		/// up, forward), or null for a hangar on the keel (its flight deck runs fore and aft, see <see cref="FlightDeck"/>).</summary>
+		cs::Nullable<DVec3> MouthAxis;
+
+		/// <summary>The hangar mouth's width and height, ship lengths, or 0 for the deck view's default size.</summary>
+		double MouthWidth = 0, MouthHeight = 0;
+
 		/// <param name="coneAxis">The hull frame's aiming direction for the hardpoint (see <see cref="ConeAxis"/>), or null for the mount's normal.</param>
 		/// <param name="coneHalfDeg">The hull frame's half-angle for it (see <see cref="ConeHalfDeg"/>), or null for its module's.</param>
 		SubsystemDef(SubsystemKind kind, double x, double y, double z, bool facesAft = false, cs::Nullable<DVec3> coneAxis = std::nullopt,
