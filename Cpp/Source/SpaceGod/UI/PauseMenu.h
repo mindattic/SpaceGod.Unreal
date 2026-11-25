@@ -223,6 +223,11 @@ namespace SpaceGod::UI
 		/// US-T571: the field typed in let go of, its draft and any refusal dropped.
 		void DropText();
 
+		/// US-T827: the Controls page's curve preview under its list: the picked row's device (a joystick axis, the mouse's
+		/// virtual stick, else the pad's sticks), its raw input (across) against its output (up) through the same curve it
+		/// flies, and the live input as a dot.
+		void DrawCurvePreview(Rect r);
+
 		/// One setting's row: its name and what it does on the left, its control and Reset on the right.
 		void DrawSetting(const cs::Ref<Core::GameSetting>& setting, Rect r, bool showGroup);
 

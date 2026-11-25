@@ -2,6 +2,7 @@
 
 #include "Input/Gamepad.h"
 #include "Camera/SpaceCamera.h"
+#include "Input/Joystick.h" // US-T827: AxisCurve
 #include "PlayerOptions.h"
 #include "Settings/GameSetting.h"
 
@@ -113,16 +114,50 @@ namespace SpaceGod::Input
 		VibrationStrength();
 		Prompts();
 		ResponseCurve();
+		Exponent();
+		OuterDeadZone();
 		TriggerDeadZone();
 	}
 
 	const cs::Ref<ChoiceSetting>& Gamepad::ResponseCurve()
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("controls.pad.responseCurve", SettingGroups::Controls,
-			"Gamepad stick response curve", cs::List<cs::String>{ "Linear", "Smooth", "Precise" }, 0,
-			"How a stick's push past its dead zone turns into movement: Linear follows the stick, Smooth (squared) and Precise (cubed) keep small pushes small for fine control and still reach full at full deflection.",
-			"gamepad controller stick response curve exponent linear smooth precise sensitivity");
+			"Gamepad stick response curve", cs::List<cs::String>{ "Linear", "Smooth", "Precise", "Custom" }, 0,
+			"How a stick's push past its dead zone turns into movement: Linear follows the stick, Smooth (squared) and Precise (cubed) keep small pushes small for fine control and still reach full at full deflection; Custom flies the curve exponent below.",
+			"gamepad controller stick response curve exponent linear smooth precise custom sensitivity");
 		return value;
+	}
+
+	const cs::Ref<RangeSetting>& Gamepad::Exponent()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.pad.exponent", SettingGroups::Controls,
+			"Gamepad stick curve exponent", 1.5, 1.0, 3.0, 0.1,
+			"The Custom response curve: 1 follows the stick, higher keeps small pushes small for fine control.",
+			cs::Func<cs::String, double>([](double v) { return cs::Fmt(v, "0.0"); }),
+			"gamepad controller stick response curve exponent custom sensitivity");
+		return value;
+	}
+
+	const cs::Ref<RangeSetting>& Gamepad::OuterDeadZone()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("controls.pad.outerDeadZone", SettingGroups::Controls,
+			"Gamepad stick outer dead zone", 0.0, 0.0, 0.1, 0.01,
+			"The last of a stick's travel that already reads full, for a stick that never quite reaches its rim.",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Off") : cs::Cat(cs::ToInt(cs::Math::Round(v * 100)), "%"); }),
+			"gamepad controller stick outer deadzone rim full");
+		return value;
+	}
+
+	float Gamepad::CurveExponent()
+	{
+		if (PlayerOptions::ScriptedRun()) return 1.0f;
+		switch (ResponseCurve()->Index)
+		{
+			case 1: return 2.0f;
+			case 2: return 3.0f;
+			case 3: return static_cast<float>(Exponent()->Value);
+			default: return 1.0f;
+		}
 	}
 
 	const cs::Ref<RangeSetting>& Gamepad::TriggerDeadZone()
@@ -184,11 +219,9 @@ namespace SpaceGod::Input
 		float dead = static_cast<float>(DeadZone()->Value);
 		float m = raw.magnitude();
 		if (m <= dead || m <= 0.0001f) return Vector2::zero();
-		float scaled = Mathf::Clamp01((m - dead) / Mathf::Max(0.0001f, 1.0f - dead));
-		// US-T633: the response curve on the length, so the direction (each axis's sign) is kept.
-		int curve = PlayerOptions::ScriptedRun() ? 0 : ResponseCurve()->Index;
-		if (curve == 1) scaled = scaled * scaled;
-		else if (curve == 2) scaled = scaled * scaled * scaled;
+		// US-T633, US-T827: the curve on the length, so the direction (each axis's sign) is kept.
+		float outer = PlayerOptions::ScriptedRun() ? 0.0f : static_cast<float>(OuterDeadZone()->Value);
+		float scaled = AxisCurve::Apply(m, dead, outer, CurveExponent(), false);
 		return raw * (scaled / m);
 	}
 

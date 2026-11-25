@@ -84,6 +84,15 @@ namespace SpaceGod::Input
 		/// deflection squared) or Precise (cubed), the direction kept. A view setting, each machine's own; a scripted run
 		/// keeps Linear.</summary>
 		static const cs::Ref<Core::ChoiceSetting>& ResponseCurve();
+		/// <summary>Controls (US-T827): the sticks' outer dead zone, 0 to 10%: the last of the travel already reads full.
+		/// A scripted run keeps 0.</summary>
+		static const cs::Ref<Core::RangeSetting>& OuterDeadZone();
+		/// <summary>Controls (US-T827): the sticks' response exponent, 1 (straight) to 3, flown with the Custom
+		/// <see cref="ResponseCurve"/>.</summary>
+		static const cs::Ref<Core::RangeSetting>& Exponent();
+		/// <summary>US-T827: the exponent the sticks fly: Linear 1, Smooth 2, Precise 3, Custom <see cref="Exponent"/>; 1 in
+		/// a scripted run.</summary>
+		static float CurveExponent();
 		/// <summary>Controls (US-T633): the triggers' dead zone, 0 (as before) to 30%: a pull inside it reads 0, the rest is
 		/// rescaled to start from 0. A scripted run keeps 0.</summary>
 		static const cs::Ref<Core::RangeSetting>& TriggerDeadZone();
@@ -99,8 +108,8 @@ namespace SpaceGod::Input
 		/// <summary>Builds every pad setting (the declaration source GameSettingsHost registers).</summary>
 		static void Declare();
 
-		/// <summary>A raw stick through the dead zone (radial, rescaled) and the <see cref="ResponseCurve"/>, the result's
-		/// length 0..1.</summary>
+		/// <summary>A raw stick through the dead zone (radial, rescaled), the <see cref="OuterDeadZone"/> and the
+		/// <see cref="CurveExponent"/> (one AxisCurve on its length), the result's length 0..1.</summary>
 		static Vector2 Stick(Vector2 raw);
 		/// <summary>The move stick through the dead zone: the left (the right with <see cref="SwapSticks"/>), its y flipped
 		/// with <see cref="InvertMove"/>; a scripted run keeps the left, unflipped.</summary>

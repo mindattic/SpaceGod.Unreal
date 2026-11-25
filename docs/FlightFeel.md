@@ -161,7 +161,7 @@ damage, as before.
 | Mouse smoothing | off by default (kept) | off |
 | Hand to screen at 60 fps | 50 ms or under (3 frames) | measured by feel-report (US-T819) |
 | Mouse flight (virtual stick) | dead zone 3% of the half-screen, full rate at 40%, curve exponent 1.5 | none (free aim and nose only) |
-| Pad / stick curves | per-axis dead zone, exponent 1 .. 3, outer dead zone 0 .. 10% | radial dead zone and three fixed curves, pad only |
+| Pad / stick curves | per-axis dead zone, exponent 1 .. 3, outer dead zone 0 .. 10% | as the target: pad radial dead zone, outer dead zone and exponent (Linear / Smooth / Precise presets of 1 / 2 / 3, or Custom), joystick per axis (US-T825, US-T827) |
 
 ## How feel-report measures it
 
@@ -250,6 +250,11 @@ than 10%:
 2. Joystick and HOTAS axes through Enhanced Input: pitch, yaw, roll, strafe and a throttle axis that sets the
    throttle absolutely (today a held key opens it at `FighterSeat::ThrottlePerSecond`, full range in 2 s).
 3. A curve preview in the Controls options: the axis's raw input against the output, live.
+   Done in US-T827: the pad gains `controls.pad.outerDeadZone` (0 .. 10%) and `controls.pad.exponent` (1 .. 3,
+   flown with the new Custom `ResponseCurve`; Linear, Smooth and Precise keep their list positions as the exponent
+   presets 1, 2 and 3, so saved profiles load); `Gamepad::Stick` runs its length through `AxisCurve::Apply`.
+   Settings > Controls shows the picked row's curve (a joystick axis, the mouse's virtual stick, else the pad) under
+   its list, with the live input as a dot (`PauseMenu::DrawCurvePreview`).
 4. The scripted runs keep linear curves and no dead zone, as the pad's settings do today.
 
 ### US-T754: AI dogfight behaviours

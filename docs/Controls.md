@@ -7,6 +7,9 @@ right Shift / Ctrl / Alt both count), plus the modal panels that own the keys wh
 `HarvestPlay.cpp`). The keys (and the mouse's and pad's bindings) are the action map's, `Input/KeyBindings.h`, rebindable under
 Settings > Controls > Key bindings (see Bindings below); the input seam (`Input/UnrealInputDevice.cpp`) reads the keyboard, the mouse
 and the pad.
+Settings > Controls also sets each device's response curve (US-T827): the pad's dead zone, outer dead zone and curve (Linear,
+Smooth, Precise or Custom with its exponent, 1 .. 3), each joystick axis's (US-T825) and the mouse's virtual stick's; a preview under
+the list plots the picked row's device, raw input across and output up, with the live input as a dot.
 `Cpp/Config/DefaultInput.ini` holds engine settings only, no action or key mappings.
 
 **Command view** = the free SpaceGod camera. **Controls** = at any seat (helm, fighter, station, gun, worker). `InputState::Arbitrate`

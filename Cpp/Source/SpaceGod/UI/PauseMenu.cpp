@@ -5,6 +5,8 @@
 #include "Audio/AudioOutput.h" // US-T654
 #include "GameSettingsHost.h"
 #include "Input/Gamepad.h" // US-T437
+#include "Input/Joystick.h" // US-T827
+#include "Input/MouseFlight.h" // US-T827
 #include "Input/KeyBindings.h" // US-T249
 #include "PlayerOptions.h" // US-T252
 #include "Settings/GameSetting.h"
@@ -429,7 +431,10 @@ namespace SpaceGod::UI
 			shown = grouped;
 		}
 
-		auto view = Rect(px, listTop, pw, bottom - listTop);
+		// US-T827: the Controls page keeps a strip under its list for the curve preview.
+		const bool curvePage = !searching && group == SettingGroups::Controls;
+		const float curveH = curvePage ? 92.0f : 0.0f;
+		auto view = Rect(px, listTop, pw, bottom - curveH - listTop);
 		// US-T437: each row's top (a group's header above its first action on the bindings page).
 		shownRowTops.Clear();
 		cs::List<std::pair<cs::String, float>> headers;
@@ -493,6 +498,7 @@ namespace SpaceGod::UI
 		if (rows == 0)
 			GUI::Label(Rect(4, 4, content.width - 8, 40), searching ? "No setting matches that." : "No system has declared a setting yet.", small);
 		GUI::EndScrollView();
+		if (curvePage) DrawCurvePreview(Rect(px, bottom - curveH + 6, pw, curveH - 6));
 
 		// Reset the group shown (or everything found), and Back.
 		float by = r.yMax() - 46;
@@ -514,6 +520,97 @@ namespace SpaceGod::UI
 			search = ""; // the button leaves the page outright; only Esc stops at clearing a search first
 			Back();
 		}
+	}
+
+	void PauseMenu::DrawCurvePreview(Rect r)
+	{
+		using Input::JoyAxis;
+		enum class CurveDevice { Pad, Mouse, Joystick };
+		CurveDevice device = CurveDevice::Pad;
+		JoyAxis axis = JoyAxis::Pitch;
+		if (settingsPick >= 0 && settingsPick < shownSettings.Count())
+		{
+			const cs::String& key = shownSettings[settingsPick]->Key;
+			if (cs::Strings::StartsWith(key, "controls.mouseFlight")) device = CurveDevice::Mouse;
+			for (int i = 0; i < static_cast<int>(JoyAxis::Count); i++)
+			{
+				const cs::String& source = Input::Joystick::Source(static_cast<JoyAxis>(i))->Key;
+				if (key == source || (cs::Strings::StartsWith(key, source) && key.size() > source.size() && key[source.size()] == '.'))
+				{
+					device = CurveDevice::Joystick;
+					axis = static_cast<JoyAxis>(i);
+				}
+			}
+		}
+
+		// The curve's settings and the live input, 0..1 off centre (off the stop, for a throttle).
+		float inner = 0, outer = 0, exponent = 1, live = 0;
+		cs::String name;
+		if (device == CurveDevice::Pad)
+		{
+			const Input::GamepadDevice& pad = Input::GamepadDevice::current();
+			inner = static_cast<float>(Input::Gamepad::DeadZone()->Value);
+			outer = static_cast<float>(Input::Gamepad::OuterDeadZone()->Value);
+			exponent = Input::Gamepad::CurveExponent();
+			live = pad.present ? Mathf::Clamp01(Mathf::Max(pad.leftStick.magnitude(), pad.rightStick.magnitude())) : 0.0f;
+			name = "Gamepad sticks";
+		}
+		else if (device == CurveDevice::Mouse)
+		{
+			live = Mathf::Clamp01(Input::MouseFlight::Cursor().magnitude());
+			name = "Mouse virtual stick (across: the cursor, share of the half-screen)";
+		}
+		else
+		{
+			inner = static_cast<float>(Input::Joystick::InnerDeadZone(axis)->Value);
+			outer = static_cast<float>(Input::Joystick::OuterDeadZone(axis)->Value);
+			exponent = static_cast<float>(Input::Joystick::Exponent(axis)->Value);
+			const Input::JoystickDevice& stick = Input::JoystickDevice::current();
+			int source = Input::Joystick::Source(axis)->Index;
+			float raw = stick.present && source > 0 ? stick.axes[Mathf::Clamp(source, 1, Input::JoystickDevice::AxisCount) - 1] : 0.0f;
+			if (axis == JoyAxis::Throttle)
+			{
+				float lever = Mathf::Clamp01((raw + 1.0f) * 0.5f);
+				live = Input::Joystick::Invert(axis)->Value ? 1.0f - lever : lever;
+			}
+			else live = Mathf::Clamp01(Mathf::Abs(raw));
+			name = cs::Cat(Input::Joystick::Source(axis)->Label, source > 0 ? cs::String() : cs::String(" (no axis set)"));
+		}
+		auto curve = [&](float x)
+		{
+			return device == CurveDevice::Mouse ? Input::MouseFlight::Shape(Vector2(x, 0)).x : Input::AxisCurve::Apply(x, inner, outer, exponent, false);
+		};
+
+		// The plot: a square, input across, output up; the curve sampled, the live input a dot on it.
+		const float side = r.height;
+		auto plot = Rect(r.x, r.y, side, side);
+		GUI::DrawTexture(plot, fieldTexture);
+		const auto& white = Texture2D::whiteTexture();
+		Color old = GUI::color;
+		const int samples = 48;
+		GUI::color = UiStyle::Dim;
+		for (int i = 0; i <= samples; i += 4) // the straight line, for comparison
+		{
+			float x = static_cast<float>(i) / samples;
+			GUI::DrawTexture(Rect(plot.x + x * (side - 2), plot.yMax() - 2 - x * (side - 2), 1, 1), white);
+		}
+		GUI::color = UiStyle::Accent;
+		for (int i = 0; i <= samples; i++)
+		{
+			float x = static_cast<float>(i) / samples;
+			float y = Mathf::Clamp01(curve(x));
+			GUI::DrawTexture(Rect(plot.x + x * (side - 2), plot.yMax() - 2 - y * (side - 2), 2, 2), white);
+		}
+		float out = Mathf::Clamp01(curve(live));
+		GUI::color = UiStyle::Warning;
+		GUI::DrawTexture(Rect(plot.x + live * (side - 2) - 3, plot.yMax() - 2 - out * (side - 2) - 3, 7, 7), white);
+		GUI::color = old;
+
+		float tx = plot.xMax() + 12, tw = r.xMax() - tx;
+		GUI::Label(Rect(tx, r.y, tw, 20), cs::Cat("Curve: ", name), label);
+		GUI::Label(Rect(tx, r.y + 22, tw, 18), cs::Cat("In ", cs::ToInt(cs::Math::Round(live * 100)), "%  ->  out ", cs::ToInt(cs::Math::Round(out * 100)), "%"), text);
+		GUI::Label(Rect(tx, r.y + 44, tw, 36),
+			"Input across, output up; the dot is the device now. Pick a joystick or virtual stick row to see its curve.", small);
 	}
 
 	void PauseMenu::NavGroup(const cs::String& g, Rect r, bool searching)
