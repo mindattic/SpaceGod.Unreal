@@ -467,18 +467,27 @@ namespace SpaceGod::Core
 			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "flight model handling throttle acceleration assist");
 	}
 
+	cs::Ref<RangeSetting> AssistThrottle::HeavySeconds(const char* key, const char* label, double seconds, const char* what)
+	{
+		return cs::New<RangeSetting>(key, SettingGroups::Dogfighting, label, seconds, 0.5, 20, 0.1,
+			cs::Cat("With flight assist on, how long a heavy fighter takes under your hands to ", what, "; its flight computer eases no faster than this, so it feels its weight (the boost still kicks). Crews fly on the hull's own ease."),
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.#"), " s"); }), "flight model handling throttle acceleration assist heavy fighter");
+	}
+
 	const cs::Ref<RangeSetting>& AssistThrottle::ToTop(FlightFamily family)
 	{
 		static const cs::Ref<RangeSetting> light = Seconds("flight.lightFighter.toTop", "Light fighters: 0 to top speed", 2.5, "reach top speed from rest");
 		static const cs::Ref<RangeSetting> interceptor = Seconds("flight.interceptor.toTop", "Interceptors: 0 to top speed", 2.2, "reach top speed from rest");
 		static const cs::Ref<RangeSetting> runner = Seconds("flight.runner.toTop", "Couriers: 0 to top speed", 3, "reach top speed from rest");
 		static const cs::Ref<RangeSetting> bomber = Seconds("flight.bomber.toTop", "Bombers: 0 to top speed", 5, "reach top speed from rest");
+		static const cs::Ref<RangeSetting> heavy = HeavySeconds("flight.heavyFighter.toTop", "Heavy fighters: 0 to top speed", 3.5, "reach top speed from rest");
 		static const cs::Ref<RangeSetting> none;
 		switch (family)
 		{
 			case FlightFamily::LightFighter: return light;
 			case FlightFamily::Interceptor: return interceptor;
 			case FlightFamily::Runner: return runner;
+			case FlightFamily::HeavyFighter: return heavy;
 			case FlightFamily::Bomber: return bomber;
 			default: return none;
 		}
@@ -490,12 +499,14 @@ namespace SpaceGod::Core
 		static const cs::Ref<RangeSetting> interceptor = Seconds("flight.interceptor.toStop", "Interceptors: top speed to stop", 1.8, "stop from top speed");
 		static const cs::Ref<RangeSetting> runner = Seconds("flight.runner.toStop", "Couriers: top speed to stop", 3, "stop from top speed");
 		static const cs::Ref<RangeSetting> bomber = Seconds("flight.bomber.toStop", "Bombers: top speed to stop", 4.5, "stop from top speed");
+		static const cs::Ref<RangeSetting> heavy = HeavySeconds("flight.heavyFighter.toStop", "Heavy fighters: top speed to stop", 3, "stop from top speed");
 		static const cs::Ref<RangeSetting> none;
 		switch (family)
 		{
 			case FlightFamily::LightFighter: return light;
 			case FlightFamily::Interceptor: return interceptor;
 			case FlightFamily::Runner: return runner;
+			case FlightFamily::HeavyFighter: return heavy;
 			case FlightFamily::Bomber: return bomber;
 			default: return none;
 		}

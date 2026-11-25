@@ -524,7 +524,8 @@ namespace SpaceGod::Core
 
 	private:
 		/// <summary>The assisted step on this model's <see cref="Handling"/>; with <paramref name="kickS"/> above 0 the hull
-		/// gathers forward speed on that time constant instead of the settle's (the boost's kick, US-T80).</summary>
+		/// gathers forward speed on that time constant instead of the settle's (the boost's kick, US-T80). Under the player's
+		/// hands <see cref="PilotInput.ToTopS"/> and <see cref="PilotInput.ToStopS"/> cap the forward ease (US-T823).</summary>
 		void Fly(PilotState& s, const cs::Ref<ShipCombat>& combat, const HullDynamics& hull, const PilotTuning& tuning, const PilotInput& input, DVec3 gravityKmS2, double dt, double kickS) const;
 
 		static double Clamp(double x);

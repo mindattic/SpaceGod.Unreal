@@ -107,6 +107,9 @@ Speeds stay true scale: the targets are times, which is what the hand feels. Eve
   This is the flight computer's push (the light fighter's `Grip` already lets assist push across the nose harder than
   the manoeuvre thrusters): a piloted-only floor on the assist's push along the nose, as `SpinUpS` is a floor on the
   attitude thrusters', so the crews and the Bench keep their numbers.
+- The heavy fighter is the other way about: its assist eases onto the set point on its own settle (0.9 s piloted), so
+  it would reach top in about 1 s. Its `flight.heavyFighter.toTop` / `toStop` (3.5 / 3.0 s) are a piloted-only
+  ceiling on that forward ease in `HeavyFighterFlightModel::Fly` (US-T823); the boost kick and bleed still apply.
 - Speed-matching: with a lock held, one key sets the throttle's set point to the target's speed (Freelancer's match
   speed), so a chase is aiming, not throttle-juggling.
 

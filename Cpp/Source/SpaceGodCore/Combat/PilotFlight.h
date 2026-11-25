@@ -77,7 +77,9 @@ namespace SpaceGod::Core
 
 		/// <summary>The flight computer's throttle (US-T818, <see cref="AssistThrottle"/>): with assist on, the push along the
 		/// nose is at least enough to reach top speed from rest in <see cref="ToTopS"/> and to stop from it in
-		/// <see cref="ToStopS"/>, s. Set only with <see cref="Piloted"/>; 0 for every crew, which keeps the hull's own thrust.</summary>
+		/// <see cref="ToStopS"/>, s. The heavy fighter reads the pair as a ceiling instead (US-T823): its ease gathers and
+		/// sheds way along the nose no faster than that. Set only with <see cref="Piloted"/>; 0 for every crew, which keeps
+		/// the hull's own thrust.</summary>
 		double ToTopS = 0, ToStopS = 0;
 
 		/// <summary>The least roll rate with assist on, deg/s (US-T818). Set only with <see cref="Piloted"/>; 0 for every crew,

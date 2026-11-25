@@ -290,6 +290,8 @@ namespace SpaceGod::Core
 	/// reaches top speed from rest within <see cref="ToTop"/> and stops from it within <see cref="ToStop"/>, however weak
 	/// its own drive, and the light fighter rolls at least <see cref="LightFighterRoll"/>. A floor on assist's push along
 	/// the nose, as the feel's spin-up is on the attitude thrusters'; crews keep the hull's own thrust and the catalog's roll.
+	/// The heavy fighter's pair is the other way about (US-T823): a ceiling on its own uncapped ease, so it gathers and
+	/// sheds way no faster than its 0-to-top and top-to-stop (<see cref="HeavyFighterFlightModel.Fly"/>).
 	/// </summary>
 	// [SettingsSource]
 	class SPACEGODCORE_API AssistThrottle
@@ -342,6 +344,7 @@ namespace SpaceGod::Core
 	private:
 		static bool LightFamily(FlightFamily family);
 		static cs::Ref<RangeSetting> Seconds(const char* key, const char* label, double seconds, const char* what);
+		static cs::Ref<RangeSetting> HeavySeconds(const char* key, const char* label, double seconds, const char* what);
 		static cs::Ref<RangeSetting> SpinUpSeconds(const char* key, const char* label, double seconds);
 	};
 

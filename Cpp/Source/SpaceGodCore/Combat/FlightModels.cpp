@@ -335,6 +335,23 @@ namespace SpaceGod::Core
 		auto ease = (commanded - s.Vel) / Max(dt, EaseTimeConstantS()) - gravityKmS2;
 		double along = DVec3::Dot(s.Vel, f);
 		double fwd = DVec3::Dot(ease, f);
+		// The player's throttle ceiling (US-T823, docs/FlightFeel.md): under the player's hands the forward ease gathers way
+		// no faster than the set point over ToTopS and sheds it no faster than over ToStopS, so the heavy fighter answers
+		// its throttle in its 3.5 s / 3.0 s rather than its 0.9 s settle. Crews never set them, so the Bench holds.
+		if (input.Piloted && (input.ToTopS > 0 || input.ToStopS > 0))
+		{
+			double g = DVec3::Dot(gravityKmS2, f);
+			double push = fwd + g; // the ease's own change along the nose, gravity aside
+			double top = Max(tuning.MaxSpeed, setPoint);
+			bool gathering = (push > 0 && along >= 0) || (push < 0 && along <= 0);
+			double limitS = gathering ? input.ToTopS : input.ToStopS;
+			if (limitS > 0)
+			{
+				double cap = top / limitS;
+				push = Max(-cap, Min(cap, push));
+				fwd = push - g;
+			}
+		}
 		// The boost's kick (US-T80, the player's only): while it fires, forward speed is gathered on the short kick rather
 		// than the settle, so the surge lands in the back at once; it only ever adds push, never brakes.
 		if (kickS > 0)
