@@ -4,6 +4,7 @@
 #include "UI/Hud.h"
 
 #include "UnitySpaceApp.h"
+#include "Audio/InterfaceSounds.h" // US-T751
 #include "UI/Icons.h"
 
 #include "Camera/SpaceCamera.h"
@@ -151,9 +152,12 @@ namespace SpaceGod::UI
 		if (hitFeed.Count() > HitFeedMax) hitFeed.RemoveRange(0, hitFeed.Count() - HitFeedMax);
 	}
 
-	void Hud::ConfirmKill(const cs::Ref<BattleUnit>& unit, const cs::String& how, Color tint, float now)
+	void Hud::ConfirmKill(const cs::Ref<BattleUnit>& unit, const cs::String& how, Color tint, float now, const char* callout, bool destroyed)
 	{
 		killMarkAt = now;
+		killCallout = cs::Cat(callout, " - ", unit->Name());
+		killCalloutTint = tint;
+		Audio::InterfaceSounds::HitConfirm(destroyed ? Audio::InterfaceSounds::HitCue::Kill : Audio::InterfaceSounds::HitCue::Disabled);
 		AddHitFeed(cs::Cat(unit->Name(), " ", how), tint, now);
 		// US-T364: on the timeline as the unit's own, and not again when the fate scan sees it fall or strike.
 		AddMoment(cs::Cat("You: the ", unit->Name(), " ", how), tint);
@@ -554,7 +558,7 @@ namespace SpaceGod::UI
 					// Its own fire, or a hull it had been hitting going up from what else hit it (a ram, a mine, flak).
 					if (ours || (hitStruck.TryGetValue(fx.Unit, last) && now - last < 4.0f))
 					{
-						ConfirmKill(fx.Unit, "destroyed", KillMarkColor, now);
+						ConfirmKill(fx.Unit, "destroyed", KillMarkColor, now, "KILL", true);
 						hitTally.Destroyed++;
 						hitStruck.Remove(fx.Unit);
 					}
@@ -566,7 +570,7 @@ namespace SpaceGod::UI
 					float last = -100.0f;
 					if (fx.Unit->Surrendering && hitStruck.TryGetValue(fx.Unit, last) && now - last < HitCreditSeconds)
 					{
-						ConfirmKill(fx.Unit, "struck colours", LockColor, now);
+						ConfirmKill(fx.Unit, "struck colours", LockColor, now, "STRUCK", false);
 						hitTally.Struck++;
 						hitStruck.Remove(fx.Unit);
 					}
@@ -576,6 +580,7 @@ namespace SpaceGod::UI
 					break;
 			}
 		}
+		if (marked) PlayHitCue(hitMark, now);
 
 		// Crippled by the unit's fire: no engines, the hull nearly gone or the bridge lost.
 		cs::List<cs::Ref<BattleUnit>> drop;
@@ -584,10 +589,19 @@ namespace SpaceGod::UI
 			if (now - hitStruck[u] > HitCreditSeconds || u == nullptr || !u->Present()) { drop.Add(u); continue; }
 			if (hitDisabled.ContainsKey(u) || u->Combat == nullptr || !u->Combat->Disabled()) continue;
 			hitDisabled[u] = now;
-			ConfirmKill(u, "disabled", Color(1.0f, 0.62f, 0.3f, 1.0f), now);
+			ConfirmKill(u, "disabled", Color(1.0f, 0.62f, 0.3f, 1.0f), now, "DISABLED", false);
 			hitTally.Disabled++;
 		}
 		for (const auto& u : drop) hitStruck.Remove(u);
+	}
+
+	void Hud::PlayHitCue(HitMark mark, float now)
+	{
+		if (now - hitCueAt < HitCueGap && static_cast<int>(mark) <= static_cast<int>(hitCueMark)) return;
+		hitCueAt = now;
+		hitCueMark = mark;
+		using Audio::InterfaceSounds::HitCue;
+		Audio::InterfaceSounds::HitConfirm(mark == HitMark::Shield ? HitCue::Shield : mark == HitMark::WeakPoint ? HitCue::WeakPoint : HitCue::Hull);
 	}
 
 	void Hud::DrawEdgePulse(Color tint, float alpha)
@@ -746,10 +760,27 @@ namespace SpaceGod::UI
 			DrawLine(at + bearing * (arcRadius + 9), at + bearing * (arcRadius + 1), tint, 2.0f);
 		}
 
-		// The hit marker: four ticks round the reticle.
+		// The hit marker: four ticks round the reticle on the hull, a broken ring flaring out on a shield (US-T751).
 		bool markers = InterfaceOptions::ShowsHitMarkers();
 		float markAge = now - hitMarkAt;
-		if (markers && markAge < HitMarkSeconds)
+		if (markers && markAge < HitMarkSeconds && hitMark == HitMark::Shield)
+		{
+			float t = markAge / HitMarkSeconds;
+			auto tint = WithAlpha(ShieldMarkColor, 1.0f - t);
+			float radius = Mathf::Lerp(9.0f, 15.0f, t);
+			constexpr int steps = 3;
+			constexpr float arcHalf = 28.0f * Mathf::Deg2Rad;
+			for (int q = 0; q < 4; q++)
+			{
+				float centre = (45.0f + 90.0f * q) * Mathf::Deg2Rad;
+				for (int k = 0; k < steps; k++)
+				{
+					float a0 = centre - arcHalf + 2 * arcHalf * k / steps, a1 = centre - arcHalf + 2 * arcHalf * (k + 1) / steps;
+					DrawLine(at + Vector2(Mathf::Cos(a0), Mathf::Sin(a0)) * radius, at + Vector2(Mathf::Cos(a1), Mathf::Sin(a1)) * radius, tint, 2.0f);
+				}
+			}
+		}
+		else if (markers && markAge < HitMarkSeconds)
 		{
 			float fade = 1.0f - markAge / HitMarkSeconds;
 			bool weak = hitMark == HitMark::WeakPoint;
@@ -776,6 +807,13 @@ namespace SpaceGod::UI
 					DrawLine(at + d * 12.0f, at + d * 26.0f, tint, 3.0f);
 				}
 			DrawRing(at, Mathf::Lerp(16.0f, 40.0f, t), tint);
+		}
+		// US-T751: the kill callout under the reticle, holding, then fading.
+		if (markers && killAge < KillCalloutSeconds && !killCallout.empty())
+		{
+			float alpha = Mathf::Min(1.0f, 2.5f * (1.0f - killAge / KillCalloutSeconds));
+			auto size = label->CalcSize(GUIContent(killCallout));
+			DrawLabel(killCallout, Vector2(at.x - size.x * 0.5f, at.y + 48.0f), WithAlpha(killCalloutTint, alpha), false);
 		}
 
 		DrawEscapes(battle, me, now);

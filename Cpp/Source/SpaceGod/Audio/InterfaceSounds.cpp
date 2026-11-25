@@ -207,6 +207,74 @@ namespace SpaceGod::Audio::InterfaceSounds
 			return clip;
 		}
 
+		// ---------------------------------------------------------------- hit confirms (US-T751)
+
+		const SoundClip& HitShield()
+		{
+			static const SoundClip clip = []
+			{
+				// A glassy tink falling away with a hiss: the round splashed on a shield.
+				auto b = Buffer(0.09f);
+				Tone(b, 0, 0.08f, 2900, 2100, 0.45f, Wave::Sine, 0.001f);
+				Noise(b, 0, 0.06f, 0.2f, 0.85f, 0.001f, 31);
+				return Finish(b, "HitShield", 0.4f);
+			}();
+			return clip;
+		}
+
+		const SoundClip& HitHull()
+		{
+			static const SoundClip clip = []
+			{
+				// A dry, short knock: metal struck.
+				auto b = Buffer(0.06f);
+				Tone(b, 0, 0.045f, 1100, 520, 0.5f, Wave::Square, 0.0005f);
+				Noise(b, 0, 0.03f, 0.3f, 0.4f, 0.0005f, 32);
+				return Finish(b, "HitHull", 0.45f);
+			}();
+			return clip;
+		}
+
+		const SoundClip& HitWeakPoint()
+		{
+			static const SoundClip clip = []
+			{
+				// The knock with a bright ping over it: something that mattered gave way.
+				auto b = Buffer(0.16f);
+				Tone(b, 0, 0.045f, 1100, 520, 0.5f, Wave::Square, 0.0005f);
+				Tone(b, 0.02f, 0.13f, 1760, 1760, 0.4f, Wave::Triangle, 0.001f);
+				return Finish(b, "HitWeakPoint", 0.5f);
+			}();
+			return clip;
+		}
+
+		const SoundClip& HitKill()
+		{
+			static const SoundClip clip = []
+			{
+				// A low thump and two rising notes: confirmed.
+				auto b = Buffer(0.42f);
+				Tone(b, 0, 0.14f, 160, 70, 0.5f, Wave::Sine, 0.001f);
+				Tone(b, 0.03f, 0.14f, 880, 880, 0.4f, Wave::Triangle, 0.002f);
+				Tone(b, 0.15f, 0.26f, 1318.5f, 1318.5f, 0.42f, Wave::Triangle, 0.002f);
+				return Finish(b, "HitKill", 0.55f);
+			}();
+			return clip;
+		}
+
+		const SoundClip& HitDisabled()
+		{
+			static const SoundClip clip = []
+			{
+				// Two level notes falling: out of the fight, not gone.
+				auto b = Buffer(0.32f);
+				Tone(b, 0, 0.12f, 880, 880, 0.4f, Wave::Triangle, 0.002f);
+				Tone(b, 0.12f, 0.2f, 659.3f, 659.3f, 0.4f, Wave::Triangle, 0.002f);
+				return Finish(b, "HitDisabled", 0.5f);
+			}();
+			return clip;
+		}
+
 		void Play(const SoundClip& clip, float volume = 1.0f) { GameAudio::Play2D(clip, AudioBus::Interface, volume); }
 
 		/// An alert: played, and captioned when Captions takes sounds (US-T636).
@@ -291,6 +359,19 @@ namespace SpaceGod::Audio::InterfaceSounds
 	{
 		savedSincePoll = true;
 		Alert(StarterSounds::Chime(), 0.6f, "[Saved chime]");
+	}
+
+	void HitConfirm(HitCue cue)
+	{
+		if (!GameAudio::Enabled()) return;
+		switch (cue)
+		{
+		case HitCue::Shield: Play(HitShield(), 0.45f); break;
+		case HitCue::Hull: Play(HitHull(), 0.55f); break;
+		case HitCue::WeakPoint: Play(HitWeakPoint(), 0.65f); break;
+		case HitCue::Kill: Alert(HitKill(), 0.8f, "[Kill confirmed]"); break;
+		case HitCue::Disabled: Alert(HitDisabled(), 0.7f, "[Target disabled]"); break;
+		}
 	}
 
 	void Poll(UnitySpaceApp* app)

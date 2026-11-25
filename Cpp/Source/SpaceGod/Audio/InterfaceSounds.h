@@ -14,9 +14,16 @@ namespace SpaceGod::Audio
 	///   opened or closed, a toast, a news report, an incoming hail, a comms line, a contract taken, completed or failed,
 	///   credits gained or spent.
 	/// - SaveDone is called where a save finishes (UnitySpaceApp::SaveTo and a toasted autosave).
+	/// - US-T751: HitConfirm is called by the HUD's hit feedback (UI/Hud.Hits.cpp) when the held unit's own fire lands or
+	///   a hull it hit falls: a cue per kind, heard over the battle's own impacts.
 	namespace InterfaceSounds
 	{
+		/// US-T751: what the held unit's fire did: struck a shield, the hull, an exposed weak point, or downed the hull
+		/// (destroyed) or left it crippled or striking its colours.
+		enum class HitCue : unsigned char { Shield, Hull, WeakPoint, Kill, Disabled };
+
 		void Poll(UnitySpaceApp* app);
 		void SaveDone();
+		void HitConfirm(HitCue cue);
 	}
 }

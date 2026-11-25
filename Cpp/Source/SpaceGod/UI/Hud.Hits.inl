@@ -5,8 +5,10 @@
 // shield and hull, never written back: nothing here enters the simulation. In every seat that fires (a helm, a launched
 // craft, a gun mount, a station):
 //   - a hit marker on the crosshair when the unit's own round, beam or missile lands, styled by what it struck: the
-//     shield (blue), the hull (white) or an exposed weak point (gold, larger);
+//     shield (a blue broken ring, a flare), the hull (white ticks) or an exposed weak point (gold ticks, larger); US-T751:
+//     with a confirm cue per kind (Audio/InterfaceSounds HitConfirm);
 //   - a kill marker and a line in a small combat feed when a hull it hit is destroyed, disabled or strikes its colours;
+//     US-T751: a callout under the reticle (KILL, DISABLED, STRUCK and the hull's name) and a confirm cue;
 //   - arcs round the reticle pointing where the held hull is taking fire from, blue on the shield and red on the hull,
 //     fading out; and a pulse round the screen's edge when its shields go down and when its hull goes critical;
 //   - US-T300: a threat warning for warheads homing on it and hostiles locking it (DrawThreatWarning);
@@ -68,6 +70,10 @@ private:
 	static constexpr float TimelineLinger = 8.0f;
 	static constexpr float HitMarkSeconds = 0.22f;
 	static constexpr float KillMarkSeconds = 0.75f;
+	/// US-T751: how long the kill callout stays under the reticle, and the least gap between two hit confirm cues (a
+	/// stream of rounds landing ticks, it does not buzz).
+	static constexpr float KillCalloutSeconds = 1.8f;
+	static constexpr float HitCueGap = 0.07f;
 	static constexpr float HitArcSeconds = 1.4f;
 	static constexpr float HitFeedSeconds = 5.0f;
 	static constexpr int HitFeedMax = 5;
@@ -84,6 +90,11 @@ private:
 	float hitMarkAt = -100.0f;
 	HitMark hitMark = HitMark::Hull;
 	float killMarkAt = -100.0f;
+	/// US-T751: the last kill's callout and its colour, and when the last hit confirm cue played and of what kind.
+	cs::String killCallout;
+	Color killCalloutTint;
+	float hitCueAt = -100.0f;
+	HitMark hitCueMark = HitMark::Hull;
 	float shieldDownAt = -100.0f;
 	float hullCriticalAt = -100.0f;
 	bool hadShield = false;
@@ -175,8 +186,14 @@ private:
 	/// <paramref name="mount"/> alone when a gun mount is held).
 	void TakeHitFx(const cs::Ref<Core::Battle>& battle, const cs::Ref<Core::BattleUnit>& me, const cs::Ref<Core::Subsystem>& mount, float now);
 
-	/// A hull the unit had a hand in has fallen (or struck, or is crippled): the kill marker and a feed line.
-	void ConfirmKill(const cs::Ref<Core::BattleUnit>& unit, const cs::String& how, Color tint, float now);
+	/// A hull the unit had a hand in has fallen (or struck, or is crippled): the kill marker and a feed line. US-T751: the
+	/// callout <paramref name="callout"/> and the hull's name under the reticle, and the kill cue when it was
+	/// <paramref name="destroyed"/> (else the disabled one).
+	void ConfirmKill(const cs::Ref<Core::BattleUnit>& unit, const cs::String& how, Color tint, float now, const char* callout, bool destroyed);
+
+	/// US-T751: the confirm cue for the frame's strongest hit, unless one played within HitCueGap (a stronger kind still
+	/// plays).
+	void PlayHitCue(HitMark mark, float now);
 
 	/// Where the reticle in use is on the screen: the seat's sight, the helm's crosshair or else its nose.
 	Vector2 HitReticle();
