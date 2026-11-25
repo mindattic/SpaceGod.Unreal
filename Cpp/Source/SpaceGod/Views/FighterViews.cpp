@@ -9,6 +9,7 @@
 #include "Rendering/ShipModels.h"
 #include "Rendering/StarSparrowKit.h"
 #include "Rendering/UscKit.h"
+#include "UnityCompat/UnityScene.h"
 #include "Views/LineStrip.h"
 
 #include "Combat/Battle.h"
@@ -60,6 +61,7 @@ namespace SpaceGod::Views
 			glowMaterial()->SetFloat("_Falloff", 2.0f);
 		}
 		if (!shipMaterial()) shipMaterial() = ShipModels::ProceduralMaterial();
+		glows = cs::New<UnityCompat::InstancedBatch>(root, quad(), glowMaterial());
 	}
 
 	void FighterViews::Update()
@@ -69,6 +71,9 @@ namespace SpaceGod::Views
 		cs::HashSet<cs::Ref<FlightDeck>> liveDecks;
 		auto cam = app->UnityCamera->transform;
 		double ppu = app->PixelsPerUnitAtUnitDistance();
+		auto rootWorld = UnityCompat::WorldMatrix::Of(*root);
+		auto toRoot = Quaternion::Inverse(root->rotation());
+		glows->Clear();
 		for (const auto& b : app->World()->War->Battles)
 		{
 			for (const auto& u : b->Units)
@@ -91,7 +96,6 @@ namespace SpaceGod::Views
 				// below a tenth of a pixel and gives way to the halo of the mesh as the hull grows past MarkFadePx.
 				bool model = RenderLod::DrawsModel(tier), shown = tier != LodTier::Culled || hullPx >= MarkFloorPx;
 				if (v->Hull->activeSelf != model) v->Hull->SetActive(model);
-				if (v->Glow->gameObject()->activeSelf != shown) v->Glow->gameObject()->SetActive(shown);
 				if (!shown)
 				{
 					v->Trail->SetVisible(false);
@@ -115,9 +119,10 @@ namespace SpaceGod::Views
 					* (1.0f - Mathf::Clamp01((hp - static_cast<float>(MarkFadePx)) / static_cast<float>(MarkFadePx)));
 				float px = markPx * Mathf::Max(rel.magnitude(), 1e-6f) / static_cast<float>(ppu);
 				// On its nozzles (US-T432), a hair behind them: the hull's own turn and scale carry the point.
-				v->Glow->localPosition = rel + v->Hull->transform->localRotation * (v->EngineAt * static_cast<float>(app->Scale()->ShipLength(u->LengthKm)));
-				v->Glow->SetRotation(Quaternion::LookRotation(v->Glow->position() - cam->position(), cam->up()));
-				v->Glow->localScale = Vector3::one() * Mathf::Max(px, static_cast<float>(app->Scale()->ShipLength(u->LengthKm)) * 0.8f);
+				// Facing the camera, in the one instanced batch every glow is drawn by (US-T721).
+				auto glowAt = rel + v->Hull->transform->localRotation * (v->EngineAt * static_cast<float>(app->Scale()->ShipLength(u->LengthKm)));
+				auto glowFacing = toRoot * Quaternion::LookRotation(rootWorld.MultiplyPoint(glowAt) - cam->position(), cam->up());
+				glows->Add(glowAt, glowFacing, Mathf::Max(px, static_cast<float>(app->Scale()->ShipLength(u->LengthKm)) * 0.8f));
 
 				if (now >= v->NextSample)
 				{
@@ -138,6 +143,7 @@ namespace SpaceGod::Views
 				}
 			}
 		}
+		glows->Flush();
 		cs::List<cs::Ref<BattleUnit>> gone;
 		for (auto kv : views)
 			if (!live.Contains(kv.first)) gone.Add(kv.first);
@@ -145,7 +151,6 @@ namespace SpaceGod::Views
 		{
 			auto v = views.At(u);
 			Destroy(v->Hull);
-			Destroy(v->Glow->gameObject());
 			v->Trail->Dispose();
 			views.Remove(u);
 		}
@@ -251,14 +256,6 @@ namespace SpaceGod::Views
 			}
 			v->EngineAt = (mid + out) / static_cast<float>(ports.Count());
 		}
-
-		auto glow = NewGameObject("Engine");
-		glow->transform->SetParent(root, false);
-		AddComponent<MeshFilter>(glow)->sharedMesh = quad();
-		auto gr = AddComponent<MeshRenderer>(glow);
-		gr->SetSharedMaterial(glowMaterial());
-		gr->shadowCastingMode = ShadowCastingMode::Off;
-		v->Glow = glow->transform;
 
 		v->Trail = cs::New<LineStrip>("Trail", root);
 		v->Trail->SetVisible(false);

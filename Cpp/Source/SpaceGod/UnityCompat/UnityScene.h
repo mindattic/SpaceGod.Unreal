@@ -81,4 +81,51 @@ namespace SpaceGod::UnityCompat
 		/// casts. Entries whose component is gone are left for the reader to skip.
 		static const TArray<TWeakObjectPtr<UPrimitiveComponent>>& ShadowCasters();
 	};
+
+	/// <summary>
+	/// US-T721: many copies of one mesh in one material, drawn by one Unreal UInstancedStaticMeshComponent on the host
+	/// actor instead of a GameObject each: the far forms (impostors, icons) of crowds that would otherwise cost a draw
+	/// call apiece. Each frame <see cref="Clear"/>, an <see cref="Add"/> per copy in <c>parent</c>'s frame, then
+	/// <see cref="Flush"/>, which writes every transform in one batch update. A plain ISM rather than a HISM: every
+	/// instance moves every frame, which would rebuild a HISM's tree each time. The instance buffer only grows (copies
+	/// past the frame's count are collapsed to nothing), so a steady crowd allocates nothing per frame. Drawn while
+	/// <c>parent</c> is active and its layer is in the screen camera's culling mask, as a renderer would be.
+	/// </summary>
+	class InstancedBatch final
+	{
+	public:
+		InstancedBatch(const cs::Ref<Transform>& parent, const cs::Ref<Mesh>& mesh, const cs::Ref<Material>& material);
+		~InstancedBatch();
+		InstancedBatch(const InstancedBatch&) = delete;
+		InstancedBatch& operator=(const InstancedBatch&) = delete;
+
+		/// Starts a frame: no copies.
+		void Clear() { count = 0; }
+
+		/// A copy at <paramref name="position"/>, turned by <paramref name="rotation"/> and scaled by <paramref name="scale"/>
+		/// (uniformly), all in the parent's frame (a child's localPosition, localRotation and localScale).
+		void Add(Vector3 position, Quaternion rotation, float scale);
+
+		/// Writes the frame's copies to Unreal in one batch update.
+		void Flush();
+
+		/// The copies added since the last Clear.
+		int Count() const { return count; }
+
+	private:
+		struct Item
+		{
+			Vector3 Position;
+			Quaternion Rotation;
+			float Scale;
+		};
+		struct Engine;
+
+		std::weak_ptr<Transform> parent;
+		cs::Ref<Mesh> mesh;
+		cs::Ref<Material> material;
+		std::vector<Item> items;
+		int count = 0;
+		std::unique_ptr<Engine> engine;
+	};
 }

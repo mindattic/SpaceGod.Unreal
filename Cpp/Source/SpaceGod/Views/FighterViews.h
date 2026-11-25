@@ -16,6 +16,11 @@ namespace SpaceGod::Core
 	class FlightDeck;
 }
 
+namespace SpaceGod::UnityCompat
+{
+	class InstancedBatch;
+}
+
 namespace SpaceGod::Views
 {
 	class LineStrip;
@@ -32,7 +37,6 @@ namespace SpaceGod::Views
 		{
 		public:
 			cs::Ref<GameObject> Hull;
-			cs::Ref<Transform> Glow;
 			/// <summary>Where its engine glow sits in the hull's frame (one unit long): the middle of the nozzles its model
 			/// draws (US-T432), else just behind its stern.</summary>
 			Vector3 EngineAt = Vector3(0, 0, -0.55f);
@@ -44,6 +48,9 @@ namespace SpaceGod::Views
 		UnitySpaceApp* app;
 		cs::Ref<Transform> root;
 		cs::Dictionary<cs::Ref<Core::BattleUnit>, cs::Ref<View>> views;
+		/// <summary>Every craft's engine glow, one instanced draw for the lot (US-T721): a squadron seen from across the
+		/// system is its sparks, and a thousand of them should cost what one does.</summary>
+		cs::Ref<UnityCompat::InstancedBatch> glows;
 
 		/// <summary>A flight deck's lights: the frames round its stern and bow mouths and its glide path.</summary>
 		class DeckView final

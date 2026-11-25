@@ -5,11 +5,15 @@
 #include "SpaceGodLog.h"
 
 #include "Components/DynamicMeshComponent.h"
+#include "Components/InstancedStaticMeshComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Engine/StaticMesh.h"
 #include "StaticMeshResources.h"
 #include "DynamicMesh/DynamicMesh3.h"
 #include "DynamicMesh/DynamicMeshAttributeSet.h"
+#include "DynamicMeshToMeshDescription.h"
+#include "MeshDescription.h"
+#include "StaticMeshAttributes.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
 #include "Materials/MaterialInstanceDynamic.h"
@@ -1015,5 +1019,133 @@ namespace SpaceGod::UnityCompat
 	{
 		if (Casters.Num() > 256) Casters.RemoveAll([](const TWeakObjectPtr<UPrimitiveComponent>& c) { return !c.IsValid() || !c->CastShadow; });
 		return Casters;
+	}
+
+	// ---------------------------------------------------------------- instanced batches (US-T721)
+
+	namespace
+	{
+		/// A Unity mesh as an Unreal static mesh (what an instanced component draws), from the conversion a renderer's
+		/// dynamic mesh gets.
+		UStaticMesh* StaticMeshOf(Mesh& mesh)
+		{
+			MeshHandle* h = Converted(mesh);
+			FMeshDescription description;
+			FStaticMeshAttributes attributes(description);
+			attributes.Register();
+			FDynamicMeshToMeshDescription convert;
+			convert.Convert(&CurrentMesh(mesh, *h), description);
+			auto* sm = NewObject<UStaticMesh>(GetTransientPackage(), NAME_None, RF_Transient);
+			for (int i = 0; i < FMath::Max(h->Sections, 1); i++) sm->GetStaticMaterials().Add(FStaticMaterial());
+			UStaticMesh::FBuildMeshDescriptionsParams params;
+			params.bMarkPackageDirty = false;
+			params.bCommitMeshDescription = false;
+			params.bFastBuild = true;
+			sm->BuildFromMeshDescriptions(TArray<const FMeshDescription*>{ &description }, params);
+			return sm;
+		}
+	}
+
+	struct InstancedBatch::Engine
+	{
+		TWeakObjectPtr<UInstancedStaticMeshComponent> Component;
+		ExitSafeStrong<UStaticMesh> Static;
+		const Mesh* Built = nullptr;
+		uint64_t BuiltVersion = 0;
+		TArray<FTransform> Transforms;
+		bool Visible = false;
+
+		~Engine()
+		{
+			if (!IsEngineExitRequested() && Component.IsValid()) Component->DestroyComponent();
+		}
+	};
+
+	InstancedBatch::InstancedBatch(const cs::Ref<Transform>& parent_, const cs::Ref<Mesh>& mesh_, const cs::Ref<Material>& material_)
+		: parent(parent_), mesh(mesh_), material(material_)
+	{
+	}
+
+	InstancedBatch::~InstancedBatch() = default;
+
+	void InstancedBatch::Add(Vector3 position, Quaternion rotation, float scale)
+	{
+		if (count == static_cast<int>(items.size())) items.push_back({});
+		items[count++] = { position, rotation, scale };
+	}
+
+	void InstancedBatch::Flush()
+	{
+		AActor* host = HostActor.Get();
+		if (!host) return;
+		if (!engine) engine = std::make_unique<Engine>();
+		Engine& e = *engine;
+		auto p = parent.lock();
+		auto go = p ? p->gameObject() : nullptr;
+		bool shown = count > 0 && mesh && !mesh->destroyed && material && !material->destroyed && go && go->activeInHierarchy()
+			&& ((ScreenMask >> (go->layer & 31)) & 1) != 0;
+		UInstancedStaticMeshComponent* c = e.Component.Get();
+		if (!shown)
+		{
+			if (c && e.Visible) c->SetVisibility(false);
+			e.Visible = false;
+			return;
+		}
+		if (c && c->GetOwner() != host)
+		{
+			c->DestroyComponent();
+			c = nullptr;
+		}
+		if (!c)
+		{
+			c = MakeComponent<UInstancedStaticMeshComponent>(host);
+			e.Component = c;
+			e.Built = nullptr;
+		}
+		if (e.Built != mesh.get() || e.BuiltVersion != mesh->Version)
+		{
+			e.Static.Reset(StaticMeshOf(*mesh));
+			c->SetStaticMesh(e.Static.Get());
+			e.Built = mesh.get();
+			e.BuiltVersion = mesh->Version;
+		}
+		UMaterialInterface* bind = SharedInstance(*material);
+		for (int i = 0; i < c->GetNumMaterials(); i++)
+			if (c->GetMaterial(i) != bind) c->SetMaterial(i, bind);
+		c->TranslucencySortPriority = ShaderBinding::SortPriority(material->shader.get());
+
+		// Each copy's Unity world matrix (the parent's times its own TRS), to Unreal as a renderer's transform is.
+		WorldMatrix w = WorldMatrix::Of(*p);
+		e.Transforms.Reset();
+		for (int n = 0; n < count; n++)
+		{
+			const Item& it = items[n];
+			Vector3 col[3] = { it.Rotation * Vector3(it.Scale, 0, 0), it.Rotation * Vector3(0, it.Scale, 0), it.Rotation * Vector3(0, 0, it.Scale) };
+			WorldMatrix iw;
+			for (int k = 0; k < 3; k++)
+			{
+				Vector3 wc = w.MultiplyVector(col[k]);
+				iw.m[0][k] = wc.x;
+				iw.m[1][k] = wc.y;
+				iw.m[2][k] = wc.z;
+			}
+			iw.t = w.MultiplyPoint(it.Position);
+			e.Transforms.Add(ToUnreal(iw));
+		}
+		// The instance buffer only grows: copies past this frame's count are collapsed to nothing.
+		const FTransform collapsed(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector);
+		int have = c->GetInstanceCount();
+		if (count > have)
+		{
+			int grown = FMath::Max(count, have + have / 2);
+			TArray<FTransform> added;
+			added.Init(collapsed, grown - have);
+			c->AddInstances(added, false, false, false);
+			have = grown;
+		}
+		while (e.Transforms.Num() < have) e.Transforms.Add(collapsed);
+		c->BatchUpdateInstancesTransforms(0, TArrayView<const FTransform>(e.Transforms.GetData(), have), false, true, true);
+		if (!e.Visible) c->SetVisibility(true);
+		e.Visible = true;
 	}
 }
