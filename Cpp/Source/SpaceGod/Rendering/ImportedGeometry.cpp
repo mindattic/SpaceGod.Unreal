@@ -34,6 +34,25 @@ namespace SpaceGod::Rendering
 					FVector3f v = pb.VertexPosition(i);
 					g.Vertices.push_back(mesh->ImportedRotation * (Vector3(v.X, v.Z, -v.Y) * k));
 				}
+				const FStaticMeshVertexBuffer& sb = lod.VertexBuffers.StaticMeshVertexBuffer;
+				if (sb.GetNumVertices() == n && sb.GetTangentData() != nullptr)
+				{
+					g.Normals.reserve(n);
+					for (uint32 i = 0; i < n; i++)
+					{
+						FVector4f t = sb.VertexTangentZ(i);
+						g.Normals.push_back(mesh->ImportedRotation * Vector3(t.X, t.Z, -t.Y));
+					}
+				}
+				if (sb.GetNumVertices() == n && sb.GetNumTexCoords() > 0 && sb.GetTexCoordData() != nullptr)
+				{
+					g.Uv0.reserve(n);
+					for (uint32 i = 0; i < n; i++)
+					{
+						FVector2f uv = sb.GetVertexUV(i, 0);
+						g.Uv0.push_back(Vector2(uv.X, uv.Y));
+					}
+				}
 				TArray<uint32> indices;
 				if (lod.IndexBuffer.GetNumIndices() > 0) lod.IndexBuffer.GetCopy(indices);
 				g.Triangles.reserve(indices.Num());

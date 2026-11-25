@@ -18,6 +18,10 @@ namespace SpaceGod::Rendering
 		std::vector<Vector3> Vertices;
 		/// <summary>Three vertex indices per triangle (their winding is not relied on: a caller orients the faces itself).</summary>
 		std::vector<int> Triangles;
+		/// <summary>Per vertex, in the same frame (US-T839; empty when the mesh keeps no tangents or uvs).</summary>
+		std::vector<Vector3> Normals;
+		/// <summary>The first uv channel as Unreal has it.</summary>
+		std::vector<Vector2> Uv0;
 		bool Ok = false;
 
 		/// <summary>The surface of <paramref name="mesh"/> when it draws an imported asset (cached per asset), else null.</summary>
