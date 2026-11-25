@@ -97,6 +97,7 @@ resized by hand.
 | Hyperlane (`laneride`), Interdiction (`interdiction`) | bottom edge | alert, always shown |
 | Navigation, Ships, Notices, Objectives | one window of tabs along the bottom edge, closed, over the rest (US-T200's bottom drawer) | HUD mode; Objectives: offers waiting |
 | Bounties, Contracts, Fleet, Outfitting (and its mechlab view), Trade desk, Port, Take charge (the seat picker), Save & load | floating, centred, where each always opened | its key, either mode (Save & load with the HUD hidden too) |
+| Missions (`missions`) | floating, centred | its tab or `sg.Missions show`, either mode; opens on a new debriefing (US-T812: the pilot's rank, callsign, tally and medals, the missions made from what the war is doing with their briefings and Accept, which drops into the fight through "Fly this", and the newest debriefing) |
 | Comms (`comms`), Tutorial (`tutorial`) | floating, centred over the foot | alert, always shown while it is up |
 
 A drawer opened by a key or a flag keeps it: the key (or the console, or co-op) sets the flag (`ShowMarket`, `ShowCargo`,

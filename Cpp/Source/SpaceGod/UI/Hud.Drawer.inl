@@ -70,6 +70,7 @@ public:
 	static constexpr const char* DrawerFtlId = "ftl";
 	static constexpr const char* DrawerBountiesId = "bounties";
 	static constexpr const char* DrawerContractsId = "contracts";
+	static constexpr const char* DrawerMissionsId = "missions"; // US-T812
 	static constexpr const char* DrawerFleetId = "fleet";
 	static constexpr const char* DrawerOutfitId = "outfit";
 	static constexpr const char* DrawerTradeId = "trade";

@@ -89,6 +89,17 @@ private:
 
 	cs::Ref<GUIStyle> opportunityHook;
 
+	// ---------------------------------------------------------------- the mission board (US-T812, Hud.Missions.cpp)
+
+	/// <summary>The pilot's career (rank, callsign, tally, medals), the missions on offer with the briefing of the one picked
+	/// and its Accept button, and the newest debriefing (the board opens on a new one).</summary>
+	void DrawMissions();
+
+	/// <summary>The mission whose briefing is shown (0: the newest debriefing).</summary>
+	int missionShown = 0;
+	cs::Ref<GUIStyle> missionText;
+	Vector2 missionScroll;
+
 	void DrawBrackets(Rect r, Color color, float thickness);
 
 	void DrawOffscreenPointer(Core::DVec3 scene, const cs::String& name);

@@ -7,6 +7,7 @@
 #include "Combat/CombatState.h"
 #include "Combat/Crews.h"
 #include "Combat/Dogfighting.h"
+#include "Combat/PilotCareer.h"
 #include "Combat/War.h"
 #include "Law/Law.h"
 #include "Persistence/ObjectGraph.h"
@@ -109,6 +110,7 @@ namespace SpaceGod::Core
 		if (book == nullptr) book = cs::New<TacticalWriteBack>();
 		book->Records.Add(r);
 		if (book->Records.Count() > HistoryCap) book->Records.RemoveAt(0);
+		PilotCareer::OnFlown(world, b, r, jd); // US-T812: the pilot's tally, medals, rank and any mission it settles
 		return r;
 	}
 

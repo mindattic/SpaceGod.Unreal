@@ -284,6 +284,10 @@ public:
 	/// <summary>The contracts board (F7) of the port in view: jobs to take, and the player's own to see through or give up.</summary>
 	bool ShowContracts = false;
 
+	/// <summary>US-T812: the mission board (its drawer's tab, sg.Missions, or a new debriefing): the pilot's career, the
+	/// missions on offer with their briefings, and the newest debriefing.</summary>
+	bool ShowMissions = false;
+
 	/// <summary>The player's fleet and property (F10): buy hulls and property, hire captains, give standing orders, read the books.</summary>
 	bool ShowFleet = false;
 

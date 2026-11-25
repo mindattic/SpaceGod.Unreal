@@ -19,6 +19,7 @@
 #include "UnitySpaceApp.h"
 #include "Camera/StarTravel.h"
 #include "Combat/Battle.h"
+#include "Combat/PilotCareer.h" // US-T812
 #include "Systems/CruiseDrive.h"
 
 #include "World.h"
@@ -239,6 +240,18 @@ namespace SpaceGod::UI
 		// ---- floating, centred: the boards and screens opened by their keys
 		AddPanel(floating(DrawerBountiesId, "BOUNTIES", "BOUNTY", 120, Vector2(768, 300)), [this] { DrawBounties(); }, &app->ShowBounties);
 		AddPanel(floating(DrawerContractsId, "CONTRACTS", "JOBS", 120, Vector2(868, 300)), [this] { DrawContracts(); }, &app->ShowContracts);
+		{
+			// US-T812: a new debriefing opens the board.
+			auto s = floating(DrawerMissionsId, "MISSIONS", "MISSIONS", 120, Vector2(768, 420));
+			s.available = [this, screenFree]
+			{
+				if (!screenFree()) return false;
+				auto career = Core::PilotCareer::Find(app->World());
+				if (career != nullptr && career->DebriefPending) app->ShowMissions = true;
+				return true;
+			};
+			AddPanel(s, [this] { DrawMissions(); }, &app->ShowMissions);
+		}
 		AddPanel(floating(DrawerFleetId, "FLEET", "FLEET", 110, Vector2(828, 520)), [this] { DrawFleet(); }, &app->ShowFleet);
 		AddPanel(floating(DrawerOutfitId, "OUTFITTING", "OUTFIT", 190, Vector2(608, 400)), [this] { DrawOutfit(); }, &app->ShowOutfit);
 		AddPanel(floating(DrawerTradeId, "TRADE DESK", "TRADE", 100, Vector2(868, 440)), [this] { DrawTradeDesk(); }, &app->ShowTrade);

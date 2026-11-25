@@ -184,6 +184,11 @@ public:
 	/// </summary>
 	void FlyThis(const Target& t);
 
+	/// <summary>US-T812: takes up mission <paramref name="id"/> from the board (<see cref="Core::PilotCareer.Accept"/>) and, when its
+	/// fight is under way, drops the player into it on the mission's side through <see cref="FlyThis"/>; an escort or an intercept
+	/// with no fight yet is flown to by its opportunity's marker. Single player only, like launching from the god view.</summary>
+	void AcceptMission(int id);
+
 private:
 	/// <summary>US-T806: the free fighter of <paramref name="side"/> (-1 any) in <paramref name="battle"/> nearest
 	/// <paramref name="nearKm"/> (battle-local): flying, not held by anyone, not on its way home, not a boarding shuttle.</summary>

@@ -16,6 +16,7 @@
 #include "Combat/Crews.h"
 #include "Combat/Diplomacy.h"
 #include "Combat/PatrolWings.h"
+#include "Combat/PilotCareer.h" // US-T812
 #include "Combat/Pursuit.h"
 #include "Combat/Salvage.h"
 #include "Combat/War.h"
@@ -202,6 +203,7 @@ namespace SpaceGod::Core
 	{
 		if (War == nullptr) return;
 		Adventures->Update(jd, EventSources::Of(shared_from_this(), jd), playerHelioKm, PilotedShip);
+		PilotCareer::Update(shared_from_this(), jd); // US-T812: the mission board, only with a player present
 	}
 
 	DVec3 World::WreckHelio(cs::Ref<Wreck> w, double jd)

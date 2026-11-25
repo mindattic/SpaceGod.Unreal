@@ -32,6 +32,7 @@
 #include "Combat/SquadOrders.h" // US-T140: War.Squads
 #include "Combat/RaidDistress.h" // US-T194: War.Distress
 #include "Combat/TacticalWriteBack.h" // US-T809: War.WriteBack
+#include "Combat/PilotCareer.h" // US-T812: War.Career
 #include "Combat/War.h"
 #include "Combat/Wreck.h"
 #include "DVec3.h"
@@ -398,7 +399,8 @@ namespace SpaceGod::Core
 		SG_F(siegeDays), SG_F(warStartJd), SG_F(world),
 		SG_OPT(Squads), // US-T140: bands closing on marks and those stood down, absent from older saves
 		SG_OPT(Distress), // US-T194: distress calls and the patrols answering them, absent from older saves
-		SG_OPT(WriteBack)) // US-T809: the fights the player flew in, absent from older saves
+		SG_OPT(WriteBack), // US-T809: the fights the player flew in, absent from older saves
+		SG_OPT(Career)) // US-T812: the pilot's career and missions, absent from older saves
 
 	SG_SERIALIZE(WeaponSpec, "Unity.SpaceGod.Core.WeaponSpec",
 		SG_F(Accuracy), SG_F(Ammo), SG_F(AntiSmall), SG_F(BurstKm), SG_F(Cooldown), SG_F(Damage), SG_F(Deploy),

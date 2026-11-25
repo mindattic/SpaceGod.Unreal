@@ -30,6 +30,7 @@ namespace SpaceGod::Core
 	class SquadOrders;
 	class RaidDistress; // US-T194
 	class TacticalWriteBack; // US-T809
+	class PilotCareer; // US-T812
 	enum class Good : int;
 	enum class ShipClass : int;
 	enum class SurrenderTerms : int;
@@ -470,6 +471,10 @@ namespace SpaceGod::Core
 		/// <summary>The fights the player flew in and what they wrote back (US-T809). Null until the first one ends (older
 		/// saves, and every fight nobody flew).</summary>
 		cs::Ref<TacticalWriteBack> WriteBack;
+
+		/// <summary>The pilot's career and the missions on offer (US-T812). Null until a player is present or flies (older
+		/// saves, and the AI-only bench).</summary>
+		cs::Ref<PilotCareer> Career;
 
 		/// <summary>
 		/// A patrol interdicts the player's wanted ship (see <see cref="Law.UpdatePilot"/>): a fight off
