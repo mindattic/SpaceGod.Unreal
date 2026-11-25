@@ -58,6 +58,10 @@ namespace SpaceGod::Core
 		std::pair<DVec3, DVec3> e;
 		DVec3 sep;
 		DVec3 off = evasion.TryGetValue(c, e) ? e.first : DVec3::Zero;
+		// US-T726: a Far fleet's hull sits where its fold has eased it to by the last step.
+		FoldedSidestep f;
+		DVec3 foldVel;
+		if (folded.Count() > 0 && folded.TryGetValue(c, f)) off = Unfold(f, lastAvoidanceJd, foldVel);
 		return separation.TryGetValue(c, sep) ? off + sep : off;
 	}
 
@@ -507,6 +511,13 @@ namespace SpaceGod::Core
 		auto started = std::chrono::steady_clock::now();
 		bool tiered = Tiers.Active();
 		double sweepMs = 0, midMs = 0;
+		if (!tiered && folded.Count() > 0)
+		{
+			// US-T726: the observers went away and every fleet is Near again: each folded hull comes back where its fold has it.
+			auto unfolding = cs::List<cs::Ref<Ship>>();
+			for (auto kv : folded) unfolding.Add(kv.first);
+			for (const auto& s : unfolding) Materialise(s, jd);
+		}
 		auto list = cs::List<cs::Ref<Ship>>();
 		// US-T725: the Mid fleets due a step this frame: sidestepped on a worker (MidSidestep), not in the solve below.
 		auto mid = cs::List<cs::Ref<Ship>>();
@@ -523,7 +534,17 @@ namespace SpaceGod::Core
 				const auto& ship = ships[k];
 				if (!Manoeuvrable(ship) || (IsHeld != nullptr && IsHeld(ship))) continue;
 				int key = ship->Controller()->Id;
-				if (Tiers.DueRetier(k, count)) Tiers.Retier(key, BaseStateOf(ship, jd).HelioKm);
+				if (Tiers.DueRetier(k, count))
+				{
+					auto was = Tiers.TierOf(key);
+					Tiers.Retier(key, BaseStateOf(ship, jd).HelioKm);
+					auto now = Tiers.TierOf(key);
+					// US-T726: into Far the sidestep folds into the aggregate; out of it (or Mid into Near) the hull steps on
+					// from where it is held, over this frame alone, never the whole stretch it skipped.
+					if (now == SimTier::Far && was != SimTier::Far) Fold(ship, jd);
+					else if (was == SimTier::Far && now != SimTier::Far) Materialise(ship, jd);
+					if (now < was) avoidedJd[ship] = jd - dt;
+				}
 				if (!Tiers.Steps(key)) continue;
 				if (Tiers.TierOf(key) == SimTier::Mid) mid.Add(ship);
 				else list.Add(ship);
@@ -732,6 +753,11 @@ namespace SpaceGod::Core
 			stale.Clear();
 			for (auto kv : avoidedJd) if (!Manoeuvrable(kv.first) || (IsHeld != nullptr && IsHeld(kv.first))) stale.Add(kv.first);
 			for (const auto& s : stale) avoidedJd.Remove(s);
+			// US-T726: a fold is dropped once it has eased out (or its hull stopped flying free).
+			stale.Clear();
+			for (auto kv : folded)
+				if (!Manoeuvrable(kv.first) || (IsHeld != nullptr && IsHeld(kv.first)) || (jd - kv.second.Jd) * (4 / 0.0104) > 40) stale.Add(kv.first);
+			for (const auto& s : stale) folded.Remove(s);
 		}
 		if (mid.Count() > 0)
 		{
@@ -882,6 +908,12 @@ namespace SpaceGod::Core
 			const auto& s = midHulls[i];
 			if (!Manoeuvrable(s) || (IsHeld != nullptr && IsHeld(s))) continue;
 			const auto& r = job->Out[static_cast<size_t>(i)];
+			// US-T726: a hull gone Far since its batch left folds what came back.
+			if (folded.ContainsKey(s))
+			{
+				folded[s] = FoldedSidestep{ r.Settled ? DVec3::Zero : r.Off, r.Settled ? DVec3::Zero : r.OffVel, lastAvoidanceJd };
+				continue;
+			}
 			if (r.Settled) evasion.Remove(s);
 			else evasion[s] = std::make_pair(r.Off, r.OffVel);
 			if (r.From >= 0) evadingFrom[s] = r.From < n ? midHulls[r.From] : midObstacles[r.From - n];
@@ -889,6 +921,34 @@ namespace SpaceGod::Core
 		Tiers.ReportWorker(SimTier::Mid, job->WorkerMs);
 		midHulls.Clear();
 		midObstacles.Clear();
+	}
+
+	DVec3 Fleet::Unfold(const FoldedSidestep& f, double jd, DVec3& vel)
+	{
+		constexpr double omega = 4 / 0.0104;
+		double t = cs::Double::IsNaN(jd) ? 0 : cs::Math::Max(0.0, jd - f.Jd);
+		double decay = std::exp(-omega * t);
+		auto drift = f.Vel + f.Off * omega;
+		vel = (f.Vel - drift * (omega * t)) * decay;
+		return (f.Off + drift * t) * decay;
+	}
+
+	void Fleet::Fold(const cs::Ref<Ship>& s, double jd)
+	{
+		std::pair<DVec3, DVec3> e{};
+		if (evasion.TryGetValue(s, e)) folded[s] = FoldedSidestep{ e.first, e.second, jd };
+		evasion.Remove(s);
+		avoidedJd.Remove(s);
+	}
+
+	void Fleet::Materialise(const cs::Ref<Ship>& s, double jd)
+	{
+		FoldedSidestep f;
+		if (!folded.TryGetValue(s, f)) return;
+		folded.Remove(s);
+		DVec3 vel;
+		auto off = Unfold(f, jd, vel);
+		if (off.LengthSquared() >= 1e-8 || vel.LengthSquared() >= 1e-8) evasion[s] = std::make_pair(off, vel);
 	}
 
 	void Fleet::ReportHeld(const cs::Ref<Ship>& ship, DVec3 helioKm, DVec3 velocityKmS, double jd)

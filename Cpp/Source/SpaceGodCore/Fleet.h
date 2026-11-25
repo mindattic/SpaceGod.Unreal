@@ -219,6 +219,24 @@ namespace SpaceGod::Core
 		/// <summary>US-T724: the date each hull last had its sidestep stepped, while tiers are in force (a Mid or Far hull skips frames).</summary>
 		cs::Dictionary<cs::Ref<Ship>, double> avoidedJd = cs::Dictionary<cs::Ref<Ship>, double>();
 
+		/// <summary>US-T726: a Far fleet's sidestep, folded back onto its course. The fleet (its leader, the escorts drawn at
+		/// their slots round it) goes on as one aggregate on its schedule; the offset it had when it went Far eases back to
+		/// nothing in closed form from <see cref="Jd"/> (no per-frame work), and a promotion picks it up from there.</summary>
+		struct FoldedSidestep
+		{
+			DVec3 Off, Vel;
+			double Jd = 0;
+		};
+		cs::Dictionary<cs::Ref<Ship>, FoldedSidestep> folded = cs::Dictionary<cs::Ref<Ship>, FoldedSidestep>();
+		/// <summary>US-T726: the sidestep (and its rate, <paramref name="vel"/>) a fold has left at <paramref name="jd"/>: a
+		/// critically damped return onto the course, at the rate the solve eases hulls back.</summary>
+		static DVec3 Unfold(const FoldedSidestep& f, double jd, DVec3& vel);
+		/// <summary>US-T726: <paramref name="s"/> goes Far: its sidestep folds into the aggregate at <paramref name="jd"/>.</summary>
+		void Fold(const cs::Ref<Ship>& s, double jd);
+		/// <summary>US-T726: <paramref name="s"/> comes out of Far: its hull is placed where the fold has it at <paramref name="jd"/>
+		/// and steps on from there.</summary>
+		void Materialise(const cs::Ref<Ship>& s, double jd);
+
 		/// <summary>US-T725: the Mid tier's sidestep batch, solved on a worker task (its ownership rule is on the definition, in
 		/// Fleet.cpp). Launched at the end of one <see cref="StepAvoidance"/>, merged in hull order by the next.</summary>
 		struct MidSidestep;
