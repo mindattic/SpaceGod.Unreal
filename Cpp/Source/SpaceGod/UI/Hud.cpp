@@ -1843,6 +1843,7 @@ namespace SpaceGod::UI
 
 	cs::String Hud::RangeText(double km)
 	{
+		if (PlayerOptions::WriteAu(km, 1e7)) return Au(km); // US-T252: Settings > Gameplay > Distances
 		return Ranges::Readout(km); // US-T156: the one source comms reads its ranges from too
 	}
 

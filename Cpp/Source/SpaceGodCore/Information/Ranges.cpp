@@ -4,9 +4,23 @@
 
 namespace SpaceGod::Core
 {
+	namespace
+	{
+		// v (at least 1) rounded to three significant figures, with the decimals that keeps.
+		cs::String RangesThreeFigures(double v)
+		{
+			double step = cs::Math::Pow(10, cs::Math::Floor(cs::Math::Log10(v)) - 2);
+			v = cs::Math::Round(v / step) * step;
+			return cs::Fmt(v, v < 10 ? "0.00" : v < 100 ? "0.0" : "N0");
+		}
+	}
+
 	cs::String Ranges::Readout(double km)
 	{
-		return km < 10 ? cs::Cat(cs::Fmt(km * 1000, "N0"), " m") : cs::Cat(cs::Fmt(km, "0.0"), " km");
+		if (!(km >= 0.9995)) return cs::Cat(cs::Fmt(km * 1000, "N0"), " m");
+		if (km < 999500) return cs::Cat(RangesThreeFigures(km), " km");
+		if (km < 999.5e6) return cs::Cat(RangesThreeFigures(km / 1e6), " million km");
+		return cs::Cat(RangesThreeFigures(km / 1e9), " billion km");
 	}
 
 	cs::String Ranges::Spoken(double km)
