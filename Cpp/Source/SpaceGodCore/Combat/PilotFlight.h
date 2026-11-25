@@ -84,6 +84,15 @@ namespace SpaceGod::Core
 		/// which rolls at the catalog's rate.</summary>
 		double RollRateDegS = 0;
 
+		/// <summary>With assist off, the rotation stays rate-held (US-T828): pitch, yaw and roll fly to the stick's rate and stop
+		/// when it is let go, as with assist on (no auto-level), while translation stays Newtonian. Set only with
+		/// <see cref="Piloted"/>; false for every crew, whose assist-off turn is the hull's raw torque and keeps its spin.</summary>
+		bool AssistOffRateHeld = false;
+
+		/// <summary>With assist off, the attitude thrusters reach the top turn and roll rate in at most this, s (US-T828,
+		/// <see cref="AssistThrottle.SpinUp"/>). Set only with <see cref="Piloted"/>; 0 for every crew: the hull's own torque.</summary>
+		double AssistOffSpinUpS = 0;
+
 		/// <summary>Drift (US-T165, Chorus style; <see cref="Drift"/>): the dogfight model is suspended, the hull coasts on
 		/// the way it has and its attitude thrusters swing it freely onto <see cref="DesiredForward"/>. Only
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI

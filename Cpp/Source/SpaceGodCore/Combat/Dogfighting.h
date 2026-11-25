@@ -312,8 +312,16 @@ namespace SpaceGod::Core
 		/// <summary>The least roll rate for <paramref name="family"/>, deg/s; 0: the catalog's.</summary>
 		static double RollDegS(FlightFamily family);
 
+		/// <summary>The assist-off spin-up setting of <paramref name="family"/> (US-T828), s; null for a family without one.</summary>
+		static const cs::Ref<RangeSetting>& SpinUp(FlightFamily family);
+
+		/// <summary>Seconds for the attitude thrusters to reach the top turn and roll rate with assist off for
+		/// <paramref name="family"/>; 0: the hull's own torque.</summary>
+		static double SpinUpS(FlightFamily family);
+
 	private:
 		static cs::Ref<RangeSetting> Seconds(const char* key, const char* label, double seconds, const char* what);
+		static cs::Ref<RangeSetting> SpinUpSeconds(const char* key, const char* label, double seconds);
 	};
 
 	// ---------------------------------------------------------------- countermeasures

@@ -743,6 +743,9 @@ namespace SpaceGod::Core
 		input.ToTopS = AssistThrottle::ToTopS(craft->Family());
 		input.ToStopS = AssistThrottle::ToStopS(craft->Family());
 		input.RollRateDegS = AssistThrottle::RollDegS(craft->Family());
+		// Assist off keeps the turn rate-held on the assist-on spin-up (US-T828); only the thrust goes Newtonian.
+		input.AssistOffRateHeld = true;
+		input.AssistOffSpinUpS = AssistThrottle::SpinUpS(craft->Family());
 		if (stick->FlightAssistOff) input.Throttle = Max(-1.0, Min(1.0, stick->Burn));
 		// Drift (US-T165): held, the craft coasts and turns free onto the aim; let go, a boost-out along the new facing.
 		stick->Drift.Update(stick->DriftHeld, dt);

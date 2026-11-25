@@ -192,6 +192,9 @@ namespace SpaceGod::Core
 		// The player's own hands (US-T87): the models' player-facing handling applies, never a crew's.
 		input.Piloted = true;
 		// The engines' share of the reactor (US-T94): top speed (assist's set point), every thruster's push and the boost's
+		// Assist off keeps the turn rate-held on the assist-on spin-up (US-T828); only the thrust goes Newtonian.
+		input.AssistOffRateHeld = true;
+		input.AssistOffSpinUpS = AssistThrottle::SpinUpS(FlightModelRegistry::Default()->FamilyOf(ship->Spec->Class));
 		// recharge, a quarter a pip either side of an even share. The helm is only ever the player's, so crews fly as before.
 		auto reactor = ship->Combat->Reactor;
 		double engines = reactor != nullptr ? reactor->Factor(PowerSystem::Engines) : 1;
@@ -229,6 +232,8 @@ namespace SpaceGod::Core
 		if (capital != nullptr && !input.FlightAssistOff && cs::Math::Abs(input.Roll) < 0.01 && ship->Battle != nullptr)
 		{
 			// C#: ship.Battle.UnitOf(ship) is BattleUnit helmUnit && helmUnit.Broadside != null && helmUnit.Broadside.RollWeakPatches
+			input.AssistOffRateHeld = false;
+			input.AssistOffSpinUpS = 0;
 			auto helmUnit = ship->Battle->UnitOf(ship);
 			if (helmUnit != nullptr && helmUnit->Broadside != nullptr && helmUnit->Broadside->RollWeakPatches)
 				input.Roll = WeakPatches::HelmRoll(ship->Battle, helmUnit, f->State.Forward, f->State.Up,

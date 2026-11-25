@@ -182,12 +182,21 @@ namespace SpaceGod::Core
 		double wRoll = DVec3::Dot(w, f);
 		auto wTurn = w - f * wRoll;
 		double alpha = hull.PitchYawAngularAccel;
+		double rollAlpha = hull.RollAngularAccel;
+		rollRateDegS = Max(rollRateDegS, input.RollRateDegS);
+		// Assist off under a player's hands (US-T828): the attitude thrusters keep the assist-on spin-up and hold the rates.
+		bool held = input.FlightAssistOff && input.AssistOffRateHeld;
+		if (input.FlightAssistOff && input.AssistOffSpinUpS > 0)
+		{
+			alpha = Max(alpha, turnRateDegS * Astro::Deg2Rad / input.AssistOffSpinUpS);
+			rollAlpha = Max(rollAlpha, rollRateDegS * Astro::Deg2Rad / input.AssistOffSpinUpS);
+		}
 		double maxDw = alpha * dt;
 
 		bool steering = input.DesiredForward.LengthSquared() > 1e-12;
 		auto want = steering ? input.DesiredForward.Normalized() : f;
 		double angle = 0;
-		if (steering || !input.FlightAssistOff)
+		if (steering || !input.FlightAssistOff || held)
 		{
 			auto target = DVec3::Zero;
 			if (steering)
@@ -217,10 +226,8 @@ namespace SpaceGod::Core
 		}
 
 		// Roll is about the nose; positive input rolls clockwise from behind, a positive spin about it.
-		double rollAlpha = hull.RollAngularAccel;
 		double rollIn = Clamp(input.Roll);
-		rollRateDegS = Max(rollRateDegS, input.RollRateDegS);
-		if (input.FlightAssistOff)
+		if (input.FlightAssistOff && !held)
 		{
 			wRoll += rollIn * rollAlpha * dt;
 		}
@@ -229,7 +236,7 @@ namespace SpaceGod::Core
 			double targetRoll = rollIn * rollRateDegS * Astro::Deg2Rad;
 			// Auto-level (US-T736): let go of roll and the roof eases toward the level up, signed about the nose.
 			auto level = input.LevelUp - f * DVec3::Dot(input.LevelUp, f);
-			if (rollIn == 0 && level.LengthSquared() > 1e-12)
+			if (rollIn == 0 && !input.FlightAssistOff && level.LengthSquared() > 1e-12)
 			{
 				level = level.Normalized();
 				double off = cs::Math::Atan2(DVec3::Dot(DVec3::Cross(s.Up, level), f), DVec3::Dot(s.Up, level));

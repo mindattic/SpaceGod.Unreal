@@ -524,6 +524,40 @@ namespace SpaceGod::Core
 
 	double AssistThrottle::RollDegS(FlightFamily family) { return family == FlightFamily::LightFighter ? LightFighterRoll()->Value : 0; }
 
+	cs::Ref<RangeSetting> AssistThrottle::SpinUpSeconds(const char* key, const char* label, double seconds)
+	{
+		return cs::New<RangeSetting>(key, SettingGroups::Dogfighting, label, seconds, 0.05, 2, 0.01,
+			"With flight assist off, how long the attitude thrusters take under your hands to reach the top turn and roll rate; the turn still stops when you let go of the stick, and only the thrust is left Newtonian. Crews turn on the hull's own torque.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0.##"), " s"); }), "flight model handling assist off newtonian spin-up rotation");
+	}
+
+	const cs::Ref<RangeSetting>& AssistThrottle::SpinUp(FlightFamily family)
+	{
+		static const cs::Ref<RangeSetting> light = SpinUpSeconds("flight.lightFighter.assistOffSpinUp", "Light fighters: assist-off spin-up", 0.08);
+		static const cs::Ref<RangeSetting> interceptor = SpinUpSeconds("flight.interceptor.assistOffSpinUp", "Interceptors: assist-off spin-up", 0.08);
+		static const cs::Ref<RangeSetting> runner = SpinUpSeconds("flight.runner.assistOffSpinUp", "Couriers: assist-off spin-up", 0.15);
+		static const cs::Ref<RangeSetting> heavy = SpinUpSeconds("flight.heavyFighter.assistOffSpinUp", "Heavy fighters: assist-off spin-up", 0.15);
+		static const cs::Ref<RangeSetting> bomber = SpinUpSeconds("flight.bomber.assistOffSpinUp", "Bombers: assist-off spin-up", 0.25);
+		static const cs::Ref<RangeSetting> hauler = SpinUpSeconds("flight.hauler.assistOffSpinUp", "Haulers: assist-off spin-up", 0.4);
+		static const cs::Ref<RangeSetting> none;
+		switch (family)
+		{
+			case FlightFamily::LightFighter: return light;
+			case FlightFamily::Interceptor: return interceptor;
+			case FlightFamily::Runner: return runner;
+			case FlightFamily::HeavyFighter: return heavy;
+			case FlightFamily::Bomber: return bomber;
+			case FlightFamily::Hauler: return hauler;
+			default: return none;
+		}
+	}
+
+	double AssistThrottle::SpinUpS(FlightFamily family)
+	{
+		auto& s = SpinUp(family);
+		return s != nullptr ? s->Value : 0;
+	}
+
 	// ---------------------------------------------------------------- countermeasures
 
 	const cs::Ref<RangeSetting>& Countermeasures::Effectiveness()

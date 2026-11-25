@@ -114,7 +114,7 @@ Speeds stay true scale: the targets are times, which is what the hand feels. Eve
 | What | Target | Now |
 |---|---|---|
 | Velocity with assist off and no thrust | kept to 0.1% over 10 s (gravity aside) | kept (Newtonian `PilotFlight::Step`) |
-| Rotation with assist off | still rate-held, the same turn rate and spin-up as assist on | the hull's own torque, no spin-up floor |
+| Rotation with assist off | still rate-held, the same turn rate and spin-up as assist on | rate-held under a player's hands on `AssistThrottle::SpinUp` (US-T828); crews keep the hull's own torque |
 | Toggling assist back on | no rotation hitch; back on the set point within the assist-on 0-to-top time | thrust-bound (7 s or more) |
 | Drift flip (180 deg, light fighter) | 0.75 s | 165 x 1.3 = 214 deg/s plus 0.12 s: about 0.96 s |
 | Drift velocity kept | to 0.1% (gravity aside) | yes |

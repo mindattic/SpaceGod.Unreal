@@ -111,7 +111,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Strafe, rise | A D, Q E | controls (capital: turn) | - |
 | Lateral boost | Shift+A/D, Q/E | light fighters | - |
 | Roll | Ctrl+A / Ctrl+D (US-T445; A/D alone still strafe) | controls | - |
-| Flight assist | F | controls | - |
+| Flight assist | F (off: thrust is Newtonian, the hull keeps its velocity; the turn and roll stay rate-held on the family's spin-up, US-T828) | controls | Settings > Dogfighting > assist-off spin-up |
 | Flip (turn and burn) / broadside stance | Alt (hold) | controls / capital | - |
 | Drift | R (hold) | fighters, launched craft | sg.Drift |
 | Reactor power | Left / Up / Right / Down (Shift: all to one) | controls | - |
