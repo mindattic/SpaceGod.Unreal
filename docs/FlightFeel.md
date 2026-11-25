@@ -70,7 +70,7 @@ Other numbers the feel depends on:
 | Heavy fighter boost kick / bleed | 0.12 s time constant / 3.5 s | `HeavyFighterFeel::Default` |
 | Boost recharge | half the drain rate (a 15 s charge refills in 30 s) | `PilotFlight::RechargeFraction` |
 | Engine pips | top speed, every thruster's push and boost recharge, x0.5 .. x1.5 (a quarter a pip over two) | `CraftPower`, `PowerDistribution` |
-| Drift | spin-up 0.12 s, swing 1.3x the turn rate, boost-out 0.6 s | `Drift` |
+| Drift | spin-up 0.1 s, swing 1.6x the turn rate, boost-out 0.6 s, 90% of top speed on the new facing within 0.8 s | `Drift` |
 | Heavy string aim | 25 deg lead at 1.3x the hull's turn rate | `PilotAim::HeavyMaxLeadDeg`, `HeavyLookRateFactor` |
 | Hauler mouse | 0.6 of the fighter's | `HelmControls::HaulerLookFactor` |
 | Mouse | raw counts, x `camera.lookSensitivity` 0.12 deg a count, smoothing 0 (off) by default | `SpaceCamera` |

@@ -93,6 +93,12 @@ namespace SpaceGod::Core
 		/// <see cref="AssistThrottle.SpinUp"/>). Set only with <see cref="Piloted"/>; 0 for every crew: the hull's own torque.</summary>
 		double AssistOffSpinUpS = 0;
 
+		/// <summary>After drift is let go (US-T829, <see cref="Drift.BoostOutReach"/>): with assist on, the push along the nose
+		/// is at least enough to make <see cref="BoostOutReachShare"/> of top speed along it within <see cref="BoostOutReachS"/>,
+		/// s, from whatever way the hull was coasting. Set only with <see cref="Piloted"/>, by <see cref="DriftControl.Apply"/>;
+		/// 0 for every crew, which keeps the hull's own thrust.</summary>
+		double BoostOutReachS = 0, BoostOutReachShare = 0;
+
 		/// <summary>Drift (US-T165, Chorus style; <see cref="Drift"/>): the dogfight model is suspended, the hull coasts on
 		/// the way it has and its attitude thrusters swing it freely onto <see cref="DesiredForward"/>. Only
 		/// <see cref="Drift.Fly"/> reads it. The player's helm and seat set it while R is held; a crew may set it too (an AI

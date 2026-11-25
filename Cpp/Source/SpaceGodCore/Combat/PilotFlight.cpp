@@ -97,6 +97,7 @@ namespace SpaceGod::Core
 		double main = hull.MainAccel * driveMult, retro = hull.RetroAccel;
 		if (input.ToTopS > 0) main = Max(main, tuning.MaxSpeed / input.ToTopS);
 		if (input.ToStopS > 0) retro = Max(retro, tuning.MaxSpeed / input.ToStopS);
+		if (input.BoostOutReachS > 0) main = Max(main, (input.BoostOutReachShare * tuning.MaxSpeed - DVec3::Dot(s.Vel, f)) / input.BoostOutReachS);
 		double setPoint = tuning.MaxSpeed * driveMult;
 		auto commanded = f * (throttle * setPoint)
 			+ r * (strafeR * setPoint * strafeSpeedFraction)

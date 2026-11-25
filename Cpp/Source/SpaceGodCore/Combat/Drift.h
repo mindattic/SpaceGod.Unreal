@@ -10,6 +10,7 @@ namespace SpaceGod::Core
 	struct HullDynamics;
 	class ShipCombat;
 	class IFlightModel;
+	class RangeSetting;
 
 	/// <summary>
 	/// Drift (US-T165), as Chorus's: held, the dogfight model lets go of the hull. It barrels on along the velocity it had
@@ -26,15 +27,26 @@ namespace SpaceGod::Core
 	public:
 		/// <summary>Seconds for the attitude thrusters to spin the nose up to its drift swing and to stop it: a floor on
 		/// the hull's own push, so the hull answers the mouse crisply with the drive cold.</summary>
-		static constexpr double SpinUpS = 0.12;
+		static const cs::Ref<RangeSetting>& SpinUp();
 
 		/// <summary>The drift swing over the class's own top turn rate: with no drive fighting the turn and no track to
 		/// carve, the attitude thrusters have the hull to themselves.</summary>
-		static constexpr double TurnFactor = 1.3;
+		static const cs::Ref<RangeSetting>& Turn();
 
 		/// <summary>Seconds of boost-out once drift is let go: the afterburner lit along the new facing, flight assist
 		/// back on, the throttle at least full.</summary>
-		static constexpr double BoostOutS = 0.6;
+		static const cs::Ref<RangeSetting>& BoostOut();
+
+		/// <summary>Under the player's hands, seconds after drift is let go by which the hull makes
+		/// <see cref="BoostOutReachShare"/> of its top speed along the new facing (US-T829).</summary>
+		static const cs::Ref<RangeSetting>& BoostOutReach();
+
+		/// <summary>The share of top speed the boost-out makes within <see cref="BoostOutReach"/>.</summary>
+		static const cs::Ref<RangeSetting>& BoostOutReachShare();
+
+		static double SpinUpS();
+		static double TurnFactor();
+		static double BoostOutS();
 
 		/// <summary>
 		/// One drifting frame: the attitude thrusters swing the hull onto <see cref="PilotInput.DesiredForward"/> (at
@@ -49,7 +61,7 @@ namespace SpaceGod::Core
 		static void Fly(const cs::Ref<IFlightModel>& model, PilotState& s, const cs::Ref<ShipCombat>& combat, const HullDynamics& hull, const PilotTuning& tuning, const PilotInput& input, DVec3 gravityKmS2, double dt);
 
 		/// <summary>The drift swing, deg/s, for a hull whose top turn rate is <paramref name="turnRateDegS"/>.</summary>
-		static double TurnRateDegS(double turnRateDegS) { return turnRateDegS * TurnFactor; }
+		static double TurnRateDegS(double turnRateDegS);
 	};
 
 	/// <summary>
@@ -65,19 +77,25 @@ namespace SpaceGod::Core
 		/// <summary>Seconds of boost-out left since drift was let go.</summary>
 		double BoostOutLeft = 0;
 
+		/// <summary>Seconds left, under the player's hands, to make <see cref="Drift.BoostOutReachShare"/> of top speed on
+		/// the new facing (US-T829).</summary>
+		double ReachLeft = 0;
+
 		/// <summary>Advances one frame with drift <paramref name="held"/> (already gated on whether this hull may drift
 		/// now). True on the frame drift is let go.</summary>
 		bool Update(bool held, double dt);
 
 		/// <summary>Writes this frame's drift onto <paramref name="input"/>: <see cref="PilotInput.Drift"/> while held;
-		/// during the boost-out, the boost lit, flight assist on and the throttle at least full.</summary>
+		/// during the boost-out, the boost lit, flight assist on and the throttle at least full; under the player's hands
+		/// (<see cref="PilotInput.Piloted"/>), until <see cref="ReachLeft"/> runs out, assist's push along the nose makes
+		/// the reach (<see cref="PilotInput.BoostOutReachS"/>).</summary>
 		void Apply(PilotInput& input) const;
 
 		/// <summary>Drops out of drift at once, with no boost-out (the hull handed over, the drives knocked out).</summary>
 		void Cancel()
 		{
 			Active = false;
-			BoostOutLeft = 0;
+			BoostOutLeft = ReachLeft = 0;
 		}
 	};
 }

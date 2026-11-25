@@ -30,6 +30,7 @@
 #include "Combat/CombatTuning.h"
 #include "Combat/Corvettes.h"
 #include "Combat/Dogfighting.h"
+#include "Combat/Drift.h"
 #include "Combat/ElectronicWarfare.h"
 #include "Combat/EnergyWeapons.h"
 #include "Combat/FireCones.h"
@@ -94,6 +95,7 @@ namespace SpaceGod::Core
 		BoostPool::ChargeSeconds(); BoostPool::RunnerChargeSeconds(); BoostPool::RefillSeconds(); BoostPool::TopSpeedSway(); found++; // US-T738 (not a C# source)
 		AssistThrottle::ToTop(FlightFamily::LightFighter); AssistThrottle::ToStop(FlightFamily::LightFighter); AssistThrottle::LightFighterRoll();
 		AssistThrottle::SpinUp(FlightFamily::LightFighter); found++; // US-T818, US-T828 (not a C# source)
+		Drift::SpinUp(); Drift::Turn(); Drift::BoostOut(); Drift::BoostOutReach(); Drift::BoostOutReachShare(); found++; // US-T829 (not a C# source)
 		Countermeasures::Effectiveness(); Countermeasures::AiSpoofLocks(); found++;                         // Combat/Dogfighting.cs
 		WeakPoints::Damage(); WeakPoints::AiGoesForThem(); found++;          // Combat/Dogfighting.cs
 		StrikeTorpedoes::BareHullDamage(); found++;                         // Combat/Dogfighting.cs
