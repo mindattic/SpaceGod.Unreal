@@ -16,6 +16,7 @@
 #include "Settings/SettingsRegistry.h"
 #include "UnityCompat/UnityTypes.h"
 #include "Views/BattleFx.h"
+#include "Views/WorldFx.h"
 
 #include <optional>
 
@@ -57,6 +58,7 @@ namespace SpaceGod
 		constexpr double PresetSimplifyPx[] = { 140, 96, 64, 48 };
 		constexpr double PresetShipIconPx[] = { 12, 8, 6, 5 };
 		constexpr double PresetEffects[] = { 1500, 2000, 3000, 4000 };
+		constexpr double PresetWorldEffects[] = { 0.25, 0.5, 0.75, 1.0 }; // US-T852
 		// US-T799: which renderer features each preset leaves on (1) or holds off (0).
 		constexpr int PresetLumen[] = { 0, 0, 1, 1 };
 		constexpr int PresetVirtualShadows[] = { 0, 1, 1, 1 };
@@ -221,6 +223,7 @@ namespace SpaceGod
 				RenderLod::SimplifyBelowPx()->Set(PresetSimplifyPx[i]);
 				ShipLod::IconBelowPx()->Set(PresetShipIconPx[i]);
 				Views::BattleFx::EffectsBudget()->Set(PresetEffects[i]);
+				Views::WorldFx::EffectsBudget()->Set(PresetWorldEffects[i]);
 				quiet--;
 				ApplyScalability();
 			});
@@ -424,6 +427,10 @@ namespace SpaceGod
 		Views::BattleFx::EffectsBudget()->Changed += [](cs::Ref<GameSetting>)
 		{
 			Touched(qualityIndex < Custom && Views::BattleFx::EffectsBudget()->Value == PresetEffects[qualityIndex]);
+		};
+		Views::WorldFx::EffectsBudget()->Changed += [](cs::Ref<GameSetting>)
+		{
+			Touched(qualityIndex < Custom && Views::WorldFx::EffectsBudget()->Value == PresetWorldEffects[qualityIndex]);
 		};
 	}
 
