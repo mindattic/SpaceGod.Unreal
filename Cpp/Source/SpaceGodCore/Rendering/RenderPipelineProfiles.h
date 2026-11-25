@@ -107,7 +107,7 @@ namespace SpaceGod::Core
 		/// The illuminance (lux) of a light of intensity 1 as the game's shaders mean it: a white Lambert surface it
 		/// lights head on shows as white at the reference exposure (π × <see cref="ReferenceLuminance"/>; 1 without exposure).
 		/// </summary>
-		double LuxPerLightUnit() const { return HasExposure() ? cs::Math::PI * ReferenceLuminance() : 1.0; }
+		double LuxPerLightUnit() const { return HasExposure() ? cs::Math::Tau * 0.5 * ReferenceLuminance() : 1.0; }
 
 		/// <summary>The Resources path of <paramref name="shader"/> (one of <see cref="RenderShaders"/>) under this pipeline.</summary>
 		cs::String ShaderPath(const cs::String& shader) const { return cs::Cat(ShaderFolder, "/", shader); }

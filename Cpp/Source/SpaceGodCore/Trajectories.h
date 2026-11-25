@@ -86,7 +86,7 @@ namespace SpaceGod::Core
 		/// </summary>
 		static double HohmannLeadAngle(double mu, double r1, double r2)
 		{
-			return cs::Math::PI - cs::Math::Sqrt(mu / (r2 * r2 * r2)) * HohmannTime(mu, r1, r2);
+			return cs::Math::Tau * 0.5 - cs::Math::Sqrt(mu / (r2 * r2 * r2)) * HohmannTime(mu, r1, r2);
 		}
 
 		/// <summary>
@@ -120,7 +120,7 @@ namespace SpaceGod::Core
 		/// </summary>
 		static double GravityLossLeaving(double mu, double rKm, double accelKmS2)
 		{
-			return mu <= 0 || rKm <= 0 || accelKmS2 <= 0 ? 0 : cs::Math::PI / 4 * mu * cs::Math::Sqrt(2 / (accelKmS2 * rKm * rKm * rKm));
+			return mu <= 0 || rKm <= 0 || accelKmS2 <= 0 ? 0 : cs::Math::Tau / 8 * mu * cs::Math::Sqrt(2 / (accelKmS2 * rKm * rKm * rKm));
 		}
 	};
 

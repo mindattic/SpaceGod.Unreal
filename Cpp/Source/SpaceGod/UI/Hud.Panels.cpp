@@ -124,7 +124,7 @@ namespace SpaceGod::UI
 			float h1 = Frac(Mathf::Sin(k * 12.9898f) * 43758.55f);
 			float h2 = Frac(Mathf::Sin(k * 78.233f) * 12345.67f);
 			float h3 = Frac(Mathf::Sin(k * 37.719f) * 24634.63f);
-			float angle = h1 * Mathf::PI * 2.0f;
+			float angle = h1 * (float)cs::Math::Tau;
 			float phase = Frac(t * (0.06f + 0.45f * warp) * (0.5f + h2) + h3);
 			// Cubed, so a mote creeps out of the distance and rushes past at the edge, as if coming nearer.
 			float r = 6.0f + phase * phase * phase * reach;
