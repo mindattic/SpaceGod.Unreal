@@ -33,6 +33,13 @@ namespace SpaceGod
 		static const cs::Ref<Core::ChoiceSetting>& GlobalIllumination();
 		static const cs::Ref<Core::ChoiceSetting>& Reflections();
 		static const cs::Ref<Core::ChoiceSetting>& Shading();
+		// US-T799: the renderer features the preset turns off on weaker hardware. On leaves each where the project sets
+		// it (DefaultEngine.ini; the light setup decides); Off holds it off: Lumen (r.DynamicGlobalIlluminationMethod,
+		// and Lumen reflections fall back to screen-space ones), virtual shadow maps (r.Shadow.Virtual.Enable) and
+		// MegaLights (r.MegaLights.EnableForProject). None of them draws under the forward renderer.
+		static const cs::Ref<Core::ChoiceSetting>& Lumen();
+		static const cs::Ref<Core::ChoiceSetting>& VirtualShadows();
+		static const cs::Ref<Core::ChoiceSetting>& MegaLights();
 		static const cs::Ref<Core::ChoiceSetting>& AntiAliasing();
 		static const cs::Ref<Core::RangeSetting>& ResolutionScale();
 		static const cs::Ref<Core::ChoiceSetting>& Upscaler();

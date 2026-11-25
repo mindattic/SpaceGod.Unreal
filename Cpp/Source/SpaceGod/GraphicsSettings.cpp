@@ -16,6 +16,8 @@
 #include "UnityCompat/UnityTypes.h"
 #include "Views/BattleFx.h"
 
+#include <optional>
+
 using namespace SpaceGod::Core;
 
 namespace SpaceGod
@@ -28,6 +30,7 @@ namespace SpaceGod
 		int qualityIndex = GraphicsSettings::Epic;
 		int shadows = 3, textures = 3, effects = 3, postProcess = 3, viewDistance = 3;
 		int globalIllumination = 3, reflections = 3, shading = 3;
+		int lumen = 1, virtualShadows = 1, megaLights = 1; // US-T799: 1 = as the project sets it
 		int aaIndex = 0, upscalerIndex = 0;
 		double resolutionScale = 100;
 		float flownFov = 60.0f;
@@ -52,6 +55,68 @@ namespace SpaceGod
 		constexpr double PresetSimplifyPx[] = { 140, 96, 64, 48 };
 		constexpr double PresetShipIconPx[] = { 12, 8, 6, 5 };
 		constexpr double PresetEffects[] = { 1500, 2000, 3000, 4000 };
+		// US-T799: which renderer features each preset leaves on (1) or holds off (0).
+		constexpr int PresetLumen[] = { 0, 0, 1, 1 };
+		constexpr int PresetVirtualShadows[] = { 0, 1, 1, 1 };
+		constexpr int PresetMegaLights[] = { 0, 0, 0, 1 };
+
+		/// A console variable a feature row holds while it is Off: the project's own value is kept from the moment the
+		/// row first holds it and put back when the row is On again. Set only when the value differs (virtual shadows
+		/// rebuild every component's render state on a change).
+		struct PresetFeatureCVar
+		{
+			const TCHAR* Name;
+			bool Holding = false;
+			int Saved = 0;
+
+			/// The project's own value (what the variable had before the row held it).
+			int Own() const
+			{
+				if (Holding) return Saved;
+				IConsoleVariable* v = IConsoleManager::Get().FindConsoleVariable(Name);
+				return v != nullptr ? v->GetInt() : 0;
+			}
+
+			void Set(std::optional<int> value)
+			{
+				IConsoleVariable* v = IConsoleManager::Get().FindConsoleVariable(Name);
+				if (v == nullptr) return;
+				if (value.has_value())
+				{
+					if (!Holding) { Saved = v->GetInt(); Holding = true; }
+					if (v->GetInt() != *value) v->Set(*value, ECVF_SetByCode);
+				}
+				else if (Holding)
+				{
+					Holding = false;
+					if (v->GetInt() != Saved) v->Set(Saved, ECVF_SetByCode);
+				}
+			}
+		};
+
+		PresetFeatureCVar giMethodCVar{ TEXT("r.DynamicGlobalIlluminationMethod") };
+		PresetFeatureCVar reflectionMethodCVar{ TEXT("r.ReflectionMethod") };
+		PresetFeatureCVar virtualShadowsCVar{ TEXT("r.Shadow.Virtual.Enable") };
+		PresetFeatureCVar megaLightsCVar{ TEXT("r.MegaLights.EnableForProject") };
+		constexpr int GiNone = 0, ReflectionLumen = 1, ReflectionScreenSpace = 2;
+
+		void ApplyLumen()
+		{
+			giMethodCVar.Set(lumen != 0 ? std::nullopt : std::optional<int>(GiNone));
+			// Only Lumen's own reflections go with it; a project on screen-space or no reflections keeps them.
+			bool holdReflections = lumen == 0 && reflectionMethodCVar.Own() == ReflectionLumen;
+			reflectionMethodCVar.Set(holdReflections ? std::optional<int>(ReflectionScreenSpace) : std::nullopt);
+		}
+
+		void ApplyVirtualShadows() { virtualShadowsCVar.Set(virtualShadows != 0 ? std::nullopt : std::optional<int>(0)); }
+		void ApplyMegaLights() { megaLightsCVar.Set(megaLights != 0 ? std::nullopt : std::optional<int>(0)); }
+
+		const cs::List<cs::String>& OffOn()
+		{
+			static const cs::List<cs::String> value{ "Off", "On" };
+			return value;
+		}
+
 
 		const cs::List<cs::String>& Levels()
 		{
@@ -108,6 +173,16 @@ namespace SpaceGod
 			return s;
 		}
 
+		/// A renderer feature row (US-T799): Off or On, its value in each preset, put into effect by apply.
+		cs::Ref<ChoiceSetting> Feature(const char* key, const char* label, const char* description, const char* keywords, int* into,
+			const int* preset, void (*apply)())
+		{
+			auto s = cs::New<ChoiceSetting>(key, SettingGroups::Graphics, label, OffOn(), 1, description, keywords)
+				->Applying([into, apply](int i) { *into = i; apply(); });
+			s->Changed += [into, preset](cs::Ref<GameSetting>) { Touched(qualityIndex < GraphicsSettings::Custom && *into == preset[qualityIndex]); };
+			return s;
+		}
+
 		/// A scripted run (smoke, shots, audits, the demo, a capture, headless) never benchmarks: it keeps the defaults.
 		bool ScriptedRun()
 		{
@@ -131,14 +206,15 @@ namespace SpaceGod
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("graphics.quality", SettingGroups::Graphics,
 			"Quality preset", cs::List<cs::String>{ "Low", "Medium", "High", "Epic", "Custom" }, Epic,
-			"Sets shadows, textures, effects, post-processing, view distance, global illumination, reflections, shading and the LOD budgets together. Changing any of them makes it Custom. Picked from a hardware benchmark on a profile's first launch.",
-			"graphics quality preset scalability performance low medium high epic custom")->Applying([](int i)
+			"Sets shadows, textures, effects, post-processing, view distance, global illumination, reflections, shading, Lumen, virtual shadow maps, MegaLights and the LOD and effects budgets together. Changing any of them makes it Custom. Picked from a hardware benchmark on a profile's first launch.",
+			"graphics quality preset scalability performance low medium high epic custom lumen megalights virtual shadow maps")->Applying([](int i)
 			{
 				qualityIndex = i;
 				if (i == Custom) { ApplyScalability(); return; }
 				quiet++;
 				Shadows()->Set(i); Textures()->Set(i); Effects()->Set(i); PostProcessing()->Set(i); ViewDistance()->Set(i);
 				GlobalIllumination()->Set(i); Reflections()->Set(i); Shading()->Set(i);
+				Lumen()->Set(PresetLumen[i]); VirtualShadows()->Set(PresetVirtualShadows[i]); MegaLights()->Set(PresetMegaLights[i]);
 				RenderLod::SimplifyBelowPx()->Set(PresetSimplifyPx[i]);
 				ShipLod::IconBelowPx()->Set(PresetShipIconPx[i]);
 				Views::BattleFx::EffectsBudget()->Set(PresetEffects[i]);
@@ -207,6 +283,30 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::Lumen()
+	{
+		static const cs::Ref<ChoiceSetting> value = Feature("graphics.lumen", "Lumen",
+			"Unreal's Lumen: light bouncing between hulls, stations and planets, and its reflections (screen-space ones stand in when off). On uses the game's own lighting setup; Off is much cheaper.",
+			"lumen global illumination gi bounce indirect reflections lighting performance", &lumen, PresetLumen, &ApplyLumen);
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::VirtualShadows()
+	{
+		static const cs::Ref<ChoiceSetting> value = Feature("graphics.virtualShadows", "Virtual shadow maps",
+			"Sharp, detailed shadows across a whole hull at any distance. Off falls back to cheaper shadow maps. Changing it briefly stalls a frame.",
+			"virtual shadow maps vsm shadows sharp detail performance", &virtualShadows, PresetVirtualShadows, &ApplyVirtualShadows);
+		return value;
+	}
+
+	const cs::Ref<ChoiceSetting>& GraphicsSettings::MegaLights()
+	{
+		static const cs::Ref<ChoiceSetting> value = Feature("graphics.megaLights", "MegaLights",
+			"Unreal's MegaLights: many shadowed lights (engine glows, running lights, weapons fire) at a steady cost. Needs hardware ray tracing; Off lights them the ordinary way.",
+			"megalights many lights shadows ray tracing performance", &megaLights, PresetMegaLights, &ApplyMegaLights);
+		return value;
+	}
+
 	const cs::Ref<ChoiceSetting>& GraphicsSettings::AntiAliasing()
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("graphics.antiAliasing", SettingGroups::Graphics,
@@ -261,6 +361,7 @@ namespace SpaceGod
 	{
 		Quality(); Shadows(); Textures(); Effects(); PostProcessing(); ViewDistance();
 		GlobalIllumination(); Reflections(); Shading();
+		Lumen(); VirtualShadows(); MegaLights();
 		AntiAliasing(); ResolutionScale(); Upscaler(); FieldOfView();
 		static bool watching = false;
 		if (watching) return;
