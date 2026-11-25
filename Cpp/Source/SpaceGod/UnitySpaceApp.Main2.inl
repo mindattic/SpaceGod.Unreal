@@ -301,6 +301,10 @@ public:
 	/// US-T78: a ship's hull centre as its view draws it (ShipView::HullCentre), else TargetScene.
 	Core::DVec3 FocusScene(const Target& target) override;
 
+	/// US-T730: the box round a ship's hull as its view draws it (ShipView::HullBox: root frame, one unit long) and its drawn
+	/// length in scene units; false before the hull is placed (see FlybyCommand.cpp).
+	bool ShipHullFrame(const cs::Ref<Core::Ship>& ship, Vector3& centre, Vector3& extents, double& length);
+
 	double TargetRadius(const Target& target) override;
 
 	/// US-T185: the target is still there to look at (see ICameraWorld::TargetValid).
