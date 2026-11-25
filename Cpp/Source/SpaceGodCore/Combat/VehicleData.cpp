@@ -330,17 +330,27 @@ namespace SpaceGod::Core
 			}
 			else if (p.Slot == "hangar")
 			{
-				// The mouth: the largest face nothing mates to.
+				// The mouth: the largest face nothing mates to; a 'tube' socket is a launch tube beside it.
 				const KitSocket* mouth = nullptr;
+				int tubes = 0;
 				for (const auto& s : part.Sockets)
 				{
 					if (s.Name == p.Socket) continue;
+					if (cs::Strings::StartsWith(s.Name, "tube"))
+					{
+						tubes++;
+						continue;
+					}
 					bool used = false;
 					for (const auto& c : design.Parts)
 						if (&c != &p && c.Parent == i && c.ParentSocket == s.Name) used = true;
 					if (!used && (!mouth || s.Size[0] * s.Size[1] > mouth->Size[0] * mouth->Size[1])) mouth = &s;
 				}
-				if (mouth) g.Hangars.push_back(GeometryMount(p, *mouth, length, i));
+				if (mouth)
+				{
+					g.Hangars.push_back(GeometryMount(p, *mouth, length, i));
+					g.Hangars.back().Tubes = tubes > 0 ? tubes : std::max(design.LaunchTubes, 0);
+				}
 			}
 			else if (p.Slot == "bridge")
 			{
@@ -391,6 +401,7 @@ namespace SpaceGod::Core
 					d->MouthAxis = cs::Nullable<DVec3>(mouth.Axis);
 					d->MouthWidth = mouth.Width;
 					d->MouthHeight = mouth.Height;
+					if (mouth.Tubes > 0 && hangarUse[k] == 1) d->LaunchTubes = mouth.Tubes;
 				}
 			}
 			else if (d->Kind == SubsystemKind::Bridge)

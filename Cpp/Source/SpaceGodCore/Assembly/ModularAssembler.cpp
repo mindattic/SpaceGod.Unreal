@@ -327,6 +327,7 @@ namespace SpaceGod::Core
 		d.Class = cls;
 		d.Seed = seed;
 		d.Style = style.Id;
+		d.LaunchTubes = std::max(style.LaunchTubes, 0);
 		d.LengthM = ScaleModel::TrueLengthM(cls);
 		if (!catalogue.Loaded())
 		{

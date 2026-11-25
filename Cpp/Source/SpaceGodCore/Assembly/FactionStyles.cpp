@@ -65,6 +65,7 @@ namespace SpaceGod::Core
 			s.Wings = StyleWeight(o, "wings", s.Wings);
 			s.Armament = StyleWeight(o, "armament", s.Armament);
 			s.Variety = StyleWeight(o, "variety", s.Variety);
+			s.LaunchTubes = std::clamp(o->GetInt("launchTubes", 0), 0, 64);
 			return s;
 		}
 

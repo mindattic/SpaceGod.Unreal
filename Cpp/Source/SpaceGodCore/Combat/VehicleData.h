@@ -46,12 +46,15 @@ namespace SpaceGod::Core
 			double Width = 0, Height = 0;
 			/// Index into the design's parts.
 			int Part = -1;
+			/// A hangar mouth's launch tubes (US-T854): its part's 'tube' sockets, else the design's own count; 0: none.
+			int Tubes = 0;
 		};
 
 		/// <summary>
 		/// What an assembled hull (US-T765, <see cref="ModularDesign"/>) gives in place of the file's rows and the built-in
 		/// tables (US-T766): an engine port on each engine part's exhaust socket, a gun mount on each turret's top socket (a
-		/// mount) or muzzle (a barrel), a hangar mouth on each hangar section's largest free face, and the bridge tower.
+		/// mount) or muzzle (a barrel), a hangar mouth on each hangar section's largest free face (its 'tube' sockets aside,
+		/// counted as its launch tubes), and the bridge tower.
 		/// Pure, no engine types; work it out once per design, off the game thread if need be.
 		/// </summary>
 		struct Geometry
@@ -65,8 +68,8 @@ namespace SpaceGod::Core
 
 		/// <summary>Puts <paramref name="layout"/>'s hardpoints (a design's own, as just declared) on the geometry's mounts:
 		/// each weapon (bar a spinal mount) on the nearest of the least-used gun mounts, its cone axis the mount's normal;
-		/// each Engine on a nozzle, each Hangar on a mouth (its normal and size kept for its flight deck, US-T842), an
-		/// unburied Bridge on the tower. A kind the geometry has no
+		/// each Engine on a nozzle, each Hangar on a mouth (its normal and size kept for its flight deck, US-T842, and the
+		/// first Hangar on a mouth with tubes given them, US-T854), an unburied Bridge on the tower. A kind the geometry has no
 		/// mount for keeps its declared place. Returns the hardpoints it set.</summary>
 		static int ApplyGeometry(const Geometry& geometry, const cs::List<cs::Ref<SubsystemDef>>& layout);
 

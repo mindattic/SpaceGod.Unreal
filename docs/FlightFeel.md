@@ -272,6 +272,16 @@ digests: rebaseline them deliberately.
 4. Difficulty: against a hull a player holds, aim error divides by the hostile-accuracy scale and reaction multiplies
    by a new hostile-reaction scale (Story 1.6x, Hard 0.65x, `gameplay.custom.reaction`); exactly 1 at Normal.
 
+## Launch tubes (US-T843, US-T779)
+
+A carrier with launch tubes (from its design or `dogfight.launchTubes`; docs/TrueScale.md 5.5)
+puts a wing out in seconds instead of one craft at a time down a flight deck. Craft wait at the breech and fire in waves:
+one a tube every `FlightDecks::TubeCycleSeconds` (2.5 s), rippling along each tier `TubeRippleSeconds` (0.12 s) a tube.
+The catapult throws each along the tube's axis at `CatapultKmS2` (0.15 km/s^2, about 15 g, or its own thrust if more) to the mouth; then each
+squadron's lead breaks for a join point ahead of its carrier, port and starboard alternating, and holds while its wing
+forms on it. Tubes only launch: every craft comes home on a flight deck. With `dogfight.launchTubes` 0 and no design
+tubes (the default) nothing launches from a tube and the Bench is unchanged.
+
 ## Not changed
 
 The crews' flight (the Bench digests), the capital's telegraph and come-about, the hauler's mass weighting and

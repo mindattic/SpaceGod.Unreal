@@ -203,6 +203,27 @@ branch and a log per far object per frame, and only worlds, orbits and lane curv
   the active one has views (`UnitySpaceApp` class comment). Nothing in 5.1 to 5.3 is read by the simulation or written
   into the lockstep frames, and each co-op peer draws round its own seat.
 
+### 5.5 Launch tubes (US-T843, US-T854)
+
+A true-scale carrier launches a whole wing at once the way the Galactica does: through rows of launch tubes, each a
+true-size bore (`FlightDecks::TubeWidthKm` 18 m by `TubeHeightKm` 12 m, `TubeWallKm` 6 m of hull between bores, at most
+`TubesPerTier` 10 to a tier) running in from its mouth 0.15 ship lengths, at most 200 m. A tube is a launch-only
+`FlightDeck` (`Tube >= 0`): craft are fired out of its mouth and never land in it, so recovery stays on the flight decks.
+
+Where a hull's tubes come from:
+
+- **Its design.** `SubsystemDef::LaunchTubes` on a hangar with a mouth (`MouthAxis`) lays that many tubes in tiers across
+  the mouth, as many to a tier as its width holds. An assembled hull (US-T765) gets it from `VehicleData::FromDesign`:
+  a hangar section's kit sockets named `tube*` count as its tubes (and are never picked as its mouth); a part with none
+  takes the design's opt-in count, `FactionStyle::LaunchTubes` (`launchTubes` in a Data/FactionStyles.json scale style,
+  `tubes=<n>` on `sg.Assemble`), copied to `ModularDesign::LaunchTubes`. `VehicleData::ApplyGeometry` gives the count to
+  the first Hangar placed on that mouth. Every built-in design and style has none, so the Bench is unchanged.
+- **The setting.** A carrier whose design has none gets `dogfight.launchTubes` (default 0, up to 120) in two flight pods
+  off its flanks, half each side.
+
+The flight deck view draws a tube by its mouth alone (no breech frame), so dozens of small mouths read as rows of
+ports and not as a lattice of nested frames. How a tube fires its craft is in docs/FlightFeel.md.
+
 ## Settings this plan introduces
 
 | Setting | Default | Where |
@@ -213,3 +234,4 @@ branch and a log per far object per frame, and only worlds, orbits and lane curv
 | Cockpit near plane | 5 cm | `sg.Origin.CockpitNearCm`, `UnitySpaceApp::UpdateClipPlanes` (US-T716) |
 | `FarFieldCm` | 1e11 | `sg.Origin.FarFieldCm`, `UnrealSpace` (US-T716) |
 | `NearFieldKm` | 50 | render side (US-T715/US-T716) |
+| Launch tubes per carrier without its own | 0 (none) | `dogfight.launchTubes`, `FlightDecks::LaunchTubes` (US-T843) |

@@ -228,7 +228,7 @@ namespace
 		ShipClass cls{};
 		if (args.Num() < 2 || !ParseClass(args[0], cls))
 		{
-			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported] [faction=<style id>] [lineup], e.g. sg.Assemble Carrier 42"));
+			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported] [faction=<style id>] [tubes=<per hangar>] [lineup], e.g. sg.Assemble Carrier 42"));
 			return;
 		}
 		uint64 seed = FCString::Strtoui64(*args[1], nullptr, 10);
@@ -242,6 +242,7 @@ namespace
 			if (key.Equals(TEXT("family"), ESearchCase::IgnoreCase)) style.Families.push_back(TCHAR_TO_UTF8(*value));
 			else if (key.Equals(TEXT("pack"), ESearchCase::IgnoreCase)) style.Packs.push_back(TCHAR_TO_UTF8(*value.ToLower()));
 			else if (key.Equals(TEXT("imported"), ESearchCase::IgnoreCase)) style.ImportedOnly = true;
+			else if (key.Equals(TEXT("tubes"), ESearchCase::IgnoreCase)) style.LaunchTubes = FMath::Clamp(FCString::Atoi(*value), 0, 64);
 			else if (key.Equals(TEXT("faction"), ESearchCase::IgnoreCase)) factionId = value;
 			else if (key.Equals(TEXT("lineup"), ESearchCase::IgnoreCase)) lineup = true;
 		}
@@ -265,6 +266,7 @@ namespace
 			if (!given.Families.empty()) style.Families = given.Families;
 			if (!given.Packs.empty()) style.Packs = given.Packs;
 			style.ImportedOnly = style.ImportedOnly || given.ImportedOnly;
+			if (given.LaunchTubes > 0) style.LaunchTubes = given.LaunchTubes;
 			UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: %s style, hull number %s, %s"), UTF8_TO_TCHAR(profile->Id.c_str()),
 				UTF8_TO_TCHAR(profile->HullNumber(seed).c_str()), UTF8_TO_TCHAR(profile->Palette.Colour.c_str()));
 		}
@@ -284,8 +286,10 @@ namespace
 				UTF8_TO_TCHAR(p.PartId.c_str()), p.Parent, UTF8_TO_TCHAR(p.ParentSocket.c_str()), p.Scale, p.Pos.X, p.Pos.Y, p.Pos.Z, p.Mirrored ? TEXT(" mirrored") : TEXT(""));
 
 		VehicleData::Geometry geometry = VehicleData::FromDesign(design, catalogue);
-		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: ports from the parts: %d engine nozzles, %d gun mounts, %d hangar mouths, %d bridge"),
-			static_cast<int>(geometry.Engines.size()), static_cast<int>(geometry.Guns.size()), static_cast<int>(geometry.Hangars.size()),
+		int tubes = 0;
+		for (const auto& h : geometry.Hangars) tubes += h.Tubes;
+		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: ports from the parts: %d engine nozzles, %d gun mounts, %d hangar mouths (%d launch tubes), %d bridge"),
+			static_cast<int>(geometry.Engines.size()), static_cast<int>(geometry.Guns.size()), static_cast<int>(geometry.Hangars.size()), tubes,
 			static_cast<int>(geometry.Bridges.size()));
 
 		int imported = 0;
@@ -325,7 +329,7 @@ namespace
 	FAutoConsoleCommand GAssembleCommand(
 		TEXT("sg.Assemble"),
 		TEXT("US-T765: assembles a hull from the kit parts (Data/ModularParts.json) for a class and seed and shows it in the model viewer. "
-			"sg.Assemble <class> <seed> [family=<kit set>] [pack=<usc|starsparrow|ssc>] [imported] [faction=<style id>] [lineup] (US-T845: Data/FactionStyles.json)"),
+			"sg.Assemble <class> <seed> [family=<kit set>] [pack=<usc|starsparrow|ssc>] [imported] [faction=<style id>] [tubes=<per hangar>] [lineup] (US-T845: Data/FactionStyles.json)"),
 		FConsoleCommandWithArgsDelegate::CreateLambda([](const TArray<FString>& args) { Assemble(args); }));
 }
 }

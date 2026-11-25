@@ -103,6 +103,9 @@ namespace SpaceGod::Core
 		double Armament = 0.5;
 		/// How likely each spine section is a different core part from the first (0: one part repeated).
 		double Variety = 0.35;
+		/// Launch tubes each hangar section carries beside its mouth when its part has no 'tube' sockets of its own
+		/// (US-T854); 0: none, the bay alone.
+		int LaunchTubes = 0;
 	};
 
 	/// <summary>One part placed in a design: its pose in the design frame (nose +Z, up +Y, +X starboard, metres, about
@@ -148,6 +151,8 @@ namespace SpaceGod::Core
 		cs::String Family;
 		/// Its length along Z, the class's true length (docs/TrueScale.md).
 		double LengthM = 0;
+		/// Launch tubes per hangar section whose part has no 'tube' sockets (<see cref="FactionStyle::LaunchTubes"/>).
+		int LaunchTubes = 0;
 		/// Parents always come before their children.
 		std::vector<ModularPlacement> Parts;
 		/// The box round every part's box, in the design frame (centred on the origin).
