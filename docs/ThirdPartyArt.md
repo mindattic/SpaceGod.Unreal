@@ -28,7 +28,8 @@ uses these assets must be built on a machine that has run the import.
 - **Result** (`/Game/ThirdParty/StarSparrow`):
   - `Meshes/SM_StarSparrow01`..`40`: the 40 prebuilt fighters, each one combined static mesh (a single node and
     no material slots in the FBX), nose +X, up +Z, centimetres (about 10-16 m long), 1.4k-3.7k triangles, pivot
-    at the middle of the length. No Nanite (no gain at this density), no lightmap UVs. Simple collision: one
+    at the middle of the length. Nanite (US-T802: 100-ship launches), its fallback mesh kept at every triangle, so
+    LOD0 stays the whole fighter where Nanite is off and for merged designs; no lightmap UVs. Simple collision: one
     18-DOP convex hull (the importer's auto collision; the FBX has no UCX hulls).
   - `Meshes/SM_StarSparrowModule_<Part>`: the 8 parts of `StarSparrowModules.fbx`: Core (hull with cockpit, 856
     tris), Engine, Thruster (nozzle), Plasma (gun pod), Weapon (barrel), Wing, Fin, Tail. The FBX lays them out in
@@ -112,7 +113,9 @@ and of every class in every livery, drawn by a camera of its own as the model vi
   base, cannon, laser and thruster, a few more for later use) are written centred on their own boxes as
   `SM_USC_Mod_<Set><Part>.fbx`.
 - **Result** (`/Game/ThirdParty/USC`):
-  - `Meshes/SM_USC_*`: those pieces (no collision, no Nanite). LODs: the script asks `StaticMeshEditorSubsystem` for
+  - `Meshes/SM_USC_*`: those pieces (no collision). Hull pieces are Nanite (US-T802), their fallback mesh kept at every
+    triangle so LOD0 stays the whole hull where Nanite is off and for merged designs (`ImportedGeometry` reads it);
+    the `SM_USC_Mod_*` modules stay plain meshes. LODs: the script asks `StaticMeshEditorSubsystem` for
     two reduced LODs (50 % and 20 %) and logs whether the commandlet had it; when it does not, the area streaming's
     detail rings (US-T133) carry the load, as they do for every other hull.
   - `Textures/T_USC_<Atlas>_<Map>`: per atlas (`GalacticLeopard_Main`, `GalacticLeopard_Parts`, `VoidWhale_Main`,
@@ -178,6 +181,7 @@ a new asset.
   `Cpp/SourceArt/ThirdParty/SSC/`, `tools/usc_prepare.py ... ssc` in Blender (the stations in `SSC_MODELS`, whole,
   centred, a piece per atlas; the Hangars girders and hangars as modules), then `tools/import_usc.py` with
   `USC_PACK=ssc` into `/Game/ThirdParty/SSC` (`SM_SSC_*`, `T_SSC_*`, `M_SSCStation`, `MI_SSC_<Atlas>_<Colour>`).
+  Station pieces are Nanite with a full-detail fallback, as USC's hulls are (US-T802); `SM_SSC_Mod_*` stay plain.
 - **Drawn** (`Cpp/Source/SpaceGod/Rendering/SscKit.cpp`), ahead of the procedural models:
   - orbital structures (`Views/StructureViews.cpp`): factories on the Storage complexes (by industry), depots on the
     tank farm, habitats on the wheel and gateways on the gyroscope ring (both turning about +Z as before); shipyards

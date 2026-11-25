@@ -633,6 +633,20 @@ def _lods(mesh):
         return False
 
 
+def _nanite(mesh):
+    """US-T802: Nanite on a hull or station piece, its fallback mesh kept at every triangle: LOD0's render data is the
+    fallback, and it is what ImportedGeometry reads for merged designs and what draws wherever Nanite is off."""
+    settings = mesh.get_editor_property("nanite_settings")
+    settings.set_editor_property("enabled", True)
+    settings.set_editor_property("keep_percent_triangles", 1.0)
+    settings.set_editor_property("fallback_target", unreal.NaniteFallbackTarget.PERCENT_TRIANGLES)
+    settings.set_editor_property("fallback_percent_triangles", 1.0)
+    try:
+        unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).set_nanite_settings(mesh, settings, True)
+    except Exception:  # no subsystem in this commandlet: setting the property rebuilds the mesh the same way
+        mesh.set_editor_property("nanite_settings", settings)
+
+
 def import_meshes(pieces):
     unreal.SystemLibrary.execute_console_command(None, "Interchange.FeatureFlags.Import.FBX 0")
     files = sorted(f for f in os.listdir(pieces) if f.lower().endswith(".fbx"))
@@ -645,7 +659,7 @@ def import_meshes(pieces):
             _log(f"removed {short} (no longer cut)")
     tasks =[_task(os.path.join(pieces, f), os.path.splitext(f)[0]) for f in files]
     tools.import_asset_tasks(tasks)
-    meshes, lods = [], 0
+    meshes, lods, nanite = [], 0, 0
     for f in files:
         name = os.path.splitext(f)[0]
         path = f"{MESHES}/{name}"
@@ -660,6 +674,13 @@ def import_meshes(pieces):
                 mesh.set_material(slot, mi)
         if _lods(mesh):
             lods += 1
+        # Hulls and stations are Nanite; the small modules bolted on stay plain meshes.
+        if not name.startswith(f"SM_{TAG}_Mod_"):
+            try:
+                _nanite(mesh)
+                nanite += 1
+            except Exception as error:  # the mesh still imports, drawn without Nanite
+                _fail(f"{name}: Nanite: {error}")
         eal.save_asset(path, only_if_is_dirty=False)
         box = mesh.get_bounding_box()
         size = box.max - box.min
@@ -669,6 +690,7 @@ def import_meshes(pieces):
         meshes.append(mesh)
     _log(f"LODs generated for {lods}/{len(meshes)} mesh(es)" if lods else
          "no LODs generated (no StaticMeshEditorSubsystem here); the area streaming's detail rings carry the load")
+    _log(f"Nanite on {nanite}/{len(meshes)} mesh(es) (hulls and stations, full-detail fallback)")
     return meshes
 
 

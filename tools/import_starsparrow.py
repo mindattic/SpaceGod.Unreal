@@ -571,7 +571,7 @@ def _mesh_settings(sm, combine, offset=None):
     # The FBX carries no UCX hulls: generate one 18-DOP convex hull per mesh (simple collision, cheap for gameplay).
     # A convex decomposition would need StaticMeshEditorSubsystem, which a -run=pythonscript commandlet does not have.
     sm.set_editor_property("auto_generate_collision", True)
-    # ~1.4k-3.7k triangles per fighter: Nanite would only add overhead, and nothing here uses baked lighting.
+    # Imported plain; finish_meshes turns Nanite on for the fighters (US-T802). Nothing here uses baked lighting.
     sm.set_editor_property("build_nanite", False)
     sm.set_editor_property("generate_lightmap_u_vs", False)
     sm.set_editor_property("remove_degenerates", True)
@@ -742,12 +742,34 @@ def import_meshes(src):
         meshes += found
     return meshes + import_modules(src)
 
+def _nanite(mesh):
+    """US-T802: Nanite on a fighter hull, its fallback mesh kept at every triangle: LOD0's render data is the
+    fallback, and it is what ImportedGeometry reads for merged designs and what draws wherever Nanite is off."""
+    settings = mesh.get_editor_property("nanite_settings")
+    settings.set_editor_property("enabled", True)
+    settings.set_editor_property("keep_percent_triangles", 1.0)
+    settings.set_editor_property("fallback_target", unreal.NaniteFallbackTarget.PERCENT_TRIANGLES)
+    settings.set_editor_property("fallback_percent_triangles", 1.0)
+    try:
+        unreal.get_editor_subsystem(unreal.StaticMeshEditorSubsystem).set_nanite_settings(mesh, settings, True)
+    except Exception:  # no subsystem in this commandlet: setting the property rebuilds the mesh the same way
+        mesh.set_editor_property("nanite_settings", settings)
+
+
 def finish_meshes(meshes, instance):
+    nanite = 0
     for mesh in meshes:
         path = mesh.get_path_name().split(".")[0]
         try:
             for slot in range(len(mesh.get_editor_property("static_materials"))):
                 mesh.set_material(slot, instance)
+            # The 40 fighters are Nanite (100-ship launches); the module parts stay plain meshes.
+            if not mesh.get_name().startswith("SM_StarSparrowModule_"):
+                try:
+                    _nanite(mesh)
+                    nanite += 1
+                except Exception as error:  # the fighter still imports, drawn without Nanite
+                    _fail(f"{path}: Nanite: {error}")
             eal.save_asset(path, only_if_is_dirty=False)
         except Exception as error:  # keep going; the summary names every failure
             _fail(f"{path}: {error}")
@@ -759,6 +781,7 @@ def finish_meshes(meshes, instance):
         _log(f"mesh {mesh.get_name()}: {tris} tris, size {size.x:.0f}x{size.y:.0f}x{size.z:.0f} cm, "
              f"bounds centre ({pivot.x:.0f},{pivot.y:.0f},{pivot.z:.0f}), "
              f"simple collision {'yes' if mesh.get_editor_property('body_setup') else 'NO'}")
+    _log(f"Nanite on {nanite}/{len(meshes)} mesh(es) (fighters, full-detail fallback)")
 
 
 def main():
