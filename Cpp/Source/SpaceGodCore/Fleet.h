@@ -18,6 +18,7 @@
 #include "Astro.h"
 #include "DVec3.h"
 #include "Persistence/Serializable.h"
+#include "SimTier.h"
 
 namespace SpaceGod::Core
 {
@@ -192,6 +193,19 @@ namespace SpaceGod::Core
 		/// <summary>How long (days) a held hull's reported pose stands for it: about two minutes, extrapolated on its velocity.</summary>
 		static constexpr double HeldReportDays = 0.0015;
 
+		/// <summary>
+		/// US-T724: each fleet's sim tier from its distance to the observers (<see cref="ReportObservers"/>). Only the
+		/// sidestepping in <see cref="StepAvoidance"/> is tiered: Near fleets every frame, Mid ones about once a second, Far
+		/// ones not at all (their schedules run as ever). With no observer reported (the Bench) it is idle and nothing differs.
+		/// The schedule's event queue is charged to the Far tier, the avoidance to Near and Mid by their share of the hulls
+		/// stepped, the separation to Near.
+		/// </summary>
+		SimTiers Tiers;
+
+		/// <summary>US-T724: where the player watches from this frame (heliocentric km: the seat or the camera). Not saved; an
+		/// observer not reported again goes stale (<see cref="SimTiers::ObserverStaleS"/>) and every fleet is Near again.</summary>
+		void ReportObservers(const cs::List<DVec3>& helioKm) { Tiers.Observe(helioKm, SimTiers::ClockS()); }
+
 		/// <summary>US-T260: where the helm last reported <paramref name="ship"/> (see <see cref="ReportHeld"/>), carried on its
 		/// velocity to <paramref name="jd"/>; false with no fresh report (no helm flies it, or the Bench).</summary>
 		bool HeldPoseOf(const cs::Ref<Ship>& ship, double jd, DVec3& helioKm) const;
@@ -201,6 +215,8 @@ namespace SpaceGod::Core
 		cs::Dictionary<cs::Ref<Ship>, std::pair<DVec3, DVec3>> evasion = cs::Dictionary<cs::Ref<Ship>, std::pair<DVec3, DVec3>>();
 		cs::Dictionary<cs::Ref<Ship>, cs::Ref<Ship>> evadingFrom = cs::Dictionary<cs::Ref<Ship>, cs::Ref<Ship>>();
 		double lastAvoidanceJd = cs::Double::NaN;
+		/// <summary>US-T724: the date each hull last had its sidestep stepped, while tiers are in force (a Mid or Far hull skips frames).</summary>
+		cs::Dictionary<cs::Ref<Ship>, double> avoidedJd = cs::Dictionary<cs::Ref<Ship>, double>();
 
 		/// <summary>A held hull's last reported pose (US-T151, <see cref="ReportHeld"/>); transient, never saved.</summary>
 		struct HeldPose

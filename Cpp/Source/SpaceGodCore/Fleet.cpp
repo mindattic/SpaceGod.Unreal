@@ -4,6 +4,7 @@
 #include "Fleet.h"
 
 #include <algorithm>
+#include <chrono>
 #include <vector>
 
 #include "Astro.h"
@@ -79,8 +80,15 @@ namespace SpaceGod::Core
 		return (ship->Phase == ShipPhase::Parked || ship->Phase == ShipPhase::Queued) && ship->Orbit != nullptr && ship->Orbit->Body == body;
 	}
 
+	namespace
+	{
+		double MsSince(std::chrono::steady_clock::time_point t) { return std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t).count(); }
+	}
+
 	void Fleet::Update(double jd)
 	{
+		Tiers.BeginFrame(SimTiers::ClockS());
+		auto started = std::chrono::steady_clock::now();
 		for (int guard = 0; guard < 100000; guard++)
 		{
 			cs::Ref<Ship> next = nullptr;
@@ -99,8 +107,12 @@ namespace SpaceGod::Core
 			if (BeforeEvent) BeforeEvent(when);
 			AdvancePhase(next);
 		}
+		Tiers.Charge(SimTier::Far, MsSince(started));
 		StepAvoidance(jd);
+		started = std::chrono::steady_clock::now();
 		StepSeparation(jd);
+		Tiers.Charge(SimTier::Near, MsSince(started));
+		Tiers.EndFrame();
 	}
 
 	namespace
@@ -456,9 +468,29 @@ namespace SpaceGod::Core
 		double dt = cs::Double::IsNaN(lastAvoidanceJd) ? 0 : jd - lastAvoidanceJd;
 		lastAvoidanceJd = jd;
 		if (!AvoidCollisions || coarse || dt <= 0) return;
+		auto started = std::chrono::steady_clock::now();
+		bool tiered = Tiers.Active();
+		int midStepped = 0;
 		auto list = cs::List<cs::Ref<Ship>>();
 		// A held ship (the one the player is flying) isn't where its schedule says: nobody steers round that ghost.
-		for (const auto& s : ships) if (Manoeuvrable(s) && (IsHeld == nullptr || !IsHeld(s))) list.Add(s);
+		if (!tiered)
+			for (const auto& s : ships) if (Manoeuvrable(s) && (IsHeld == nullptr || !IsHeld(s))) list.Add(s);
+		else
+		{
+			// US-T724: only the fleets due a step this frame (Near every frame, Mid about once a second, Far never), each
+			// re-measured against the observers in its turn.
+			int count = ships.Count();
+			for (int k = 0; k < count; k++)
+			{
+				const auto& ship = ships[k];
+				if (!Manoeuvrable(ship) || (IsHeld != nullptr && IsHeld(ship))) continue;
+				int key = ship->Controller()->Id;
+				if (Tiers.DueRetier(k, count)) Tiers.Retier(key, BaseStateOf(ship, jd).HelioKm);
+				if (!Tiers.Steps(key)) continue;
+				if (Tiers.TierOf(key) == SimTier::Mid) midStepped++;
+				list.Add(ship);
+			}
+		}
 		int n = list.Count();
 		auto pos = cs::NewArray<DVec3>(n);
 		auto vel = cs::NewArray<DVec3>(n);
@@ -603,6 +635,14 @@ namespace SpaceGod::Core
 		for (int i = 0; i < n; i++)
 		{
 			auto s = list[i];
+			// US-T724: a hull that skipped frames (Mid or Far) eases over all the time since its last step.
+			double sdt = dt;
+			if (tiered)
+			{
+				double was = 0;
+				if (avoidedJd.TryGetValue(s, was)) sdt = jd - was;
+				avoidedJd[s] = jd;
+			}
 			std::pair<DVec3, DVec3> e{};
 			evasion.TryGetValue(s, e);
 			bool isThreatened = threatened[static_cast<size_t>(i)], isNear = nearby[static_cast<size_t>(i)];
@@ -615,18 +655,18 @@ namespace SpaceGod::Core
 			}
 			auto off = e.first;
 			auto v = e.second;
-			if (omega * dt > 1)
+			if (omega * sdt > 1)
 			{
 				// A long frame (high time warp): settle part way in one go, without overshoot, rather than integrating thousands of tiny steps.
-				off = DVec3::Lerp(off, target[i], cs::Math::Min(1.0, omega * dt * 0.5));
+				off = DVec3::Lerp(off, target[i], cs::Math::Min(1.0, omega * sdt * 0.5));
 				v = DVec3::Zero;
 			}
 			else
 			{
-				double step = cs::Math::Min(dt, 0.002);
-				for (double done = 0; done < dt - 1e-12; done += step)
+				double step = cs::Math::Min(sdt, 0.002);
+				for (double done = 0; done < sdt - 1e-12; done += step)
 				{
-					double d = cs::Math::Min(step, dt - done);
+					double d = cs::Math::Min(step, sdt - done);
 					auto acc = (target[i] - off) * (omega * omega) - v * (2 * omega);
 					double maxAcc = s->AccelG() * Astro::GravityKmPerDay2;
 					if (acc.Length() > maxAcc) acc = acc.Normalized() * maxAcc;
@@ -640,6 +680,18 @@ namespace SpaceGod::Core
 		auto stale = cs::List<cs::Ref<Ship>>();
 		for (auto kv : evasion) if (!Manoeuvrable(kv.first) || (IsHeld != nullptr && IsHeld(kv.first))) stale.Add(kv.first);
 		for (const auto& s : stale) evasion.Remove(s);
+		if (!tiered) avoidedJd.Clear();
+		else
+		{
+			stale.Clear();
+			for (auto kv : avoidedJd) if (!Manoeuvrable(kv.first) || (IsHeld != nullptr && IsHeld(kv.first))) stale.Add(kv.first);
+			for (const auto& s : stale) avoidedJd.Remove(s);
+		}
+		// US-T724: the solve's time, shared between Near and Mid by the hulls each put into it.
+		double ms = MsSince(started);
+		double midShare = n > 0 ? static_cast<double>(midStepped) / n : 0;
+		Tiers.Charge(SimTier::Near, ms * (1 - midShare));
+		Tiers.Charge(SimTier::Mid, ms * midShare);
 	}
 
 	void Fleet::ReportHeld(const cs::Ref<Ship>& ship, DVec3 helioKm, DVec3 velocityKmS, double jd)

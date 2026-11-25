@@ -619,6 +619,8 @@ namespace SpaceGod
 			SpaceCamera->Update(dt, AtControls() ? Input.ForChaseCamera() : Input);
 		}
 		UpdateClipPlanes(dt);
+		// US-T724: the fleets' sim tiers measured from where the player watches. Solo only: co-op peers must sidestep alike.
+		if (Coop::CoopPeer::Current() == nullptr) Fleet()->ReportObservers(cs::List<DVec3>{ PlayerHelioKm() });
 		UpdateStreaming(dt);
 		Sky->Update(dt);
 		UpdateSkyTravel(dt); // US-T145
