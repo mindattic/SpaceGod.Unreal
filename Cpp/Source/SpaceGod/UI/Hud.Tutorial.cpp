@@ -21,7 +21,7 @@ namespace SpaceGod::UI
 				auto bar = HudDrawers::PublishedContent(DrawerTopBarId);
 				if (bar.width <= 0) return Rect(0, 0, 0, 0);
 				return static_cast<Core::TutorialHighlight>(highlight) == Core::TutorialHighlight::TimeControls
-					? Rect(bar.x + 196, bar.y + 8, 176, 36) // << || >> Now
+					? Rect(bar.x + 196, bar.y + 8, 176, 36) // << || >> Start
 					: Rect(bar.x + 386, bar.y + 5, 244, 44); // the scale button and its bar
 			}
 			case Core::TutorialHighlight::Navigator:

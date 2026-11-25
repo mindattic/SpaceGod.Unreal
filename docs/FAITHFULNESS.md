@@ -144,7 +144,7 @@ Sources: **CH** = ControlsHelp binding, **GM** = GameManual chapter, **US** = U.
 |---|---|---|---|---|
 | Eased pause (Space / Pause) | CH, US-T21 | ✓R | ✓R | |
 | Time warp (`.` `,` `=` `-` numpad) | CH | ✓R | ✓R | |
-| T back to now | CH | ✓R | ✓R | |
+| T back to the game's start | CH | ✓R | ✓R | |
 | Pause menu stops time (Time.timeScale) | US-T276 | ✓R | ✓R | |
 
 ### Bodies, systems and the galaxy

@@ -234,6 +234,9 @@ namespace SpaceGod::Core
 		cs::List<cs::Ref<SocialEvent>> Events = cs::List<cs::Ref<SocialEvent>>();
 		cs::List<cs::Ref<Civics>> Worlds = cs::List<cs::Ref<Civics>>();
 		cs::List<cs::Ref<Org>> Orgs = cs::List<cs::Ref<Org>>();
+		/// <summary>US-T863: the day of the first update (NaN in saves from before it); the organisations that day founds are
+		/// backdated as old ones, and their grace years count from it.</summary>
+		double OpenedJd = cs::Double::NaN;
 
 		// The module groups (US-T276..US-T283), made on the first update, absent from saves made before them.
 		cs::Ref<SpaceGod::Core::Kinship> Kinship;

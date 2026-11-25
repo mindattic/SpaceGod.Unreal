@@ -23,7 +23,7 @@ namespace SpaceGod::Core
 				L("B", "watch a battle"),
 				L("Space  or  Pause", "pause (eases to a stop and back); in a mech Space is its jump jets, Pause still pauses"), // US-T83
 				L(",  .  or  -  =  or  numpad -  +", "time warp slower / faster; below real time, slow motion (1/2, 1/4, 1/10, 1/30)"), // US-T166
-				L("T", "back to now"),
+				L("T", "time back to the game's start"),
 				L("G  or  `", "toggle GAMEPLAY / REALISTIC scale"),
 				L("R", "auto-reorient on / off (keep this system's plane level); at a fighter's controls, held, R is drift"),
 				L("O", "orbits"),

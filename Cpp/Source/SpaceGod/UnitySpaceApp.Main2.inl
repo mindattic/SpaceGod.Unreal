@@ -226,6 +226,10 @@ public:
 public:
 	void ShowToast(const cs::String& message);
 
+	/// <summary>US-T863: the Julian date this game began on (its New Game setup's day, else NewGameSetup::DefaultStartJd),
+	/// where T and the HUD's Start button put the clock back to.</summary>
+	double GameStartJd() const;
+
 	void ResetToNow();
 
 private:

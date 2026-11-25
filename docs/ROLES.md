@@ -72,7 +72,7 @@ frame: the craft's at the controls, the command view's otherwise.
 2. **Focus never touches a craft's camera.** F, 1-9, Home, Tab, the map's double-click, panel rows and the drawer's rows all
    refuse at the controls (`AtControls()`, not `IsPiloting()`: a gunner or worker is held too). A planet is never grabbed as a
    fighter.
-3. **Time.** T (back to now) and the rebuild it can cause refuse at the controls. A helm in a fight holds real time; a hunted
+3. **Time.** T (back to the game's start) and the rebuild it can cause refuse at the controls. A helm in a fight holds real time; a hunted
    helm holds real time; lane rides and FTL set the warp for the crossing and hand it back.
 4. **Drive regimes are exclusive.** Cruise refuses in a fight, on a lane, between the stars, with the drives out or powered
    down, and deep in a gravity well. The tractor beam refuses (and lets go) in the same regimes it can't work in: on a lane,

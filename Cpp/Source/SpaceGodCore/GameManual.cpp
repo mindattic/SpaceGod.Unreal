@@ -72,9 +72,9 @@ namespace SpaceGod::Core
 				  "exports, shortages and defences. For a ship: status, speed, ETA, cargo and trade profit, or hull, shields, "
 				  "lost hardpoints, fighters aboard and orders. The selected ship's flight path is drawn, lanes included."),
 				T("Time",
-				  "The clock starts at the current date and runs from real time up to a year a second. Space pauses (easing "
-				  "to a stop), comma and period slow and speed the warp, and T brings it back to now. Watching a battle or "
-				  "taking a helm drops to real time."),
+				  "The clock starts on the game's start date and runs from real time up to a year a second. Space pauses (easing "
+				  "to a stop), comma and period slow and speed the warp, and T (or the Start button) brings it back to the day the "
+				  "game began. Watching a battle or taking a helm drops to real time."),
 				T("Gameplay and realistic scale",
 				  "G switches scale. At gameplay scale worlds are drawn large and close so a system can be read at a glance; "
 				  "at realistic scale everything drops back to its true size and distance, and most things become icons. "
@@ -850,7 +850,7 @@ namespace SpaceGod::Core
 				  "from one seat to another is instant: the old one goes back to its crew, the new one is yours that frame, and "
 				  "the view is there in a blink. Each key has one owner at a time: at a seat the craft has the keys and the mouse "
 				  "(F is flight assist, T a lock, Backspace up to the helm) and the camera only follows it, the wheel zooming the "
-				  "chase; in command the same keys work the camera (F focus, T back to now, Backspace home). A key or button "
+				  "chase; in command the same keys work the camera (F focus, T back to the game's start, Backspace home). A key or button "
 				  "still held as you take or leave a seat is ignored until you let it go, so a burn held as you hand the helm back "
 				  "does not swim the camera off."),
 				T("Manning a gun",

@@ -561,7 +561,7 @@ namespace SpaceGod
 			.WithKeys(".").WithState([](UnitySpaceApp& a) { return cs::Strings::ToUpperInvariant(a.Clock->Warp().Label); }).StaysOpen());
 		CheatRegistry::Add("Time & scale", CheatEntry::Action("Slower", "one step down the warp", [](UnitySpaceApp& a) { a.Clock->Slower(); })
 			.WithKeys(",").WithState([](UnitySpaceApp& a) { return cs::Strings::ToUpperInvariant(a.Clock->Warp().Label); }).StaysOpen());
-		CheatRegistry::Add("Time & scale", CheatEntry::Action("Back to now", "the clock to today's date", [](UnitySpaceApp& a) { a.ResetToNow(); })
+		CheatRegistry::Add("Time & scale", CheatEntry::Action("Back to the start", "the clock to the day this game began", [](UnitySpaceApp& a) { a.ResetToNow(); })
 			.WithKeys("T").WithBlocker([](UnitySpaceApp& a) { return a.AtControls() ? cs::String("at the controls: P to release first") : cs::String(); }));
 		CheatRegistry::Add("Time & scale", CheatEntry::Action("Realistic / game scale", "true distances and sizes, or the navigable game scale", [](UnitySpaceApp& a) { a.ToggleScale(); })
 			.WithKeys("G").WithState([](UnitySpaceApp& a) { return cs::String(a.ScaleGoal > 0.5 ? "GAME SCALE" : "REALISTIC"); }).StaysOpen());
