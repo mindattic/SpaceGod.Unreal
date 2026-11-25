@@ -2,6 +2,7 @@
 #include "Rendering/HullLighting.h"
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
+#include "Settings/GameSetting.h"
 #include "UnityCompat/UnityScene.h"
 #include "UnitySpaceApp.h"
 #include "Camera/SpaceCamera.h"
@@ -12,6 +13,7 @@
 #include "BodyDefinition.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
+#include "ScaleModel.h"
 #include "Ships.h"
 #include "Systems/Galaxy.h"
 
@@ -55,6 +57,18 @@ namespace SpaceGod::Rendering
 		TAutoConsoleVariable<float> CVarLamps(TEXT("sg.HullLighting.Lamps"), 1.0f, TEXT("US-T172: small craft headlights and a Void Station's Embers as lamps."));
 		TAutoConsoleVariable<int32> CVarShadows(TEXT("sg.HullLighting.Shadows"), 1, TEXT("US-T172: the key light's self-shadows on the hulls."));
 		TAutoConsoleVariable<int32> CVarNav(TEXT("sg.HullLighting.NavLights"), 1, TEXT("US-T172: nav lights and strobes on the hulls."));
+		TAutoConsoleVariable<int32> CVarScaleLights(TEXT("sg.HullLighting.ScaleLights"), 1,
+			TEXT("US-T835: running lights and lit windows along the hulls at their true spacing (a scale cue), one instanced draw each."));
+		TAutoConsoleVariable<float> CVarRunningSpacing(TEXT("sg.HullLighting.RunningSpacingM"), 30.0f,
+			TEXT("US-T835: metres between running lights along a hull's keel, spine and flanks. Read when a hull is built."));
+		TAutoConsoleVariable<float> CVarWindowSpacing(TEXT("sg.HullLighting.WindowSpacingM"), 6.0f,
+			TEXT("US-T835: metres between windows along a hull's flanks. Read when a hull is built."));
+		TAutoConsoleVariable<int32> CVarScalePerHull(TEXT("sg.HullLighting.ScaleLightsPerHull"), 192,
+			TEXT("US-T835: most running lights and windows on one hull (past it, whole runs are dropped so the rest keep their spacing). "
+				"Read when a hull is built."));
+		TAutoConsoleVariable<int32> CVarScaleMax(TEXT("sg.HullLighting.ScaleLightsMax"), 4096, TEXT("US-T835: most running lights and windows drawn in a frame."));
+		TAutoConsoleVariable<float> CVarScaleGapPx(TEXT("sg.HullLighting.ScaleLightsMinGapPx"), 3.0f,
+			TEXT("US-T835: a hull's running lights (or windows) show only while their spacing is at least this many pixels on screen."));
 
 		/// The Unreal side of the lighting, on the scene host actor (remade when the world changes).
 		struct Rig
@@ -76,7 +90,7 @@ namespace SpaceGod::Rendering
 		Vector3 ShineFrom;
 		Vector3 ShineColor;
 		float ShadowReach = 0;
-		int ShadowCasting = 0, LampsLit = 0, EmbersLit = 0, NavShown = 0;
+		int ShadowCasting = 0, LampsLit = 0, EmbersLit = 0, NavShown = 0, ScaleShown = 0;
 		double NextCapture = 0;
 		bool CaptureSoon = true;
 
@@ -376,12 +390,22 @@ namespace SpaceGod::Rendering
 			Vector3 Nose;
 			float Size = 0.02f, Phase = 0;
 			bool SmallCraft = false;
+			/// US-T835: running lights and windows in the root's frame, their spacing and their true size (fractions of the hull).
+			std::vector<Vector3> Running, Windows;
+			float RunGap = 0, WindowGap = 0, RunSize = 0, WindowSize = 0;
 		};
 
 		std::vector<NavSet>& NavSets()
 		{
 			static std::vector<NavSet> sets;
 			return sets;
+		}
+
+		cs::Ref<Mesh> NavQuad()
+		{
+			static cs::Ref<Mesh> quad;
+			if (!Alive(quad)) quad = MeshFactory::Quad();
+			return quad;
 		}
 
 		cs::Ref<Material> NavMaterial(NavKind k)
@@ -406,6 +430,8 @@ namespace SpaceGod::Rendering
 		{
 			bool Ok = false;
 			FVector3f P[6];
+			/// US-T835: a strided sample of its vertices (a few thousand at most), for the hull's profile along its length.
+			std::vector<FVector3f> Sample;
 		};
 
 		const Extremes& ExtremesOf(const cs::String& asset)
@@ -432,6 +458,9 @@ namespace SpaceGod::Rendering
 							if (v[axis] > e.P[axis * 2 + 1][axis]) e.P[axis * 2 + 1] = v;
 						}
 					}
+					uint32 stride = std::max<uint32>(1, n / 2048);
+					e.Sample.reserve(n / stride + 1);
+					for (uint32 i = 0; i < n; i += stride) e.Sample.push_back(pb.VertexPosition(i));
 					e.Ok = true;
 				}
 			}
@@ -474,6 +503,165 @@ namespace SpaceGod::Rendering
 			}
 		}
 
+		// ------------------------------------------------------------ running lights and windows (US-T835)
+
+		/// The hull's outline along its length in the root's frame: per slice of z, its outermost points to port, to
+		/// starboard, on top and on the keel.
+		struct HullProfile
+		{
+			static constexpr int Bins = 48;
+			float Z0 = 0, Z1 = 0;
+			Vector3 Edge[4][Bins];
+			bool Ok = false;
+
+			/// The outline's point on one edge (0 port, 1 starboard, 2 top, 3 keel) at <paramref name="z"/>, between slices.
+			Vector3 At(int edge, float z) const
+			{
+				float f = (z - Z0) / (Z1 - Z0) * Bins - 0.5f;
+				int i = std::clamp(static_cast<int>(std::floor(f)), 0, Bins - 1);
+				int j = std::min(i + 1, Bins - 1);
+				float t = std::clamp(f - static_cast<float>(i), 0.0f, 1.0f);
+				Vector3 p = Edge[edge][i] + (Edge[edge][j] - Edge[edge][i]) * t;
+				p.z = z;
+				return p;
+			}
+		};
+
+		HullProfile HullProfileOf(const std::vector<Vector3>& points, float z0, float z1)
+		{
+			HullProfile p;
+			p.Z0 = z0;
+			p.Z1 = z1;
+			if (points.empty() || z1 <= z0) return p;
+			bool has[HullProfile::Bins] = {};
+			for (const auto& q : points)
+			{
+				int b = std::clamp(static_cast<int>((q.z - z0) / (z1 - z0) * HullProfile::Bins), 0, HullProfile::Bins - 1);
+				if (!has[b])
+				{
+					for (auto& e : p.Edge) e[b] = q;
+					has[b] = true;
+					continue;
+				}
+				if (q.x < p.Edge[0][b].x) p.Edge[0][b] = q;
+				if (q.x > p.Edge[1][b].x) p.Edge[1][b] = q;
+				if (q.y > p.Edge[2][b].y) p.Edge[2][b] = q;
+				if (q.y < p.Edge[3][b].y) p.Edge[3][b] = q;
+			}
+			// A slice no sampled vertex fell in takes its nearest filled neighbour's outline.
+			int last = -1;
+			for (int b = 0; b < HullProfile::Bins; b++)
+			{
+				if (!has[b]) continue;
+				for (int k = last + 1; k < b; k++)
+				{
+					int from = last < 0 || b - k <= k - last ? b : last;
+					for (auto& e : p.Edge) e[k] = e[from];
+				}
+				last = b;
+			}
+			if (last < 0) return p;
+			for (int k = last + 1; k < HullProfile::Bins; k++)
+				for (auto& e : p.Edge) e[k] = e[last];
+			p.Ok = true;
+			return p;
+		}
+
+		uint32 MixScaleSeed(uint32 a, uint32 b)
+		{
+			uint32 h = (a * 0x9E3779B1u) ^ ((b + 0x7F4A7C15u) * 0x85EBCA6Bu);
+			h ^= h >> 15;
+			h *= 0x2C1B3C6Du;
+			h ^= h >> 12;
+			return h;
+		}
+
+		/// Keeps about <paramref name="fraction"/> of the points, by whole runs of <paramref name="run"/> neighbours (so the
+		/// ones left keep their true spacing), and at most <paramref name="cap"/>.
+		void KeepRuns(std::vector<Vector3>& v, float fraction, int run, uint32 seed, int cap)
+		{
+			uint32 bar = static_cast<uint32>(std::clamp(fraction, 0.0f, 1.0f) * 65536.0f);
+			size_t w = 0;
+			for (size_t i = 0; i < v.size() && static_cast<int>(w) < cap; i++)
+				if (fraction >= 1.0f || (MixScaleSeed(seed, static_cast<uint32>(i / run)) & 0xffffu) < bar) v[w++] = v[i];
+			v.resize(w);
+		}
+
+		/// Running lights along the spine, keel and flanks and windows along the flanks, at their true spacing on a hull
+		/// <paramref name="lengthM"/> long, bounded by sg.HullLighting.ScaleLightsPerHull.
+		void AddScaleLights(NavSet& set, const HullProfile& profile, double lengthM, uint32 seed)
+		{
+			if (!profile.Ok || lengthM <= 0) return;
+			int cap = std::max(0, static_cast<int>(CVarScalePerHull.GetValueOnGameThread()));
+			set.RunGap = static_cast<float>(std::max(1.0, static_cast<double>(CVarRunningSpacing.GetValueOnGameThread())) / lengthM);
+			set.WindowGap = static_cast<float>(std::max(0.5, static_cast<double>(CVarWindowSpacing.GetValueOnGameThread())) / lengthM);
+			set.RunSize = static_cast<float>(1.2 / lengthM);
+			set.WindowSize = static_cast<float>(0.8 / lengthM);
+			float span = profile.Z1 - profile.Z0;
+			// Lights sit proud of the hull by half their size, outward from the edge they are on.
+			const Vector3 outward[4] = { Vector3(-1, 0, 0), Vector3(1, 0, 0), Vector3(0, 1, 0), Vector3(0, -1, 0) };
+			int runs = static_cast<int>(span / set.RunGap);
+			if (runs >= 2 && cap > 0)
+			{
+				for (int edge = 0; edge < 4; edge++)
+					for (int i = 0; i < runs; i++)
+						set.Running.push_back(profile.At(edge, profile.Z0 + (i + 0.5f) * set.RunGap) + outward[edge] * (set.RunSize * 0.5f));
+				int runCap = std::max(1, cap / 3);
+				KeepRuns(set.Running, std::min(1.0f, static_cast<float>(runCap) / static_cast<float>(set.Running.size())), 4, seed, runCap);
+			}
+			// Windows: a row down each flank, clear of the bow and stern, lit in irregular runs.
+			float w0 = profile.Z0 + span * 0.08f, w1 = profile.Z1 - span * 0.08f;
+			int windows = static_cast<int>((w1 - w0) / set.WindowGap);
+			int windowCap = cap - static_cast<int>(set.Running.size());
+			if (windows >= 4 && windowCap > 0)
+			{
+				for (int edge = 0; edge < 2; edge++)
+					for (int i = 0; i < windows; i++)
+						set.Windows.push_back(profile.At(edge, w0 + (i + 0.5f) * set.WindowGap) + outward[edge] * (set.WindowSize * 0.5f));
+				KeepRuns(set.Windows, 0.6f, 3, seed ^ 0x5bd1e995u, static_cast<int>(set.Windows.size()));
+				if (!set.Windows.empty())
+					KeepRuns(set.Windows, std::min(1.0f, static_cast<float>(windowCap) / static_cast<float>(set.Windows.size())), 8, seed + 17u, windowCap);
+			}
+		}
+
+		cs::Ref<Material> ScaleMaterial(bool window)
+		{
+			static cs::Ref<Material> m[2];
+			auto& mat = m[window ? 1 : 0];
+			if (Alive(mat)) return mat;
+			mat = Materials::MarkShared(Materials::Create(Materials::Glow(), window ? "HullWindow" : "HullRunningLight"));
+			mat->SetColor("_Color", window ? Color(1.0f, 0.8f, 0.52f) : Color(1.0f, 0.93f, 0.78f));
+			mat->SetFloat("_Intensity", window ? 1.6f : 3.0f);
+			mat->SetFloat("_Falloff", window ? 3.0f : 2.4f);
+			return mat;
+		}
+
+		/// Every hull's running lights, and every hull's windows, on one layer: one instanced draw each.
+		struct ScaleBatch
+		{
+			cs::Ref<GameObject> Host;
+			cs::Ref<UnityCompat::InstancedBatch> Running, Windows;
+		};
+
+		ScaleBatch* ScaleBatches()
+		{
+			static ScaleBatch batches[32];
+			return batches;
+		}
+
+		ScaleBatch& ScaleBatchFor(int layer)
+		{
+			ScaleBatch& b = ScaleBatches()[layer & 31];
+			if (!Alive(b.Host) || b.Host->destroyed)
+			{
+				b.Host = NewGameObject("HullScaleLights");
+				b.Host->layer = layer & 31;
+				b.Running = cs::New<UnityCompat::InstancedBatch>(b.Host->transform, NavQuad(), ScaleMaterial(false));
+				b.Windows = cs::New<UnityCompat::InstancedBatch>(b.Host->transform, NavQuad(), ScaleMaterial(true));
+			}
+			return b;
+		}
+
 		void UpdateNav(UnitySpaceApp* app)
 		{
 			auto& sets = NavSets();
@@ -493,6 +681,17 @@ namespace SpaceGod::Rendering
 			float screen = Mathf::Max(static_cast<float>(Screen::height), 240.0f) / 1080.0f;
 			float now = Time::unscaledTime;
 			bool on = CVarNav.GetValueOnGameThread() != 0;
+			bool scaleOn = on && CVarScaleLights.GetValueOnGameThread() != 0;
+			int scaleLeft = std::max(0, static_cast<int>(CVarScaleMax.GetValueOnGameThread()));
+			float gapPx = CVarScaleGapPx.GetValueOnGameThread();
+			Quaternion facing = cam->transform->rotation();
+			ScaleShown = 0;
+			for (int i = 0; i < 32; i++)
+			{
+				ScaleBatch& b = ScaleBatches()[i];
+				if (b.Running) b.Running->Clear();
+				if (b.Windows) b.Windows->Clear();
+			}
 			for (auto& s : sets)
 			{
 				auto root = s.Root.lock();
@@ -525,6 +724,35 @@ namespace SpaceGod::Rendering
 					l.T->localScale = Vector3::one() * (world / length);
 					NavShown++;
 				}
+				// US-T835: running lights and windows, while their spacing is a few pixels or more; at their true size, but
+				// never under a pixel or so.
+				if (!scaleOn || !show || scaleLeft <= 0 || (s.Running.empty() && s.Windows.empty())) continue;
+				float unitPx = length / dist * static_cast<float>(ppu);
+				bool running = !s.Running.empty() && s.RunGap * unitPx >= gapPx;
+				bool windows = !s.Windows.empty() && s.WindowGap * unitPx >= gapPx;
+				if (!running && !windows) continue;
+				ScaleBatch& batch = ScaleBatchFor(root->gameObject()->layer);
+				float minWorld = static_cast<float>(1.5 * screen / ppu);
+				auto draw = [&](const std::vector<Vector3>& points, float size, UnityCompat::InstancedBatch& into)
+				{
+					for (const auto& local : points)
+					{
+						if (scaleLeft <= 0) return;
+						Vector3 p = m.MultiplyPoint(local);
+						float d = (p - camPos).magnitude();
+						into.Add(p, facing, Mathf::Max(size * length, minWorld * d));
+						scaleLeft--;
+						ScaleShown++;
+					}
+				};
+				if (running) draw(s.Running, s.RunSize, *batch.Running);
+				if (windows) draw(s.Windows, s.WindowSize, *batch.Windows);
+			}
+			for (int i = 0; i < 32; i++)
+			{
+				ScaleBatch& b = ScaleBatches()[i];
+				if (b.Running) b.Running->Flush();
+				if (b.Windows) b.Windows->Flush();
 			}
 		}
 
@@ -726,6 +954,7 @@ namespace SpaceGod::Rendering
 		// Every hull piece's extremes in the root's frame (nose +Z, up +Y, starboard +X), then the hull's.
 		bool any = false;
 		Vector3 lo[3], hi[3];
+		std::vector<Vector3> samples;
 		for (const auto& r : hull)
 		{
 			if (!r || !r->transform()) continue;
@@ -734,6 +963,11 @@ namespace SpaceGod::Rendering
 			const Extremes& e = ExtremesOf(mesh->ImportedAsset);
 			if (!e.Ok) continue;
 			WorldMatrix m = WorldMatrix::Of(*r->transform());
+			for (const auto& p : e.Sample)
+			{
+				Vector3 local = mesh->ImportedRotation * (Vector3(p.X, p.Z, -p.Y) * mesh->ImportedScale);
+				samples.push_back(Mul(inv, m.MultiplyPoint(local) - rm.t));
+			}
 			for (const auto& p : e.P)
 			{
 				// Unreal (x, y, z) cm is Unity (x, z, -y) / 100 (UnrealSpace), then the import's correction.
@@ -749,8 +983,7 @@ namespace SpaceGod::Rendering
 			}
 		}
 		if (!any) return;
-		static cs::Ref<Mesh> quad;
-		if (!Alive(quad)) quad = MeshFactory::Quad();
+		cs::Ref<Mesh> quad = NavQuad();
 		NavSet set;
 		set.Root = root;
 		set.Owner = ship;
@@ -782,6 +1015,9 @@ namespace SpaceGod::Rendering
 		add(NavKind::Strobe, hi[1] + Vector3(0, out, 0));
 		add(NavKind::Stern, lo[2] + Vector3(0, 0, -out));
 		if (km > 0.15) add(NavKind::Beacon, lo[1] + Vector3(0, -out, 0));
+		// US-T835: spaced in metres of the hull as drawn (its real length under true scale).
+		double realM = ScaleModel::TrueScale()->Value && ship->Spec ? ScaleModel::RealLengthM(ship->Spec->Class) : 0;
+		AddScaleLights(set, HullProfileOf(samples, lo[2].z, hi[2].z), realM > 0 ? realM : km * 1000.0, static_cast<uint32>(ship->Id) * 2654435761u);
 		NavSets().push_back(std::move(set));
 	}
 
@@ -797,7 +1033,7 @@ namespace SpaceGod::Rendering
 		auto* sky = rig->Sky.Get();
 		return cs::Cat("key ", f(key ? key->Intensity : 0), " lux (eclipse ", f(Eclipse), "), fill ", f(fill ? fill->Intensity : 0), ", planetshine ",
 			f(shine ? shine->Intensity : 0), ", sky ", f(sky ? sky->Intensity : 0), Overridden ? " (override)" : "", "; shadows ",
-			key && key->CastShadows ? cs::Cat(ShadowCasting, " casters to ", f(ShadowReach), " cm") : cs::String("off"), "; nav lights ", NavShown,
+			key && key->CastShadows ? cs::Cat(ShadowCasting, " casters to ", f(ShadowReach), " cm") : cs::String("off"), "; nav lights ", NavShown, ", scale lights ", ScaleShown,
 			", headlights ", LampsLit, ", Ember lamps ", EmbersLit);
 	}
 }
