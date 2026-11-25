@@ -2055,9 +2055,12 @@ namespace SpaceGod
 			float depth;
 			if (!ToGui(shipScene[i], p, depth)) continue;
 			double px = Core::ShipLod::ApparentPx(shipLength[i] * Core::ShipLod::ExtentFactor(ships[i]), depth, ppu);
-			if (picture != nullptr && ships[i] != Piloted.Ship && !(Core::ShipLod::DrawsModel(px) && PerceivesShipModel(i)) && picture->Of(ships[i]) == nullptr) continue;
-			if (FoldedShips.Contains(ships[i]) && !Core::ShipLod::DrawsModel(px)) continue;
-			double pickRadius = cs::Math::Max(px * 0.5, UI::Icons::PixelSize(ships[i]->Spec->Class) * 0.5 + 4);
+			// US-T816: picked as it is drawn, in the tier the render budget gave it (US-T719).
+			bool model = ShipModelShown(ships[i], px);
+			if (picture != nullptr && ships[i] != Piloted.Ship && !(model && PerceivesShipModel(i)) && picture->Of(ships[i]) == nullptr) continue;
+			if (FoldedShips.Contains(ships[i]) && !model) continue;
+			double iconRadius = UI::Icons::PixelSize(ships[i]->Spec->Class) * 0.5 + 4;
+			double pickRadius = model ? cs::Math::Max(px * 0.5, iconRadius) : iconRadius;
 			double d = (p - gui).magnitude();
 			if (d > pickRadius) continue;
 			if (Occluded(shipScene[i])) continue;
