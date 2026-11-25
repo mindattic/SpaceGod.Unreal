@@ -510,13 +510,24 @@ namespace SpaceGod::Core
 			if (v->Along >= v->SpotAlong - 1e-6) Touchdown(b, u, v);
 			return true;
 		}
-		// Launching: thrown down the deck at the craft's own thrust, nose along the hull's.
+		// Launching: thrown down the deck at the craft's own thrust, nose along the hull's; out of a tube, by its catapult once
+		// its wave fires, taxiing up to the breech till then (US-T779).
+		auto axis = deck->Axis();
+		bool tube = deck->LaunchOnly();
+		if (tube && b->Seconds < v->Release)
+		{
+			v->Speed = 0;
+			v->Along = Min(deck->SternAlong, v->Along + MinCloseKmS * dt);
+			u->Pos = deck->At(v->Along, v->Offset);
+			u->Vel = c->Vel;
+			u->Forward = axis;
+			return true;
+		}
 		double top = Max(spec->MaxSpeed, MinCloseKmS);
-		v->Speed = Min(top, v->Speed + Max(spec->Accel, 0.02) * dt);
+		v->Speed = Min(top, v->Speed + Max(spec->Accel, tube ? CatapultKmS2 : 0.02) * dt);
 		v->Along += v->Speed * dt;
 		v->Offset = v->Offset - v->Offset * (1 - cs::Math::Exp(-dt / LineUpSeconds));
 		u->Pos = deck->At(v->Along, v->Offset);
-		auto axis = deck->Axis();
 		u->Vel = c->Vel + axis * v->Speed;
 		u->Forward = axis;
 		if (v->Along >= deck->BowAlong + ExitKm) ClearOfBow(b, u, v);
@@ -545,6 +556,9 @@ namespace SpaceGod::Core
 		f->PhaseTime = 0;
 		f->RunClosest = cs::Double::MaxValue;
 		f->RunEntry = DVec3::Zero;
+		// Out of a tube (US-T779), it breaks for its squadron's join point, the squadrons' alternating port and starboard.
+		if (v->Deck->LaunchOnly() && v->After == FighterPhase::Launch && f->Squadron >= 0)
+			f->Join = DVec3((f->Squadron / 2 + 0.5) * (f->Squadron % 2 == 0 ? -JoinSpreadKm : JoinSpreadKm), JoinUpKm, JoinAheadKm);
 		// A relaunched pilot rejoins its squadron's vee behind whoever leads it now (it leads if nobody does); a squadron
 		// launching together at the start of a fight keeps the leads it was launched with.
 		if (f->Squadron >= 0 && v->Relaunch && !b->Flown.ContainsKey(u))
@@ -683,10 +697,28 @@ namespace SpaceGod::Core
 		v->Stage = DeckStage::Launching;
 		v->After = craft->Fighter->Phase;
 		v->Along = -bestCount * LaunchSpacingKm;
+		// A tube (US-T779) holds it at the breech, queued behind the others in it, until its wave fires: one craft a tube a
+		// wave, rippling along each tier.
+		if (best->LaunchOnly())
+		{
+			v->Along = best->SternAlong - bestCount * LaunchSpacingKm;
+			v->Release = Max(b->Seconds + (best->Tube % TubesPerTier) * TubeRippleSeconds, best->NextLaunch);
+			best->NextLaunch = v->Release + TubeCycleSeconds;
+		}
 		craft->Fighter->Deck = v;
 		craft->Pos = best->At(v->Along, DVec3::Zero);
 		craft->Vel = carrier->Vel;
 		craft->Forward = best->Axis();
+		return true;
+	}
+
+	bool FlightDecks::JoinGoal(const cs::Ref<BattleUnit>& u, DVec3& goal)
+	{
+		auto f = u ? u->Fighter : nullptr;
+		if (f == nullptr || f->Join.LengthSquared() == 0 || f->Carrier == nullptr) return false;
+		DVec3 right, up;
+		f->Carrier->Basis(right, up);
+		goal = f->Carrier->Pos + right * f->Join.X + up * f->Join.Y + f->Carrier->Forward * f->Join.Z;
 		return true;
 	}
 

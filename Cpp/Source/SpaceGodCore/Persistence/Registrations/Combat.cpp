@@ -261,7 +261,7 @@ namespace SpaceGod::Core
 		SG_F(Resolved), SG_F(nextId), SG_F(rng))
 
 	SG_SERIALIZE(DeckVisit, "Unity.SpaceGod.Core.DeckVisit",
-		SG_F(After), SG_F(Along), SG_F(Deck), SG_F(Offset), SG_F(Relaunch), SG_F(Service), SG_F(Speed),
+		SG_F(After), SG_F(Along), SG_F(Deck), SG_F(Offset), SG_F(Relaunch), SG_F(Release), SG_F(Service), SG_F(Speed),
 		SG_F(SpotAlong), SG_F(Stage), SG_F(Stowing),
 		// The deck it visits rejoins its carrier's decks, which no save holds (US-T111, FlightDecks::Adopt).
 		SG_LOADED([](DeckVisit& v) { FlightDecks::Adopt(v.Deck); }))
@@ -292,7 +292,7 @@ namespace SpaceGod::Core
 
 	SG_SERIALIZE(FighterState, "Unity.SpaceGod.Core.FighterState",
 		SG_F(Bomber), SG_F(BreakPoint), SG_F(Carrier), SG_F(Deck), SG_F(Discipline), SG_F(Drill), SG_F(HavenCheckIn),
-		SG_F(Home), SG_F(Lead), SG_F(Order), SG_F(Phase), SG_F(PhaseTime), SG_F(Reaction), SG_F(Role),
+		SG_F(Home), SG_F(Join), SG_F(Lead), SG_F(Order), SG_F(Phase), SG_F(PhaseTime), SG_F(Reaction), SG_F(Role),
 		SG_F(RunClosest), SG_F(RunEntry), SG_F(Seed), SG_F(Skill), SG_F(Slot), SG_F(Squadron), SG_F(Stranded))
 
 	SG_SERIALIZE(FlightDeck, "Unity.SpaceGod.Core.FlightDeck",

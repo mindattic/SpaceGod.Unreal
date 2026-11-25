@@ -76,6 +76,10 @@ namespace SpaceGod::Core
 		/// <summary>Where the current run starts and where the break-off heads, battle-local km.</summary>
 		DVec3 RunEntry, BreakPoint;
 
+		/// <summary>Out of a launch tube (US-T779): its squadron's join point in its carrier's frame (right, up, forward), km,
+		/// or zero for none (see <see cref="FlightDecks.JoinGoal"/>).</summary>
+		DVec3 Join;
+
 		double Seed = 0;
 
 		/// <summary>Its visit to a flight deck (U.SPC-T518, see <see cref="FlightDecks"/>): flying in to land, down on the deck

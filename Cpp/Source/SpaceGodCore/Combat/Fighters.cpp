@@ -382,6 +382,17 @@ namespace SpaceGod::Core
 		switch (f->Phase)
 		{
 			case FighterPhase::Launch:
+				// US-T779: out of a tube, it breaks for its squadron's join point and holds there while its wing forms on it.
+				if (FlightDecks::JoinGoal(u, goal))
+				{
+					bool there = (u->Pos - goal).Length() < FlightDecks::JoinCaptureKm;
+					if ((there && f->PhaseTime > FlightDecks::JoinHoldSeconds) || f->PhaseTime > 2 * FlightDecks::JoinHoldSeconds)
+					{
+						f->Join = DVec3::Zero;
+						Switch(f, FighterPhase::Approach);
+					}
+					break;
+				}
 				goal = f->Carrier->Pos + f->Carrier->Forward * 4 + DVec3::UnitZ * 0.6;
 				if (f->PhaseTime > 7) Switch(f, FighterPhase::Approach);
 				break;

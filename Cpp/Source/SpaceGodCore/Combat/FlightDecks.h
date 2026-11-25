@@ -63,6 +63,9 @@ namespace SpaceGod::Core
 
 		/// <summary>Launched again after a turnaround (not with its squadron at the start of the fight): it rejoins whoever leads now.</summary>
 		bool Relaunch = false;
+
+		/// <summary>Out of a launch tube (US-T779): the battle second its catapult fires; until then it waits at the tube's breech.</summary>
+		double Release = 0;
 	};
 
 	/// <summary>
@@ -218,6 +221,17 @@ namespace SpaceGod::Core
 		static constexpr double TubeLengthShipLengths = 0.15; static constexpr double MaxTubeLengthKm = 0.2;
 		static constexpr int TubesPerTier = 10;
 
+		/// <summary>The launch sequencer (US-T779): every tube fires in waves, one craft each, a wave every
+		/// <see cref="TubeCycleSeconds"/>, rippling along each tier <see cref="TubeRippleSeconds"/> a tube; the catapult throws
+		/// a craft down its tube at <see cref="CatapultKmS2"/> (or its own thrust, if more).</summary>
+		static constexpr double TubeCycleSeconds = 2.5; static constexpr double TubeRippleSeconds = 0.12; static constexpr double CatapultKmS2 = 0.15;
+
+		/// <summary>Out of a tube, a squadron's lead breaks for its join point (US-T779): this far ahead of its carrier and above
+		/// it, km, the squadrons' points alternating port and starboard this far apart. It flies on into the fight once its wing
+		/// has had <see cref="JoinHoldSeconds"/> to form on it there (within <see cref="JoinCaptureKm"/>), or after twice that.</summary>
+		static constexpr double JoinAheadKm = 4; static constexpr double JoinUpKm = 0.6; static constexpr double JoinSpreadKm = 0.8;
+		static constexpr double JoinCaptureKm = 0.4; static constexpr double JoinHoldSeconds = 12;
+
 	private:
 		// C#'s ConditionalWeakTable<BattleUnit, FlightDeck[]> and its shared empty array (see FlightDecks.cpp).
 		static const cs::List<cs::Ref<FlightDeck>>& None();
@@ -351,6 +365,10 @@ namespace SpaceGod::Core
 		/// in a column. False when the hull has no deck open (it is left where the launch put it).
 		/// </summary>
 		static bool Catapult(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& carrier, const cs::Ref<BattleUnit>& craft);
+
+		/// <summary>Where a lead launched out of a tube flies in <see cref="FighterPhase.Launch"/> (US-T779): its squadron's join
+		/// point off its carrier, battle-local km. False for any other craft (it flies the old launch goal).</summary>
+		static bool JoinGoal(const cs::Ref<BattleUnit>& u, DVec3& goal);
 
 		// ---------------------------------------------------------------- the player
 
