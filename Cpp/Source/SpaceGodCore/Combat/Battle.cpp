@@ -3538,7 +3538,7 @@ namespace SpaceGod::Core
 		return !u->PlayerControlled() && !o->CargoRefused && RaidDoctrine::Robs(u->Faction, o->Ship);
 	}
 
-	bool Battle::HoldsFireOn(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o) { return IgnoredByAi(u, o) || (o->Combat->Disabled() && Spares(u, o)); }
+	bool Battle::HoldsFireOn(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o) { return IgnoredByAi(u, o) || (o->Combat->Disabled() && Spares(u, o)) || Wing::HoldsFire(u, o); }
 
 	bool Battle::IgnoredByAi(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o)
 	{

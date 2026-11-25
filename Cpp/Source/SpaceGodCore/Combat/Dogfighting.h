@@ -478,6 +478,15 @@ namespace SpaceGod::Core
 
 		/// <summary>Each picks and fights its own target.</summary>
 		EngageAtWill,
+
+		/// <summary>US-T756: fly runs on the lead's target as it was when ordered, and hold fire once it lies disabled.</summary>
+		Disable,
+
+		/// <summary>US-T756: hold the vee and leave the lead's target as it was when ordered alone.</summary>
+		Ignore,
+
+		/// <summary>US-T756: fly home to the carrier, land and stay aboard.</summary>
+		ReturnToCarrier,
 	};
 	SPACEGODCORE_API const char* ToString(WingOrder v);
 
@@ -500,6 +509,10 @@ namespace SpaceGod::Core
 		/// <summary>The hostile a wingman covering <paramref name="lead"/> goes after: the nearest armed one within
 		/// <see cref="CoverKm"/> of it, one behind it first; null if the lead is clear.</summary>
 		static cs::Ref<BattleUnit> Threat(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& lead);
+
+		/// <summary>US-T756: whether wingman <paramref name="u"/> holds its fire on <paramref name="o"/> by its lead's order:
+		/// the target it was told to ignore, or the one it was told to disable once that lies disabled.</summary>
+		static bool HoldsFire(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o);
 
 		static cs::String Label(WingOrder o);
 	};

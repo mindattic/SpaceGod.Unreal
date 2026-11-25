@@ -63,6 +63,8 @@ namespace SpaceGod::Core
 
 		/// <summary>What its squadron's lead has told it to do (U.SPC-T424, see <see cref="Wing"/>).</summary>
 		WingOrder Order = WingOrder::FormUp;
+		/// <summary>US-T756: the lead's target when it ordered Disable or Ignore (see <see cref="Wing.HoldsFire"/>).</summary>
+		cs::Ref<BattleUnit> OrderTarget;
 		FighterPhase Phase = FighterPhase::Launch;
 		double PhaseTime = 0;
 		/// <summary>Closest the run has come to its target; a run only counts as past once it has actually closed.</summary>

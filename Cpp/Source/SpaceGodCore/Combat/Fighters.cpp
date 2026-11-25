@@ -193,7 +193,8 @@ namespace SpaceGod::Core
 	bool FighterAI::Recalled(const cs::Ref<BattleUnit>& u)
 	{
 		auto f = u != nullptr ? u->Fighter : nullptr;
-		return f != nullptr && f->Carrier != nullptr && f->Carrier->WingRecalled && f->LandsOn() == f->Carrier && f->Role != FighterRole::AssaultShuttle;
+		return f != nullptr && f->Carrier != nullptr && (f->Carrier->WingRecalled || (f->Lead != nullptr && f->Order == WingOrder::ReturnToCarrier))
+			&& f->LandsOn() == f->Carrier && f->Role != FighterRole::AssaultShuttle;
 	}
 
 	cs::Ref<BattleUnit> FighterAI::HelmCall(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u, bool& guard)
@@ -619,7 +620,7 @@ namespace SpaceGod::Core
 		// re-check the target's own state here so neither the lead nor a wingman copying its
 		// target gets a last torpedo off at a hull that is already struck or already gone.
 		if (!f->Bomber || phase != FighterPhase::AttackRun || u->Target == nullptr || u->Target->Kind == UnitKind::Fighter
-			|| !b->Hostile(u, u->Target) || u->Target->Surrendering || u->Target->Captured || Battle::IgnoredByAi(u, u->Target)) return; // US-T528
+			|| !b->Hostile(u, u->Target) || u->Target->Surrendering || u->Target->Captured || Battle::IgnoredByAi(u, u->Target) || Wing::HoldsFire(u, u->Target)) return; // US-T528
 		auto to = u->Target->Pos - u->Pos;
 		double dist = to.Length();
 		if (dist > CombatTuning::RangeKm(WeaponSpec::Torpedo()) || DVec3::Dot(u->Forward, to / dist) < TorpedoBoresightCos) return;
@@ -957,6 +958,9 @@ namespace SpaceGod::Core
 				return pinned != nullptr;
 			case WingOrder::EngageAtWill:
 				return true;
+			case WingOrder::Disable:
+				pinned = Fair(b, u, f->OrderTarget) && !f->OrderTarget->Combat->Disabled() ? f->OrderTarget : nullptr;
+				return pinned != nullptr;
 			default:
 				return false;
 		}
@@ -993,7 +997,7 @@ namespace SpaceGod::Core
 			return;
 		}
 		Formations::Rejoin(u);
-		u->Target = lead->Target;
+		u->Target = Wing::HoldsFire(u, lead->Target) ? nullptr : lead->Target;
 		// US-T180: the lead is on a capital: the flight breaks up and each fighter flies its own strafing run down the hull
 		// (Choreography::StrafeRun, from whichever end it is nearer), so the hull is swarmed rather than passed by one vee
 		// (US-T164 had the wingmen hold their slots and only coast when the lead did). A bomber keeps station for its run.

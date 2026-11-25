@@ -61,6 +61,9 @@ namespace SpaceGod::Core
 			case WingOrder::AttackMyTarget: return "AttackMyTarget";
 			case WingOrder::CoverMe: return "CoverMe";
 			case WingOrder::EngageAtWill: return "EngageAtWill";
+			case WingOrder::Disable: return "Disable";
+			case WingOrder::Ignore: return "Ignore";
+			case WingOrder::ReturnToCarrier: return "ReturnToCarrier";
 		}
 		return "";
 	}
@@ -726,10 +729,12 @@ namespace SpaceGod::Core
 		if ((lead ? lead->Fighter : nullptr) == nullptr) return 0;
 		auto members = Members(b, lead);
 		lead->Fighter->Lead = nullptr;
+		auto marked = order == WingOrder::Disable || order == WingOrder::Ignore ? lead->Target : nullptr;
 		for (const auto& m : members)
 		{
 			auto f = m->Fighter;
 			f->Lead = lead;
+			f->OrderTarget = marked;
 			if (f->Order != order && f->Phase != FighterPhase::Return)
 			{
 				// A fresh start on the new order, not the tail of an old run.
@@ -765,6 +770,13 @@ namespace SpaceGod::Core
 		return best;
 	}
 
+	bool Wing::HoldsFire(const cs::Ref<BattleUnit>& u, const cs::Ref<BattleUnit>& o)
+	{
+		auto f = u != nullptr ? u->Fighter : nullptr;
+		if (f == nullptr || f->Lead == nullptr || o == nullptr || f->OrderTarget != o) return false;
+		return f->Order == WingOrder::Ignore || (f->Order == WingOrder::Disable && o->Combat->Disabled());
+	}
+
 	cs::String Wing::Label(WingOrder o)
 	{
 		switch (o)
@@ -772,6 +784,9 @@ namespace SpaceGod::Core
 			case WingOrder::AttackMyTarget: return "attack my target";
 			case WingOrder::CoverMe: return "cover me";
 			case WingOrder::EngageAtWill: return "engage at will";
+			case WingOrder::Disable: return "disable my target";
+			case WingOrder::Ignore: return "ignore my target";
+			case WingOrder::ReturnToCarrier: return "return to carrier";
 			default: return "form up";
 		}
 	}
