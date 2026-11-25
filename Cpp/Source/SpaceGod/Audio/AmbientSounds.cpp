@@ -556,7 +556,11 @@ namespace SpaceGod::Audio::AmbientSounds
 		if (!present)
 		{
 			// The menu, or the app going away: every bed fades out.
-			s.Out.Wanted = Mix();
+			// (bughunt) only the volumes go to 0: a default Mix's pitches are 0, which would slide every bed down to the
+			// pitch clamp while it fades. Each keeps the pitch it had (1 if it never had one).
+			s.Out.Wanted.Level.fill(0.0f);
+			for (float& p : s.Out.Wanted.Pitch)
+				if (p <= 0) p = 1.0f;
 			s.App = nullptr;
 		}
 		else if (s.App != app)
