@@ -271,7 +271,8 @@ namespace SpaceGod::UI
 		auto rel = t->Pos - me->Pos;
 		double km = rel.Length();
 		double closing = km > 1e-9 ? -DVec3::Dot(t->Vel - me->Vel, rel / km) : 0;
-		DrawLabel(cs::Cat(RangeText(km), "   ", closing >= 0 ? "closing " : "opening ", cs::Fmt(cs::Math::Abs(closing), "0.00"), " km/s"), Vector2(x, y), Dim, true);
+		DrawLabel(FitText(cs::Cat(RangeText(km), "   ", closing >= 0 ? "closing " : "opening ", cs::Fmt(cs::Math::Abs(closing), "0.00"), " km/s  \xC2\xB7  ",
+			SpeedText(t->Vel.Length())), minorLabel, w), Vector2(x, y), Dim, true);
 		y += RowH;
 
 		// US-T339: the focus on it -- you and the hulls and craft of your side whose target it is -- and a rough time to
