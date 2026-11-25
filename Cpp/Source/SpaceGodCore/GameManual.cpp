@@ -28,7 +28,7 @@ namespace SpaceGod::Core
 				  "diplomat's, or take nothing at all and let it play out."),
 				T("The main menu",
 				  "SpaceGod's logo sits over the list, Earth turns below it and now and then a ship crosses the sky. Continue "
-				  "loads the latest save, New Game opens the setup page (below), Quick Start starts at once at the current date "
+				  "loads the latest save, New Game opens the setup page (below), Quick Start starts at once on 1 January 3026 "
 				  "beside Earth, Load Game opens the saves (each line says how its game began), Co-op hosts a game for friends "
 				  "to join (Host Co-op) or joins one by its address (Join Co-op), Settings opens every tunable, Help opens this "
 				  "manual, Credits rolls the credits and Quit leaves. "
@@ -36,8 +36,8 @@ namespace SpaceGod::Core
 				  "Extras holds the guided tutorial, the dogfight demos (a light or a heavy fighter) and the showcase tour. The "
 				  "bottom-right corner names the build: its version, build number and commit."), // US-T245
 				T("Setting up a new game",
-				  "New Game asks how the game starts. Start date: today, or pick a day (yyyy-mm-dd, 1900 to 2300) and the worlds "
-				  "stand where they did, or will, that day. Galaxy seed: a random number, or type your own (a word works too); the "
+				  "New Game asks how the game starts. Start date: 1 January 3026, or pick a day (yyyy-mm-dd, 1900 to 3100) and "
+				  "the worlds stand where they did, or will, that day. Galaxy seed: a random number, or type your own (a word works too); the "
 				  "same seed makes the same galaxy beyond the real stars near Sol, so share it with a friend. Starting as: the god "
 				  "view by Earth (the classic start), a fighter pilot on patrol (at the helm of a home-side fighter near Earth), a "
 				  "freighter captain with a small purse (your own freighter at Earth and 250,000 cr in the house account), or a "

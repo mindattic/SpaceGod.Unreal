@@ -217,7 +217,7 @@ namespace SpaceGod::Core
 			return 2 + Society::DaysPerLy * (a->PositionLy - b->PositionLy).Length() + (h % 4u);
 		}
 
-		int Year(double jd) { return 2000 + static_cast<int>(cs::Math::Floor((jd - 2451544.5) / 365.25)); }
+		int Year(double jd) { return Astro::ToDateTime(jd).Year(); }
 
 		cs::String Money(double credits)
 		{
@@ -437,8 +437,17 @@ namespace SpaceGod::Core
 				if (!Stands(s) || s->Population < 200) continue;
 				int wanted = cs::Math::Clamp(static_cast<int>(cs::Math::Floor(cs::Math::Log10(s->Population))) - 2, 1, MaxHouses);
 				int have = HousesOf(s).Count();
-				// A new world gets its houses one a month; the opening census founds them all.
-				for (int i = have; i < wanted && (first || i == have); i++) FoundHouse(galaxy, sys, s, jd, i);
+				// A new world gets its houses one a month; the opening census founds them all, as old houses: founded 20 to
+				// 219 years before, their businesses since.
+				for (int i = have; i < wanted && (first || i == have); i++)
+				{
+					auto house = FoundHouse(galaxy, sys, s, jd, i);
+					if (!first) continue;
+					std::uint32_t k = H(static_cast<std::uint32_t>(house->Id), 0xF0DEu);
+					std::uint32_t years = 20 + k % 200u;
+					house->FoundedJd = jd - 365.25 * years;
+					if (house->Business != nullptr) house->Business->FoundedJd = jd - 365.25 * (2 + (k >> 8) % (years - 1));
+				}
 			}
 		}
 		for (const auto& h : Houses.ToArray())

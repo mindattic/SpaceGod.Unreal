@@ -853,7 +853,7 @@ namespace SpaceGod::Core
 			cs::String record = lore.Long(a->LoreKey, "");
 			if (!record.empty()) a->AddSection("", record);
 			a->AddSection("Standing", cs::Cat(o->Leader != nullptr ? cs::Cat("Led by ", o->Leader->FullName(), ". ") : cs::String(), o->Members.Count(), " members. Strength ",
-				cs::Fmt(o->Strength * 100, "0"), "%. Funds ", Narrator::Money(o->Funds), ". Founded ", static_cast<int>(2000 + (o->FoundedJd - 2451544.5) / 365.25), "."));
+				cs::Fmt(o->Strength * 100, "0"), "%. Funds ", Narrator::Money(o->Funds), ". Founded ", Astro::ToDateTime(o->FoundedJd).Year(), "."));
 			Add(a);
 		}
 		if (civ->Culture != nullptr && civ->Culture->Chronicle.Count() > 0)
@@ -867,7 +867,7 @@ namespace SpaceGod::Core
 			a->AddKeywords("chronicle history historians events");
 			cs::String text;
 			for (const auto& e : civ->Culture->Chronicle)
-				text = cs::Cat(text, text.empty() ? "" : "\n", static_cast<int>(2000 + (e->Jd - 2451544.5) / 365.25), ": ", e->ToString());
+				text = cs::Cat(text, text.empty() ? "" : "\n", Astro::ToDateTime(e->Jd).Year(), ": ", e->ToString());
 			a->AddSection("", text);
 			Add(a);
 		}

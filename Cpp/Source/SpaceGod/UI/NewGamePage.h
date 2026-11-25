@@ -2,10 +2,10 @@
 
 // US-T247: the main menu's New Game setup page. Not a port of a C# file.
 //
-// What a new game picked from the main menu starts with: the start date (today, or a picked day), the galaxy seed (random or
+// What a new game picked from the main menu starts with: the start date (1 January 3026, or a picked day), the galaxy seed (random or
 // typed, shown so it can be shared), the starting situation (Core::StartSituation) and the difficulty (Core::Difficulty, the
 // same setting as Settings > Gameplay). The main menu's New Game and the Host Co-op page's Host New Game both open it; the
-// menu's Quick Start skips it (today, the default galaxy, the god view). Drawn inside the main menu's OnGUI with its styles.
+// menu's Quick Start skips it (1 January 3026, the default galaxy, the god view). Drawn inside the main menu's OnGUI with its styles.
 
 #include "Cs/Cs.h"
 #include "NewGameSetup.h"
@@ -37,7 +37,7 @@ namespace SpaceGod::UI
 			Start,
 		};
 
-		/// Opens the page afresh: today, a new random seed, the god view; <paramref name="hosting"/> for the Host Co-op page.
+		/// Opens the page afresh: 1 January 3026, a new random seed, the god view; <paramref name="hosting"/> for the Host Co-op page.
 		void Open(bool hosting);
 
 		/// Whether the page was opened to host a co-op game.

@@ -3,6 +3,7 @@
 
 #include "Cs/Cs.h"
 #include "Astro.h"
+#include "NewGameSetup.h"
 
 #include <array>
 
@@ -63,7 +64,9 @@ namespace SpaceGod::Core
 		/// shows System II longitude rising from 410° (2024 Jan 1) to 439° (2025 Dec 1), +0.0415°/day
 		/// westward; System III runs 8.0°/30 days faster than System II (BAA), so the spot drifts
 		/// +0.308°/day in System III west longitude. Its drift oscillates (~90-day libration) and
-		/// changes over years; this linear fit is good to a few degrees for 2024-2027.
+		/// changes over years; this linear fit is good to a few degrees for 2024-2027. Outside those years the drift is
+		/// counted from the game's start (3026-01-01) instead of the anchor, so the spot opens where it was measured
+		/// rather than where a millennium of extrapolation would put it.
 		/// Internal circulation: ~4.5 to 6 days around the high-speed collar (Juno and Voyager/Galileo
 		/// cloud tracking, e.g. Simon et al. 2018); the core is comparatively quiet.
 		/// </summary>
@@ -85,7 +88,14 @@ namespace SpaceGod::Core
 			/// <summary>Where the spot sits on the colour map (OPAL Hubble map of 2015 Jan 19), System III west longitude.</summary>
 			static constexpr double MapSystemIIIWestDeg = 125.9;
 
-			static double SystemIIIWestDeg(double jd) { return Astro::WrapDegrees360(AnchorSystemIIIWestDeg + DriftDegPerDay * (jd - AnchorJd)); }
+			/// <summary>The years the fit holds: 2024-01-01 to 2028-01-01, 00:00 UT.</summary>
+			static constexpr double FitFirstJd = 2460310.5;
+			static constexpr double FitEndJd = 2461771.5;
+
+			/// <summary>Days of drift since the spot stood at its anchor longitude.</summary>
+			static double DriftDays(double jd) { return jd >= FitFirstJd && jd < FitEndJd ? jd - AnchorJd : jd - NewGameSetup::DefaultStartJd; }
+
+			static double SystemIIIWestDeg(double jd) { return Astro::WrapDegrees360(AnchorSystemIIIWestDeg + DriftDegPerDay * DriftDays(jd)); }
 
 			/// <summary>East longitude (map coordinates, -180..180) of the spot's centre.</summary>
 			static double EastLongitudeDeg(double jd)

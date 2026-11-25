@@ -219,7 +219,7 @@ namespace SpaceGod
 		Core::NewGameSetup setup;
 		bool setUp = GameLaunch::TakeSetup(setup);
 		if (setUp && !std::isnan(setup.StartJd)) Clock = cs::New<SimClock>(setup.StartJd);
-		else Clock = std::isnan(StartJd) ? SimClock::StartingNow() : cs::New<SimClock>(StartJd); // US-T45: was SimClock::StartingNow()
+		else Clock = cs::New<SimClock>(std::isnan(StartJd) ? Core::NewGameSetup::DefaultStartJd : StartJd); // US-T45, US-T861: 3026-01-01 unless pinned
 		Clock->SetWarp(SimClock::StartingWarp()->Index);
 		scaleModel = cs::New<ScaleModel>();
 		scaleModel->SetBlend(1);

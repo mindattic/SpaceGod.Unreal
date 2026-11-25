@@ -86,7 +86,7 @@ namespace SpaceGod
 		bool enabled = true;
 
 		/// US-T45 (the C# track's UnitySpaceApp.StartJd): a fixed start for the next game's clock (the screenshot runs,
-		/// so both tracks show the same moment); NaN starts at now, as the original.
+		/// so both tracks show the same moment); NaN starts on 3026-01-01 (NewGameSetup::DefaultStartJd).
 		static inline double StartJd = std::numeric_limits<double>::quiet_NaN();
 
 		/// The smoke run (Smoke/SpaceGodSmoke.cpp) reads private members, as the C# track's smoke does by reflection.

@@ -35,7 +35,7 @@ namespace SpaceGod::UI
 	{
 		hosting = hostingGame;
 		pickDate = false;
-		dateText = NewGameSetup::FormatDate(Astro::JulianDate(cs::DateTime::UtcNow()));
+		dateText = NewGameSetup::FormatDate(NewGameSetup::DefaultStartJd);
 		seedText = cs::Cat(NewGameSetup::RandomSeed());
 		situation = StartSituation::GodView;
 		keyStart = false;
@@ -98,7 +98,7 @@ namespace SpaceGod::UI
 		// ---- start date
 		GUI::Label(Rect(lx, y + 5, 130, 20), "Start date", s.text);
 		const float half = (cw - 10) * 0.5f;
-		if (GUI::Button(Rect(cx, y, half, 28), cs::Cat("Today (", NewGameSetup::FormatDate(Astro::JulianDate(cs::DateTime::UtcNow())), ")"), pickDate ? s.button : s.buttonActive))
+		if (GUI::Button(Rect(cx, y, half, 28), cs::Cat("New Year 3026 (", NewGameSetup::FormatDate(NewGameSetup::DefaultStartJd), ")"), pickDate ? s.button : s.buttonActive))
 			pickDate = false;
 		if (GUI::Button(Rect(cx + half + 10, y, half, 28), "Pick a day", pickDate ? s.buttonActive : s.button)) pickDate = true;
 		y += 34;
