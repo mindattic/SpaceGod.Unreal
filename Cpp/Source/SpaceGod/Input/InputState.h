@@ -43,6 +43,16 @@ namespace SpaceGod::Input
 		/// <summary>While piloting: roll, -1 (Z, anticlockwise) .. 1 (X, clockwise), seen from behind.</summary>
 		float Roll = 0;
 
+		/// <summary>US-T838: the joystick's stick through its curves (Input/Joystick.h), x yaw and y pitch, each -1..1;
+		/// zero in command.</summary>
+		Vector2 JoyStick;
+
+		/// <summary>US-T838: a stick is connected and pitch or yaw has a joystick source: the helm flies <see cref="JoyStick"/>.</summary>
+		bool JoyStickBound = false;
+
+		/// <summary>US-T838: the joystick's throttle lever, 0..1; -1 with none bound (or in command).</summary>
+		float ThrottleAxis = -1;
+
 		/// <summary>While piloting: switches flight assist on or off (shares F with <see cref="Focus"/>,
 		/// which is gated off while piloting, so the two never fire together).</summary>
 		bool ToggleFlightAssist = false;
@@ -320,6 +330,9 @@ namespace SpaceGod::Input
 		/// US-T83: the jump jets' key went down this frame (it shares Space with the pause), and the boost from the keys alone
 		/// and from the pad (in a mech the pad's boost button is its jets).
 		bool jumpJetsPressed = false, keyBoost = false, padBoost = false;
+		/// US-T838: the joystick's roll and strafe this frame, added to Roll and Move only at the controls (Arbitrate).
+		float joyRoll = 0;
+		Vector2 joyStrafe;
 
 	public:
 		/// <summary>True on the frame the right button was released without dragging (a "right click").</summary>
@@ -370,6 +383,9 @@ namespace SpaceGod::Input
 
 		/// US-T250: the pad's part of the frame (Input/Gamepad.h), after the keyboard's and mouse's.
 		void PollPad();
+
+		/// US-T838: the joystick's part of the frame (Input/Joystick.h), after the pad's.
+		void PollJoystick();
 
 		static float Axis(const ButtonControl& positive, const ButtonControl& negative);
 	};

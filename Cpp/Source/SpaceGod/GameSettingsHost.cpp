@@ -15,6 +15,7 @@
 #include "Coop/CoopOptions.h" // US-T562
 #include "Input/DriftKey.h"
 #include "Input/Gamepad.h" // US-T250
+#include "Input/Joystick.h" // US-T838
 #include "Input/MouseFlight.h" // US-T736
 #include "Input/KeyBindings.h" // US-T249
 #include "Rendering/Pipeline/RenderBackend.h"
@@ -74,6 +75,7 @@ namespace SpaceGod
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::DriftKey::ModeSetting(); }); // US-T165: drift on R, hold or toggle
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::MouseFlight::Declare(); }); // US-T736: mouse flight and auto-level
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::Gamepad::Declare(); }); // US-T250: the pad's dead zone, aim and buttons
+		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::Joystick::Declare(); }); // US-T838: Controls > the joystick's axes
 		SettingsRegistry::AddDeclarationSource([] { ::SpaceGod::Input::KeyBindings::Declare(); }); // US-T249: Controls > Key bindings
 		SettingsRegistry::AddDeclarationSource([]
 		{

@@ -1,5 +1,6 @@
 #include "Input/UnrealInputDevice.h"
 #include "Input/Gamepad.h" // US-T250
+#include "Input/Joystick.h" // US-T838
 #include "Console/GameConsole.h" // US-T622
 #include "UnrealSpace.h"
 
@@ -158,6 +159,32 @@ namespace SpaceGod::Input
 			Gamepad::ResolvePrompts();
 		}
 
+		/// US-T838: the joystick's raw axes, the RawInput plugin's GenericUSBController_Axis1..8 keys. Built on first use,
+		/// as the plugin registers its keys when it starts.
+		const FKey* JoystickKeys()
+		{
+			static const TArray<FKey> keys = []
+			{
+				TArray<FKey> k;
+				for (int i = 0; i < JoystickDevice::AxisCount; i++)
+					k.Add(FKey(FName(*FString::Printf(TEXT("GenericUSBController_Axis%d"), i + 1))));
+				return k;
+			}();
+			return keys.GetData();
+		}
+
+		/// US-T838: the joystick, raw (InputState applies each axis's curve from the settings).
+		void FeedJoystick(APlayerController* pc)
+		{
+			JoystickDevice& stick = JoystickDevice::current();
+			const FKey* keys = JoystickKeys();
+			for (int i = 0; i < JoystickDevice::AxisCount; i++)
+			{
+				stick.axes[i] = FMath::Clamp(pc->PlayerInput->GetRawKeyValue(keys[i]), -1.0f, 1.0f);
+				if (stick.axes[i] != 0.0f) stick.present = true;
+			}
+		}
+
 		/// US-T250: the keyboard or the mouse touched this frame (a key or button down, the pointer moved, the wheel).
 		bool KeyboardMouseTouched(const InputDevice& device)
 		{
@@ -184,6 +211,7 @@ namespace SpaceGod::Input
 			device.Clear();
 			GamepadDevice::current().present = false; // US-T250
 			GamepadDevice::current().Clear();
+			JoystickDevice::current().Clear(); // US-T838
 			return;
 		}
 		device.present = true;
@@ -194,6 +222,7 @@ namespace SpaceGod::Input
 			if (pc->GetMousePosition(cx, cy)) device.position = UnrealSpace::MouseToUnity(cx, cy, Screen::height);
 			GamepadDevice::current().present = true;
 			GamepadDevice::current().Clear();
+			JoystickDevice::current().Clear(); // US-T838
 			return;
 		}
 
@@ -235,6 +264,7 @@ namespace SpaceGod::Input
 
 		// US-T250: the pad, and which device was used last (the GUI's focus highlight and the Help screen's pad buttons).
 		FeedPad(pc);
+		FeedJoystick(pc); // US-T838
 		pc->ForceFeedbackScale = Gamepad::Vibration(); // US-T557: every rumble played through this controller, live
 		if (GamepadDevice::current().Touched()) Gamepad::LastUsed = true;
 		else if (KeyboardMouseTouched(device)) Gamepad::LastUsed = false;

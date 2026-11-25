@@ -5,6 +5,7 @@
 #include "Input/InputDevice.h"
 #include "Input/DriftKey.h"
 #include "Input/Gamepad.h" // US-T250
+#include "Input/Joystick.h" // US-T838
 #include "Input/KeyBindings.h" // US-T249
 #include "CaptureEvents.h"
 #include "Embodiment/SelfDestruct.h"
@@ -234,6 +235,17 @@ namespace SpaceGod::Input
 		}
 
 		PollPad(); // US-T250
+		PollJoystick(); // US-T838
+	}
+
+	void InputState::PollJoystick()
+	{
+		if (Gamepad::MenuMode) return;
+		JoyStick = Vector2(Joystick::Read(JoyAxis::Yaw), Joystick::Read(JoyAxis::Pitch));
+		JoyStickBound = Joystick::Bound(JoyAxis::Pitch) || Joystick::Bound(JoyAxis::Yaw);
+		ThrottleAxis = Joystick::Read(JoyAxis::Throttle);
+		joyRoll = Joystick::Read(JoyAxis::Roll);
+		joyStrafe = Vector2(Joystick::Read(JoyAxis::StrafeX), Joystick::Read(JoyAxis::StrafeY));
 	}
 
 	void InputState::PollPad()
@@ -292,6 +304,10 @@ namespace SpaceGod::Input
 			// shares the reactor as the arrows do (left weapons, up shields, right engines, down an even share).
 			if (padSecondary) LookHeld = true;
 			if (PowerKey < 0 && padDpad >= 0) PowerKey = padDpad == 3 ? 6 : padDpad;
+			// US-T838: the joystick's roll and strafe fly the craft with the keys'.
+			Roll = Mathf::Clamp(Roll + joyRoll, -1.0f, 1.0f);
+			Move.x = Mathf::Clamp(Move.x + joyStrafe.x, -1.0f, 1.0f);
+			Move.y = Mathf::Clamp(Move.y + joyStrafe.y, -1.0f, 1.0f);
 			return;
 		}
 		// US-T250: the pad in command: the right stick orbits and looks about (the right button held), the bumpers sink and
@@ -322,6 +338,11 @@ namespace SpaceGod::Input
 		JumpJets = jumpJetsPressed = false; // US-T83: no mech to lift in command; Space is the pause's
 		ThrottleStep = 0;
 		Roll = 0;
+		JoyStick = Vector2::zero(); // US-T838: no stick to fly in command
+		JoyStickBound = false;
+		ThrottleAxis = -1;
+		joyRoll = 0;
+		joyStrafe = Vector2::zero();
 	}
 
 	void InputState::GiveWalkerKeys(bool walker)
@@ -430,6 +451,11 @@ namespace SpaceGod::Input
 		padSecondary = padBack = false;
 		padBumpers = 0;
 		padDpad = -1;
+		JoyStick = Vector2::zero(); // US-T838
+		JoyStickBound = false;
+		ThrottleAxis = -1;
+		joyRoll = 0;
+		joyStrafe = Vector2::zero();
 	}
 
 	float InputState::Axis(const ButtonControl& positive, const ButtonControl& negative)

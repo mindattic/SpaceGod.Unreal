@@ -47,6 +47,10 @@
 		{
 			"Name": "MindAtticMediaCapture",
 			"Enabled": true
+		},
+		{
+			"Name": "RawInput",
+			"Enabled": true
 		}
 	],
 	"AdditionalPluginDirectories": [
