@@ -5,6 +5,7 @@
 #include "UnitySpaceApp.h"
 
 #include "Camera/SpaceCamera.h"
+#include "Coop/CoopPeer.h" // US-T855: the clock is slowed solo only
 #include "PlayerOptions.h"
 #include "UI/UiMotion.h"
 #include "Views/PossessionFx.h"
@@ -33,6 +34,12 @@ namespace SpaceGod
 	namespace
 	{
 		constexpr double LightKmS = 299792.458;
+
+		// US-T855: the seat transition's shape, as shares of its length: time slows over the first SeatSlowEnd, holds at
+		// SeatStandstill of full speed, and picks up again from SeatRiseStart; the veil peaks SeatVeilPeak times the show's wash.
+		constexpr float SeatSlowEnd = 0.3f, SeatRiseStart = 0.65f, SeatVeilPeak = 2.0f;
+		constexpr double SeatStandstill = 0.02;
+		constexpr float SeatMaxStep = 1.0f / 30.0f;
 
 		float Smooth01(float a, float b, float x)
 		{
@@ -240,8 +247,110 @@ namespace SpaceGod
 
 	float UnitySpaceApp::PossessionWash() const
 	{
-		if (!possessionShow.Active) return 0;
-		return Bump(possessionShow.T, 0.0f, Tune::WashPeakS, Tune::WashS) * Mathf::Max(PlayerOptions::FlashScale(), 0.35f);
+		float show = possessionShow.Active ? Bump(possessionShow.T, 0.0f, Tune::WashPeakS, Tune::WashS) : 0.0f;
+		// US-T855: the ghost's veil, deepest at the standstill between the two bodies.
+		float veil = seatTransition.Active ? SeatVeilPeak * Mathf::Sin(Mathf::PI * SeatTransitionT()) : 0.0f;
+		float wash = Mathf::Max(show, veil);
+		return wash > 0 ? wash * Mathf::Max(PlayerOptions::FlashScale(), 0.35f) : 0.0f;
+	}
+
+	// ---------------------------------------------------------------- US-T855: the consciousness between bodies
+
+	float UnitySpaceApp::SeatTransitionT() const
+	{
+		return seatTransition.Active && seatTransition.Seconds > 0 ? Mathf::Clamp01(seatTransition.T / seatTransition.Seconds) : 0.0f;
+	}
+
+	double UnitySpaceApp::SeatTransitionTimeScale(float u)
+	{
+		// Time slows on a log curve (each step a like share), holds near a standstill, then picks up the same way.
+		float still = Smooth01(0.0f, SeatSlowEnd, u) * (1.0f - Smooth01(SeatRiseStart, 1.0f, u));
+		return cs::Math::Exp(cs::Math::Log(SeatStandstill) * still);
+	}
+
+	bool UnitySpaceApp::BeginSeatTransition(int restoreWarp)
+	{
+		float seconds = PlayerOptions::SeatTransitionSeconds();
+		// In co-op the clock is everyone's: the warp comes back at once, as it always has (the view still drifts).
+		if (Coop::CoopPeer::Current() != nullptr && restoreWarp >= 0 && Clock != nullptr)
+		{
+			Clock->SetWarp(restoreWarp);
+			restoreWarp = -1;
+		}
+		if (!(seconds > 0) || Clock == nullptr)
+		{
+			EndSeatTransition(false);
+			if (restoreWarp >= 0 && Clock != nullptr) Clock->SetWarp(restoreWarp);
+			return false;
+		}
+		// Changing seats again mid-way: time is already still, so the new drift starts from the standstill.
+		bool already = seatTransition.Active;
+		bool drives = seatTransition.DrivesClock;
+		seatTransition = SeatTransitionState();
+		seatTransition.Active = true;
+		seatTransition.Seconds = seconds;
+		seatTransition.T = already ? seconds * SeatSlowEnd : 0.0f;
+		seatTransition.DrivesClock = drives;
+		seatTransition.RestoreWarp = restoreWarp;
+		seatTransition.HeldWarp = Clock->WarpIndex;
+		if (SpaceCamera != nullptr) SpaceCamera->Ghost(seconds - seatTransition.T, UI::UiMotion::ProfileReducesMotion() ? 0.0f : 1.0f);
+		return true;
+	}
+
+	void UnitySpaceApp::UpdateSeatTransition(float dt)
+	{
+		if (!seatTransition.Active) return;
+		if (Clock == nullptr)
+		{
+			seatTransition = SeatTransitionState();
+			return;
+		}
+		// Stepped as the camera's glide is (a hitch slows it for a frame rather than skipping a tenth of it).
+		seatTransition.T += Mathf::Min(dt, SeatMaxStep);
+		float u = SeatTransitionT();
+		if (seatTransition.RestoreWarp >= 0 && u >= SeatRiseStart)
+		{
+			if (Clock->WarpIndex == seatTransition.HeldWarp) Clock->SetWarp(seatTransition.RestoreWarp);
+			seatTransition.RestoreWarp = -1;
+		}
+		if (u >= 1.0f)
+		{
+			EndSeatTransition(false);
+			return;
+		}
+		// The clock's own Speed, as the eased pause drives it: solo only, and never over the player's own pause.
+		if (Coop::CoopPeer::Current() == nullptr && !Clock->Paused() && !Clock->Pausing() && !Clock->Resuming())
+		{
+			Clock->Speed = SeatTransitionTimeScale(u);
+			seatTransition.DrivesClock = true;
+		}
+		else seatTransition.DrivesClock = false;
+	}
+
+	void UnitySpaceApp::EndSeatTransition(bool skipped)
+	{
+		if (!seatTransition.Active) return;
+		if (Clock != nullptr)
+		{
+			if (seatTransition.DrivesClock && !Clock->Paused() && !Clock->Pausing() && !Clock->Resuming()) Clock->Speed = 1;
+			if (seatTransition.RestoreWarp >= 0 && Clock->WarpIndex == seatTransition.HeldWarp) Clock->SetWarp(seatTransition.RestoreWarp);
+		}
+		if (skipped && SpaceCamera != nullptr) SpaceCamera->SkipGlide();
+		seatTransition = SeatTransitionState();
+	}
+
+	void UnitySpaceApp::SkipSeatTransitionOnKey()
+	{
+		if (!seatTransition.Active || !(Input.Escape || Input.SelectClicked)) return;
+		Input.Escape = false; // spent on the skip, not the pause menu
+		Input.SelectClicked = false;
+		EndSeatTransition(true);
+	}
+
+	bool UnitySpaceApp::GlideBackToGodEye(const Target& anchor)
+	{
+		if (godEyeBody < 0 || godEyeBody >= Catalog()->Count() || SpaceCamera == nullptr) return false;
+		return SpaceCamera->GlideToPose(anchor, BodyScene(godEyeBody) + godEyeOffset, godEyeRotation);
 	}
 
 	float UnitySpaceApp::PossessionFovBreath() const

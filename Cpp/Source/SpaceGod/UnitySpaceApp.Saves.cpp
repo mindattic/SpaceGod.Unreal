@@ -241,7 +241,11 @@ namespace SpaceGod
 	void UnitySpaceApp::ApplyLoaded(const cs::Ref<SaveData>& data)
 	{
 		DropSession();
+		seatTransition = SeatTransitionState();
 		Clock = data->Clock;
+		// US-T855: a save (or rewind keyframe) taken during a seat change's standstill holds its slowed Speed with no ease
+		// under way; the transition is not carried over, so time runs at full again (a pause or its ease is kept as saved).
+		if (Clock != nullptr && !CoopIsClient() && !Clock->Paused() && !Clock->Pausing() && !Clock->Resuming()) Clock->Speed = 1;
 		Galaxy = data->Galaxy;
 		// US-T253: the level the save was played at (a co-op client already has the host's, from the sync's settings).
 		if (!CoopIsClient()) Difficulty::Restore(Galaxy->DifficultyRecord);

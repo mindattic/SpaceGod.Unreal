@@ -12,6 +12,7 @@
 #include "Combat/Fighters.h" // US-T106: a craft's carrier
 #include "Combat/FlightDecks.h" // US-T786: a launch tube
 #include "Astro.h"
+#include "BodyCatalog.h" // US-T855: the god's eye body, bounds-checked
 #include "Combat/PilotAim.h" // US-T129
 #include "Combat/FlightModels.h" // US-T168: a light craft's slack string
 #include "Combat/PilotFlight.h"
@@ -119,6 +120,10 @@ namespace SpaceGod
 		if (AtControls()) return;
 		commandWarp = Clock->WarpIndex;
 		commandFocus = SpaceCamera->Mode != Cameras::SpaceCamera::CameraMode::Free ? SpaceCamera->FocusTarget : Target::None();
+		// US-T855: the god's eye itself, for the ghost's drift back to it.
+		godEyeBody = SpaceCamera->FrameBody() >= 0 && SpaceCamera->FrameBody() < Catalog()->Count() ? SpaceCamera->FrameBody() : -1;
+		godEyeOffset = godEyeBody >= 0 ? SpaceCamera->ScenePosition - BodyScene(godEyeBody) : DVec3::Zero;
+		godEyeRotation = SpaceCamera->Rotation;
 	}
 
 	void UnitySpaceApp::TakeSeat(const cs::Ref<IEmbodiable>& next)
@@ -140,6 +145,7 @@ namespace SpaceGod
 			if (IsPiloting()) ExitPiloting();
 			EnterPiloting(Target::OfShip(helm->Ship));
 			if (switching) SpaceCamera->Hurry();
+			BeginSeatTransition(-1); // US-T855: the consciousness drifts into the hull as time stands still
 			return;
 		}
 		if (Coop::CoopPeer::Current() != nullptr)
@@ -162,6 +168,7 @@ namespace SpaceGod
 		Clock->SetWarp(0);
 		// US-T135: the camera rides it by its own rig (a chase, a gun's mount down the barrel, a worker's shoulder).
 		RideCameraRig(next, pose, switching);
+		BeginSeatTransition(-1); // US-T855
 		ShowToast(cs::Cat(next->RolePanel().Verb, " ", next->Name(), ", ", Clock->Warp().Label, SeatKeys(next)));
 	}
 
@@ -255,10 +262,12 @@ namespace SpaceGod
 		// A seat already lost (the session let go of it) is named by the caller, so the toast can still say why.
 		auto held = HeldNonHelm();
 		cs::String name = held ? held->Name() : lostName;
+		Target anchor = held ? SeatTarget(held) : Target::None(); // US-T855: what the ghost drifts back out of
 		ReleaseSeat();
 		if (IsPiloting())
 		{
 			name = Piloted.Ship ? Piloted.Ship->Name : cs::String();
+			if (Piloted.Ship != nullptr) anchor = Target::OfShip(Piloted.Ship);
 			ExitPiloting();
 		}
 		SpaceCamera->PilotView = std::nullopt;
@@ -268,12 +277,17 @@ namespace SpaceGod
 		SpaceCamera->ExitFocus();
 		if (!commandFocus.IsNone() && !(commandFocus.IsShip() && commandFocus.Ship->Destroyed) && !commandFocus.IsUnit())
 			SpaceCamera->FocusOn(commandFocus);
-		if (commandWarp >= 0) Clock->SetWarp(commandWarp);
+		else GlideBackToGodEye(anchor); // US-T855: the ghost drifts back out to the god's eye it left
+		// US-T855: time stands still while the consciousness leaves the hull, and picks up again at the god's warp.
+		int warp = commandWarp;
+		bool easing = BeginSeatTransition(warp);
 		commandWarp = -1;
 		commandFocus = Target::None();
+		godEyeBody = -1;
 		cs::String head = !why.empty() && !name.empty() ? cs::Cat("The ", name, " is ", why)
 			: !name.empty() ? cs::Cat(name, " handed back to its crew") : cs::String("Handed back");
-		ShowToast(cs::Cat(head, ": back in command, ", Clock->Warp().Label));
+		bool pending = easing && seatTransition.RestoreWarp >= 0 && seatTransition.RestoreWarp < SimClock::Levels().Count();
+		ShowToast(cs::Cat(head, ": back in command, ", pending ? SimClock::Levels()[seatTransition.RestoreWarp].Label : Clock->Warp().Label));
 	}
 
 	cs::Ref<Battle> UnitySpaceApp::BattleInView()

@@ -229,9 +229,14 @@ namespace SpaceGod::Cameras
 		float travelT = 0;
 		/// <summary>Whether this glide takes <see cref="QuickTravelSeconds"/> rather than <see cref="TravelSeconds"/>.</summary>
 		bool hurried = false;
+		/// <summary>US-T855: a ghost glide's length (0 for none), and how much it floats and sways (0 still .. 1).</summary>
+		float ghostSeconds = 0, ghostSway = 0;
+		/// <summary>US-T855: a glide that ends at a pose of its own (back to the god's eye) rather than framing its anchor.</summary>
+		bool travelToPose = false;
+		Quaternion travelEndRotation = Quaternion::identity();
 
 		/// <summary>How long this glide takes, read live.</summary>
-		float GlideSeconds() const { return hurried ? QuickTravelSeconds() : TravelSeconds(); }
+		float GlideSeconds() const { return ghostSeconds > 0 ? ghostSeconds : hurried ? QuickTravelSeconds() : TravelSeconds(); }
 
 		/// <summary>The pilot chase's distance scale (<see cref="ChaseDistance"/>); 1 for any other focus.</summary>
 		double ChaseScale() const { return PilotLocked ? ChaseDistance() : 1.0; }
@@ -242,6 +247,19 @@ namespace SpaceGod::Cameras
 
 		/// <summary>US-T90: the glide under way (a seat switched to another) finishes in <see cref="QuickTravelSeconds"/>.</summary>
 		void Hurry() { hurried = true; }
+
+		/// <summary>US-T855: the glide under way becomes the consciousness's ghost drift: <paramref name="seconds"/> long, the
+		/// turn spread over all of it, floating and swaying by <paramref name="sway"/> (0 still .. 1) between the two eyes.
+		/// Nothing when no glide is under way.</summary>
+		void Ghost(float seconds, float sway);
+
+		/// <summary>US-T855: the glide under way lands on its next update (a skipped transition).</summary>
+		void SkipGlide() { if (Mode == CameraMode::Travel) travelT = 1.0f; }
+
+		/// <summary>US-T855: a ghost glide from where the eye is now to a free pose (the god's eye left on taking a seat),
+		/// eased about <paramref name="anchor"/> (the seat let go) so its distance runs log-scaled from a chase's to the god's;
+		/// it ends in the free camera at that pose. False (nothing changed) when the anchor cannot be glided about.</summary>
+		bool GlideToPose(const Target& anchor, Core::DVec3 endScene, Quaternion endRotation);
 
 	private:
 

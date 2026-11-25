@@ -306,6 +306,8 @@ namespace SpaceGod::Cameras
 		travelEndZoom = framing;
 		travelT = 0;
 		hurried = false;
+		ghostSeconds = 0;
+		travelToPose = false;
 
 		// The orbit angles that reproduce endDir: offset = Euler(pitch, yaw) * back, in the level frame.
 		auto look = -endLocal;
@@ -324,6 +326,8 @@ namespace SpaceGod::Cameras
 		auto rotation = Rotation;
 		Mode = CameraMode::Free;
 		FocusTarget = Target::None();
+		travelToPose = false;
+		ghostSeconds = 0;
 		PilotLocked = false;
 		PilotView = std::nullopt;
 		PilotEye = nullptr;
@@ -349,6 +353,43 @@ namespace SpaceGod::Cameras
 		PilotEye = nullptr;
 		ResetChaseLag();
 		chaseLagTarget = target;
+	}
+
+	void SpaceCamera::Ghost(float seconds, float sway)
+	{
+		if (Mode != CameraMode::Travel || !(seconds > 0)) return;
+		ghostSeconds = seconds;
+		ghostSway = Mathf::Clamp01(sway);
+	}
+
+	bool SpaceCamera::GlideToPose(const Target& anchor, DVec3 endScene, Quaternion endRotation)
+	{
+		if (anchor.IsNone() || !world->TargetValid(anchor)) return false;
+		double r = world->TargetRadius(anchor);
+		if (!(r > 0)) return false;
+		auto centre = world->FocusScene(anchor);
+		auto end = endScene - centre;
+		double endDist = end.Length();
+		if (!(endDist > r * 1e-6)) return false;
+		auto start = ScenePosition - centre;
+		PilotLocked = false;
+		PilotView = std::nullopt;
+		PilotEye = nullptr;
+		ResetChaseLag();
+		travelStartOffset = start.LengthSquared() > 0 ? start : end;
+		travelStartRotation = Rotation;
+		travelEndDirection = end / endDist;
+		travelEndZoom = endDist / r;
+		travelEndRotation = endRotation;
+		travelToPose = true;
+		travelT = 0;
+		hurried = false;
+		ghostSeconds = 0;
+		zoom = zoomTarget = travelEndZoom;
+		FocusTarget = anchor;
+		Mode = CameraMode::Travel;
+		velocity = Vector3::zero();
+		return true;
 	}
 
 	double SpaceCamera::DefaultFraming(const Target& target)
@@ -565,7 +606,7 @@ namespace SpaceGod::Cameras
 		else
 		{
 			dir = Vector3::Slerp(ToVector(startDir), ToVector(travelEndDirection), e).normalized();
-			lookAt = Quaternion::LookRotation(-dir, Up());
+			lookAt = travelToPose ? travelEndRotation : Quaternion::LookRotation(-dir, Up());
 		}
 		ScenePosition = target + DVec3(dir.x, dir.y, dir.z) * dist;
 		// US-T463: the chase over a seat's view rides PilotViewLift above it (UpdateFocus); the glide rises into that lift
@@ -583,11 +624,30 @@ namespace SpaceGod::Cameras
 		}
 		// The turn lands ahead of the glide (x1.8), except on a hurried seat switch: its 0.3 s glide turned the view 90-120
 		// degrees in under 0.17 s, 15-20 degrees a frame (sg.Feel, 'fighter again'); there the turn spans the whole glide.
-		float turnRate = hurried ? 1.0f : 1.8f;
+		// US-T855: a ghost's drift turns over its whole length too, as the consciousness looks round on its way.
+		float turnRate = hurried || ghostSeconds > 0 ? 1.0f : 1.8f;
 		Rotation = Quaternion::Slerp(travelStartRotation, lookAt, SmootherStep(Mathf::Min(1.0f, travelT * turnRate)));
+		// US-T855: the ghost floats as it drifts: a slow sway across the view and a lean of a few degrees, nothing at either eye.
+		if (ghostSeconds > 0 && ghostSway > 0)
+		{
+			float swell = Mathf::Sin(Mathf::PI * e) * ghostSway;
+			float tau = travelT * ghostSeconds;
+			auto across = Rotation * Vector3::right();
+			auto rise = Rotation * Vector3::up();
+			double amp = dist * 0.04 * swell;
+			ScenePosition += DVec3(across.x, across.y, across.z) * (amp * Mathf::Sin(tau * 2.1f))
+				+ DVec3(rise.x, rise.y, rise.z) * (amp * 0.7 * Mathf::Sin(tau * 1.37f + 1.0f));
+			Rotation = Rotation * Quaternion::AngleAxis(3.0f * swell * Mathf::Sin(tau * 0.9f), Vector3::forward());
+		}
 
 		if (travelT >= 1.0f)
 		{
+			if (travelToPose)
+			{
+				Rotation = travelEndRotation;
+				ExitFocus();
+				return;
+			}
 			Mode = CameraMode::Focus;
 			zoom = zoomTarget = travelEndZoom;
 		}

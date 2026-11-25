@@ -95,6 +95,40 @@ and the camera's glide play as for any take; time warp drops to 1x and comes bac
   co-op has no command to carry a launch ordered from the god view.
 - Else any side's free fighter. Out of a fight, the ship's own helm.
 
+## The consciousness between bodies: the seat transition (US-T855)
+
+The owner: "need transition for god-to-ship, and ship-to-ship, and ship-to-god; the universe needs to slow to a
+standstill, drift the view like a ghost to show the consciousness, and slerp lerp back to real time."
+
+Every seat change runs one transition, started where the change is made: `TakeSeat` (god to a seat and seat to seat,
+so Fly this and every key and picker path) and `ReturnToCommand` (a seat back to the god's view). The state is
+`UnitySpaceApp::seatTransition` (`UnitySpaceApp.Possession.inl/.cpp`); the possession show above plays alongside it.
+
+1. **Time slows to a standstill.** `UpdateSeatTransition`, just before the clock advances, sets the clock's own `Speed`
+   (the multiplier the eased pause drives) on a log curve: down over the first 30% of the transition to 2% of full speed,
+   held there, and back up from 65%. Nothing is lost or skipped: the simulation steps as it does while a pause eases in.
+   It never touches a clock the player is pausing, paused or resuming, and never runs in co-op (the clock is everyone's).
+2. **The view drifts like a ghost.** The camera's own glide (`SpaceCamera`'s Travel) becomes the ghost's drift
+   (`SpaceCamera::Ghost`): as long as the transition, its distance eased log-scaled about the seat (so god scale to
+   cockpit scale reads evenly at true scale), its direction and its turn slerped over the whole of it, and a slow float
+   across the view and a lean of a few degrees, swelling mid-way and gone at both eyes (still under Reduce motion). Going
+   back to command with nothing focused, it drifts back out to the god's eye left on taking the seat
+   (`SpaceCamera::GlideToPose`, kept by `RememberCommand` as an offset from its frame body), ending in the free camera there;
+   with something focused it glides to it as before. The screen takes the show's wash (up to twice its peak) at the
+   standstill.
+3. **Back to real time.** Time picks back up to full speed as the eye lands: 1x in a seat (Fly this's, as `TakeSeat` sets
+   it), the god's own warp going back to command (set as time starts to pick up, unless the player picked another meanwhile).
+
+A seat changed again mid-way starts its drift from the standstill. **Esc or a click** skips it: the glide lands and time
+is back at once (`SkipSeatTransitionOnKey`, before the commands; that Esc does not open the pause menu).
+**Settings > Gameplay > Seat change transition** sets its length (2.4 s by default, up to 5; 0 is instant, the old
+behaviour). A scripted run is always instant (`PlayerOptions::SeatTransitionSeconds`), so every capture, test and bench
+path is unchanged. A save or rewind keyframe taken at the standstill keeps the slowed `Speed`; loading it runs at full
+speed again (`ApplyLoaded`), since the transition is not carried over.
+
+Per frame it is a handful of arithmetic: no allocation, no search. There is no post-process volume change: the
+standstill's look is the HUD wash.
+
 ## Checking it
 
 ```powershell

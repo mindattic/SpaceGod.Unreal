@@ -557,6 +557,7 @@ namespace SpaceGod
 		}
 		ArbitrateInput(true); // US-T90: one owner per input this frame (the craft held, else the command view)
 		int screensOpen = OpenScreens();
+		SkipSeatTransitionOnKey(); // US-T855: Esc or a click lands a seat change's transition at once
 		HandleCommands();
 		UpdateTutorial(dt); // US-T254: the tutorial's step looked for in what the commands did, and the first-time hints
 		ArbitrateInput(false); // US-T90: a seat taken or let go just now: the new owner starts on an idle frame
@@ -580,6 +581,7 @@ namespace SpaceGod
 			ShowToast("Time warp is held at real time while the helm is in a battle");
 		}
 
+		UpdateSeatTransition(dt); // US-T855: a seat change eases the clock's Speed down to a standstill and back
 		double raceSim = Race::Probe::Now(); // US-T46: the race's simulation time (docs/RACE.md)
 		CoopAdvance(dt); // US-T44: Clock->Advance(dt), in lockstep with the host in co-op
 		Galaxy->Update(Clock->Jd);

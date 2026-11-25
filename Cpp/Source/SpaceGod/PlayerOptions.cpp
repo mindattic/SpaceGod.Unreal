@@ -139,6 +139,15 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& PlayerOptions::SeatTransition()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("gameplay.seatTransition", Gameplay, "Seat change transition", 2.4, 0, 5, 0.2,
+			"Taking a ship, moving to another or going back to the god's view: time slows to a standstill, the view drifts like a ghost to the new eye and time comes back (0 changes at once; Esc or a click skips one).",
+			cs::Func<cs::String, double>([](double v) { return v <= 0 ? cs::String("Instant") : cs::Cat(cs::Fmt(v, "0.0"), " s"); }),
+			"seat change transition possess ghost slow motion time standstill drift camera instant skip");
+		return value;
+	}
+
 	const cs::Ref<ToggleSetting>& PlayerOptions::PauseOnFocusLoss()
 	{
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.pauseOnFocusLoss", Gameplay, "Pause when the window loses focus", false,
@@ -211,7 +220,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); CinematicLaunch(); PauseOnFocusLoss(); Clock(); Dates();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); CinematicLaunch(); SeatTransition(); PauseOnFocusLoss(); Clock(); Dates();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -283,6 +292,8 @@ namespace SpaceGod
 	}
 
 	bool PlayerOptions::CinematicLaunchCamera() { return !ScriptedRun() && CinematicLaunch()->Value; }
+
+	float PlayerOptions::SeatTransitionSeconds() { return ScriptedRun() ? 0.0f : cs::Math::Max(0.0f, static_cast<float>(SeatTransition()->Value)); }
 
 	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }
 

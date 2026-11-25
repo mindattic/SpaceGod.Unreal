@@ -55,6 +55,9 @@ namespace SpaceGod
 		static const cs::Ref<Core::RangeSetting>& CameraFeel();
 		/// US-T786: out of a launch tube, the view watches the craft fired from outside the carrier instead of from its cockpit.
 		static const cs::Ref<Core::ToggleSetting>& CinematicLaunch();
+		/// US-T855: how long a seat change's ghost transition takes (time slows to a standstill, the view drifts to the new eye
+		/// and time comes back); 0 changes seats at once.
+		static const cs::Ref<Core::RangeSetting>& SeatTransition();
 		/// US-T555: the pause menu opens when the window loses focus, outside co-op. Off by default.
 		static const cs::Ref<Core::ToggleSetting>& PauseOnFocusLoss();
 		/// US-T617: times of day in 24-hour (as always) or 12-hour form.
@@ -119,6 +122,8 @@ namespace SpaceGod
 		static float FeelScale();
 		/// US-T786: Cinematic launch camera is on (never in a scripted run).
 		static bool CinematicLaunchCamera();
+		/// US-T855: the seat transition's length in seconds, 0 for instant (always 0 in a scripted run).
+		static float SeatTransitionSeconds();
 		/// Pause when the window loses focus is on (never in a scripted run).
 		static bool PausesOnFocusLoss();
 

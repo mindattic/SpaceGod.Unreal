@@ -55,7 +55,50 @@ public:
 	/// <summary>The 3D half of the show, made on the system's root; null before a system is shown.</summary>
 	cs::Ref<Views::PossessionFx> possessionFx;
 
+	/// <summary>
+	/// US-T855: the consciousness moving between bodies. Every seat change (god to a seat, seat to seat, seat back to the god)
+	/// runs one transition: time eases down to a standstill through the clock's own Speed (the eased pause's multiplier), the
+	/// camera's glide becomes a ghost's drift from the old eye to the new (SpaceCamera::Ghost, log-scaled about the seat), and
+	/// time eases back up to the warp the new view runs at. Its length is Settings > Gameplay > Seat change transition (0
+	/// instant; always instant in a scripted run, so no bench or capture path ever sees it); Esc or a click skips it. Solo
+	/// only for the clock (a co-op session's shared clock is never slowed by one peer's view).
+	/// </summary>
+	bool SeatTransitionShowing() const { return seatTransition.Active; }
+	/// <summary>0..1 through the transition under way (0 when none).</summary>
+	float SeatTransitionT() const;
+
 private:
+	struct SeatTransitionState
+	{
+		bool Active = false;
+		/// <summary>Whether the transition set the clock's Speed last frame (so it puts it back to 1 at the end).</summary>
+		bool DrivesClock = false;
+		float T = 0, Seconds = 0;
+		/// <summary>The warp to come back to as time picks up (the god's, on going back to command), -1 for the one running;
+		/// HeldWarp the one running when it began, so a warp the player picked meanwhile is kept.</summary>
+		int RestoreWarp = -1, HeldWarp = 0;
+	};
+	SeatTransitionState seatTransition;
+	/// <summary>US-T855: where the god's eye was when a seat was taken (its frame body's scene offset and its rotation), for
+	/// the drift back to it on going back to command; GodEyeBody -1 when none is kept.</summary>
+	int godEyeBody = -1;
+	Core::DVec3 godEyeOffset;
+	Quaternion godEyeRotation = Quaternion::identity();
+
+	/// <summary>US-T855: starts the transition for a seat change just made (the camera's glide already begun); returns false
+	/// (nothing started) when it is instant. <paramref name="restoreWarp"/> is the warp to pick up to, -1 for the current.</summary>
+	bool BeginSeatTransition(int restoreWarp);
+	/// <summary>US-T855: the transition's clock this frame (before the clock advances): time's ease, the skip, the end.</summary>
+	void UpdateSeatTransition(float dt);
+	/// <summary>US-T855: ends the transition under way (skipped, or a save or load): the glide lands, time back to full.</summary>
+	void EndSeatTransition(bool skipped);
+	/// <summary>US-T855: Esc or a click while a transition plays skips it (Esc spent on that, not the pause menu).</summary>
+	void SkipSeatTransitionOnKey();
+	/// <summary>US-T855: the drift back to the god's eye kept on taking the seat, about the seat let go; false if none.</summary>
+	bool GlideBackToGodEye(const Target& anchor);
+	/// <summary>US-T855: the share of full speed time runs at, u through the transition (near standstill in the middle).</summary>
+	static double SeatTransitionTimeScale(float u);
+
 	struct PossessionShowState
 	{
 		bool Active = false, Entering = true;
