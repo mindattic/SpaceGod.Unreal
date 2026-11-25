@@ -161,10 +161,38 @@ namespace SpaceGod::Cameras
 		return value->Value;
 	}
 
+	float SpaceCamera::ChaseLagHz()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "chaseLagHz", "Chase lag spring", 2.5, 0.5, 10, 0.1, "Hz",
+			TuningScope::View, "How fast the pilot chase's spring lag swings after the hull's felt acceleration: higher is stiffer.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::ChaseLagDamping()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "chaseLagDamping", "Chase lag damping", 0.7, 0.1, 1.5, 0.05, "",
+			TuningScope::View, "How the chase's spring lag settles: 1 without overshoot, lower bounces past and back.");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::ChaseLagPerG()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "chaseLagPerG", "Chase lag per g", 0.015, 0, 0.1, 0.005, "x",
+			TuningScope::View, "How far the pilot chase lags against a g of felt acceleration, in chase distances (0 is off).");
+		return static_cast<float>(value->Value);
+	}
+
+	float SpaceCamera::ChaseLagMax()
+	{
+		static const cs::Ref<RangeSetting> value = Tuning::Knob("camera", "chaseLagMax", "Chase lag limit", 0.12, 0, 0.5, 0.01, "x",
+			TuningScope::View, "The most the pilot chase's spring lag ever moves the eye, in chase distances.");
+		return static_cast<float>(value->Value);
+	}
+
 	void SpaceCamera::DeclareTuning()
 	{
 		PilotViewLift(); PilotCamResponseHz(cs::Nullable<FlightFamily>()); PilotLockTrackStrength(); TravelSeconds(); QuickTravelSeconds(); LevelSeconds();
-		BaseLookSensitivity(); ChaseDistance();
+		BaseLookSensitivity(); ChaseDistance(); ChaseLagHz(); ChaseLagDamping(); ChaseLagPerG(); ChaseLagMax();
 	}
 
 	SpaceCamera::SpaceCamera(ICameraWorld* inWorld)
@@ -299,6 +327,7 @@ namespace SpaceGod::Cameras
 		PilotLocked = false;
 		PilotView = std::nullopt;
 		PilotEye = nullptr;
+		ResetChaseLag();
 		SetRotation(rotation);
 		// US-T463: a chase or a seat's view may be rolled (the hull banked under the helm); the free camera has no roll, so
 		// letting go once snapped it level in one frame. The roll now eases out over LevelSeconds, as Level does.
@@ -318,6 +347,8 @@ namespace SpaceGod::Cameras
 		FocusOn(target, radii);
 		PilotLocked = true;
 		PilotEye = nullptr;
+		ResetChaseLag();
+		chaseLagTarget = target;
 	}
 
 	double SpaceCamera::DefaultFraming(const Target& target)
@@ -403,6 +434,39 @@ namespace SpaceGod::Cameras
 		ScenePosition = FramePosition();
 	}
 
+	void SpaceCamera::UpdateChaseLag(float dt)
+	{
+		if (!(FocusTarget == chaseLagTarget))
+		{
+			ResetChaseLag();
+			chaseLagTarget = FocusTarget;
+		}
+		float feel = Mathf::Clamp(ChaseFeel, 0.0f, 2.0f);
+		float limit = ChaseLagMax() * feel;
+		if (!(limit > 0))
+		{
+			ResetChaseLag();
+			return;
+		}
+		if (!(dt > 0)) return;
+		auto want = ChaseAcceleration * (-ChaseLagPerG() * feel);
+		if (!(want.sqrMagnitude() < 1e12f)) want = Vector3::zero();
+		want = Vector3::ClampMagnitude(want, limit);
+		// Semi-implicit spring, substepped so omega * step stays under a half whatever the frame time (at most 8 steps;
+		// a hitch past a tenth of a second is stepped as one).
+		float omega = 2.0f * Mathf::PI * ChaseLagHz();
+		float span = Mathf::Min(dt, 0.1f);
+		int steps = Mathf::Clamp(Mathf::CeilToInt(span * omega / 0.5f), 1, 8);
+		float h = span / steps;
+		float pull = omega * omega * h, drag = 2.0f * ChaseLagDamping() * omega * h;
+		for (int i = 0; i < steps; i++)
+		{
+			chaseLagVelocity += (want - chaseLag) * pull - chaseLagVelocity * drag;
+			chaseLag += chaseLagVelocity * h;
+		}
+		chaseLag = Vector3::ClampMagnitude(chaseLag, limit);
+	}
+
 	void SpaceCamera::UpdateFocus(float dt, const Input::InputState& input)
 	{
 		if (PilotLocked)
@@ -436,7 +500,17 @@ namespace SpaceGod::Cameras
 				ScenePosition += DVec3(lift.x, lift.y, lift.z) * (zoom * chaseR * PilotViewLift());
 			}
 			// At a gun mount the eye is the mount's own, not a chase (U.SPC-T445).
-			if (PilotEye) ScenePosition = PilotEye();
+			if (PilotEye)
+			{
+				ResetChaseLag();
+				ScenePosition = PilotEye();
+			}
+			else
+			{
+				// US-T841: the eye lags the hull on a spring; Rotation is untouched, so the aim stays on the nose.
+				UpdateChaseLag(dt);
+				ScenePosition += DVec3(chaseLag.x, chaseLag.y, chaseLag.z) * (zoom * chaseR);
+			}
 			CurrentSpeed = 0;
 			return;
 		}

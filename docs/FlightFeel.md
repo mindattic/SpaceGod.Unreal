@@ -75,6 +75,7 @@ Other numbers the feel depends on:
 | Hauler mouse | 0.6 of the fighter's | `HelmControls::HaulerLookFactor` |
 | Mouse | raw counts, x `camera.lookSensitivity` 0.12 deg a count, smoothing 0 (off) by default | `SpaceCamera` |
 | Pilot chase camera | 20 Hz on fighters, 12 on heavy fighters, bombers and haulers, 6 on capitals (US-T819) | `camera.pilotResponse`, `camera.pilotResponseHeavy`, `camera.pilotResponseHauler`, `camera.pilotResponseCapital` |
+| Pilot chase spring lag | the eye (never the aim) lags against the hull's felt acceleration: 0.015 chase distances a g, at most 0.12, a 2.5 Hz spring at damping 0.7, times the camera feel intensity (0 off); dropped at a gun mount's eye, on a new chase or hull, on letting go and on a teleport (US-T841) | `camera.chaseLagHz`, `camera.chaseLagDamping`, `camera.chaseLagPerG`, `camera.chaseLagMax`; `SpaceCamera::ChaseAcceleration`, `ChaseFeel`, `ResetChaseLag` |
 | Pad | radial dead zone 0.2, Linear / Smooth / Precise curve, 180 deg/s at full deflection | `Input/Gamepad` |
 | Joystick / HOTAS / throttle axis | none | - |
 

@@ -127,6 +127,17 @@ namespace SpaceGod::Cameras
 		/// hull as it moves; null keeps the chase. Cleared whenever a new chase begins or the focus is let go.</summary>
 		cs::Func<Core::DVec3> PilotEye;
 
+		/// <summary>US-T841: the flown hull's felt (proper) acceleration this frame, in g along scene axes, set by the app each
+		/// frame. The pilot chase lags against it on a spring (thrust pulls the hull ahead, a hard turn swings it out),
+		/// moving only the eye: <see cref="Rotation"/> stays the aim, so the crosshair stays true to the nose.</summary>
+		Vector3 ChaseAcceleration;
+
+		/// <summary>US-T841: the camera feel intensity the spring lag is scaled by, set by the app (0 off, 1 as tuned, up to 2).</summary>
+		float ChaseFeel = 0;
+
+		/// <summary>US-T841: drops the chase's spring lag at once (a teleport, a gate jump), so the eye does not swing in from it.</summary>
+		void ResetChaseLag() { chaseLag = chaseLagVelocity = Vector3::zero(); }
+
 	private:
 		// (PilotViewResponseHz is gone, US-T129: the view is welded to PilotView, so it turns with the mouse at once.)
 
@@ -186,6 +197,16 @@ namespace SpaceGod::Cameras
 		/// target (0 = ignores the lock, 1 = looks straight at it regardless of the ship's facing).</summary>
 		static float PilotLockTrackStrength();
 
+		/// <summary>US-T841: the chase spring lag's knobs: its natural frequency, its damping ratio (1 settles without
+		/// overshoot), how far it lags per g of felt acceleration and the most it ever lags, both in chase distances.</summary>
+		static float ChaseLagHz();
+		static float ChaseLagDamping();
+		static float ChaseLagPerG();
+		static float ChaseLagMax();
+
+		/// <summary>US-T841: steps the chase's spring lag toward <see cref="ChaseAcceleration"/>'s pull; bounded substeps.</summary>
+		void UpdateChaseLag(float dt);
+
 		/// The world outlives the camera (the app owns both).
 		ICameraWorld* const world;
 
@@ -196,6 +217,10 @@ namespace SpaceGod::Cameras
 
 		float orbitYaw = 0, orbitPitch = 0;
 		double zoom = 4, zoomTarget = 4;
+
+		/// <summary>US-T841: the pilot chase's spring lag, in chase distances along scene axes, its rate, and the hull it is for.</summary>
+		Vector3 chaseLag, chaseLagVelocity;
+		Target chaseLagTarget = Target::None();
 
 		Core::DVec3 travelStartOffset;
 		Quaternion travelStartRotation;
