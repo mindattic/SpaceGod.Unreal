@@ -43,6 +43,26 @@ namespace SpaceGod::UI
 		DrawBoresight(nose, Color(1, 1, 1, 0.85f));
 	}
 
+	void Hud::DrawSeatVelocity()
+	{
+		auto f = cs::As<FighterSeat>(app->HeldSeat());
+		if (f == nullptr || f->Unit == nullptr || (!f->FlightAssistOff() && !app->PilotDrifting())) return;
+		double speed = f->Unit->Vel.Length();
+		if (speed < 1e-9 || f->Unit->Forward.LengthSquared() < 1e-12) return;
+		auto dir = f->Unit->Vel / speed;
+		auto forward = f->Unit->Forward.Normalized();
+		if (DVec3::Dot(dir, forward) > InterfaceOptions::VelocityMarkerCos()) return;
+		Vector2 pro, nose;
+		if (DirectionToGui(dir, pro))
+		{
+			if (DirectionToGui(forward, nose) && (pro - nose).sqrMagnitude() > 400)
+				DrawLine(nose, pro, Color(ProgradeColor.r, ProgradeColor.g, ProgradeColor.b, 0.45f), 1.5f);
+			DrawIcon(Icons::Prograde(), pro, 28, ProgradeColor);
+		}
+		Vector2 retro;
+		if (DirectionToGui(-dir, retro)) DrawIcon(Icons::Retrograde(), retro, 28, RetrogradeColor);
+	}
+
 	// ---------------------------------------------------------------- the virtual stick (US-T736)
 
 	void Hud::DrawVirtualStick()

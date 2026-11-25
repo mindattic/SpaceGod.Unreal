@@ -73,6 +73,16 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& InterfaceOptions::VelocityMarkerAngle()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("interface.velocityMarkerAngle", SettingGroups::Interface,
+			"Velocity marker angle", 5, 0, 30, 1,
+			"With flight assist off or in drift, how far the craft's track swings off its nose before the prograde and retrograde markers show.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), "°"); }),
+			"velocity vector prograde retrograde marker track drift flight assist off slide angle hud");
+		return value;
+	}
+
 	const cs::Ref<ChoiceSetting>& InterfaceOptions::ChatterDensitySetting()
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("radio.chatterDensity", SettingGroups::Interface, "Chatter density",
@@ -119,7 +129,7 @@ namespace SpaceGod
 
 	void InterfaceOptions::Declare()
 	{
-		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone();
+		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone(); VelocityMarkerAngle();
 		ChatterDensitySetting(); RadioSubtitles(); MaxVoices(); MinRadioPriority();
 	}
 
@@ -162,6 +172,13 @@ namespace SpaceGod
 		const auto& s = SafeZone();
 		double pct = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
 		return static_cast<float>(cs::Math::Max(0.0, cs::Math::Min(10.0, pct)) / 100.0);
+	}
+
+	double InterfaceOptions::VelocityMarkerCos()
+	{
+		const auto& s = VelocityMarkerAngle();
+		double deg = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
+		return cs::Math::Cos(cs::Math::Max(0.0, cs::Math::Min(30.0, deg)) * cs::Math::PI / 180.0);
 	}
 
 	double InterfaceOptions::ChatterDensity()

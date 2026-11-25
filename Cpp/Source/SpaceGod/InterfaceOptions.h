@@ -35,6 +35,9 @@ namespace SpaceGod
 		/// US-T600: how far in from the screen's edges the HUD keeps (0% to 10%), for TVs that crop the picture and very
 		/// wide screens. 0 by default: the HUD on the screen's edges as it always was.
 		static const cs::Ref<Core::RangeSetting>& SafeZone();
+		/// US-T830: how far (0 to 30 degrees) a fighter seat's velocity must swing off the nose, with flight assist off or in
+		/// drift, before the prograde and retrograde markers show. 5 by default.
+		static const cs::Ref<Core::RangeSetting>& VelocityMarkerAngle();
 
 		// US-T704: the radio, as each machine hears it (never shared in co-op, nothing in the simulation or its digests).
 		/// How busy the ambient chatter is: Off, Low, Normal (the default) or High (ChatterSampler::Density 0, 0.4, 1, 2).
@@ -72,6 +75,9 @@ namespace SpaceGod
 
 		/// The HUD's inset from each edge as a fraction of the screen's size (0 to 0.1).
 		static float SafeZoneFraction();
+
+		/// The cosine of the velocity markers' angle off the nose (VelocityMarkerAngle): they show below it.
+		static double VelocityMarkerCos();
 
 		/// ChatterSampler::Density for the chosen chatter density.
 		static double ChatterDensity();

@@ -256,6 +256,11 @@ private:
 	/// the seat's crosshair (the middle of the view, where the mouse aims) as the craft turns after it. Hud.Sights.cpp.</summary>
 	void DrawSeatNose();
 
+	/// <summary>A fighter seat's velocity vector (US-T830): with flight assist off or in drift, once the track swings past
+	/// InterfaceOptions::VelocityMarkerAngle off the nose, the prograde marker where the craft is actually going (joined to
+	/// the nose) and the retrograde opposite it, as the helm's flight markers show them. Hud.Sights.cpp.</summary>
+	void DrawSeatVelocity();
+
 	/// <summary>Mouse flight's virtual stick (US-T736), in a cockpit or at a fighter's or hauler's helm: the cursor, the dead
 	/// zone's ring about the centre and a faint ring where the nose turns at full rate. Hud.Sights.cpp.</summary>
 	void DrawVirtualStick();

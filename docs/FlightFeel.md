@@ -223,7 +223,8 @@ than 10%:
 1. Assist off keeps rotation rate-held: the family's turn rate and spin-up floor apply (today it falls to the hull's
    own torque); translation stays fully Newtonian.
 2. A velocity-vector marker on the HUD (prograde and retrograde) when velocity is over 5 deg off the nose, in both
-   assist off and drift.
+   assist off and drift. In a cockpit (US-T830, `Hud::DrawSeatVelocity`) past `interface.velocityMarkerAngle` (5 deg);
+   the helm's flight markers show them always.
 3. Toggling assist back on: re-acquire the set point at the assist-on push (US-T736's floor), no rotation step.
 4. Drift: `Drift::TurnFactor` 1.3 to 1.6 and `Drift::SpinUpS` 0.12 to 0.1 as settings, for the 0.75 s flip; the
    boost-out (`BoostOutS`) reaching 90% of top speed on the new facing in 0.8 s.
