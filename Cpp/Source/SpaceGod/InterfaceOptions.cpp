@@ -83,6 +83,16 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<RangeSetting>& InterfaceOptions::WingCommsMenuTime()
+	{
+		static const cs::Ref<RangeSetting> value = cs::New<RangeSetting>("interface.wingCommsMenuTime", SettingGroups::Interface,
+			"Wing comms menu time", 5, 2, 15, 1,
+			"How long a fighter seat's wing comms menu (Shift+Z) waits for a number key before it closes.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), " s"); }),
+			"wing comms menu orders wingmen squadron radial timeout close seconds");
+		return value;
+	}
+
 	const cs::Ref<ChoiceSetting>& InterfaceOptions::ChatterDensitySetting()
 	{
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("radio.chatterDensity", SettingGroups::Interface, "Chatter density",
@@ -129,7 +139,7 @@ namespace SpaceGod
 
 	void InterfaceOptions::Declare()
 	{
-		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone(); VelocityMarkerAngle();
+		CrosshairStyleSetting(); CrosshairColourSetting(); ShowFpsCounter(); TargetLabels(); OffscreenIndicators(); HitMarkers(); SafeZone(); VelocityMarkerAngle(); WingCommsMenuTime();
 		ChatterDensitySetting(); RadioSubtitles(); MaxVoices(); MinRadioPriority();
 	}
 
@@ -179,6 +189,13 @@ namespace SpaceGod
 		const auto& s = VelocityMarkerAngle();
 		double deg = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
 		return cs::Math::Cos(cs::Math::Max(0.0, cs::Math::Min(30.0, deg)) * cs::Math::PI / 180.0);
+	}
+
+	float InterfaceOptions::WingCommsMenuS()
+	{
+		const auto& s = WingCommsMenuTime();
+		double v = PlayerOptions::ScriptedRun() ? s->FactoryDefault : s->Value;
+		return static_cast<float>(cs::Math::Max(2.0, cs::Math::Min(15.0, v)));
 	}
 
 	double InterfaceOptions::ChatterDensity()

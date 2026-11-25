@@ -140,6 +140,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Guns | Left mouse | controls | - |
 | Lock hull | T | controls | - |
 | Lock attacker (again: the next one engaging you) | Shift+B (US-T307; controls only, B in command watches a battle) | controls | - |
+| Wing comms menu (US-T834): 1 attack my target, 2 disable, 3 ignore, 4 cover me, 5 form up, 6 engage at will, 7 return to carrier, 0 close; a wingman answers over the radio | Shift+Z, then a number (closes on its own after Settings > Interface > Wing comms menu time, 5 s) | fighter seat | Settings > Controls |
 | Missiles / rockets | Right mouse | controls | - |
 | EMP | Middle mouse | controls | - |
 | Mine | Ctrl (press) | controls, fight | - |

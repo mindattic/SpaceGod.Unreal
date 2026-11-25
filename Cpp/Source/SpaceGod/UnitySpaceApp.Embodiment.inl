@@ -259,11 +259,17 @@ private:
 	/// The dogfight game's keys in a cockpit (U.SPC-T424): F flight assist, T a lock on the hostile nearest the crosshair
 	/// (again for the next), Ctrl flares, and the number keys: 1 the next weapon group on the second trigger, 2-5 orders
 	/// to the wing (attack my target, cover me, form up, engage at will), 6 the next weak point on the locked hull, 7/8/9
-	/// a pip of power to weapons, shields or engines, 0 an even share.
+	/// a pip of power to weapons, shields or engines, 0 an even share. US-T834: Shift+Z opens the wing comms menu, where
+	/// the number keys are every wing order instead (1 attack, 2 disable, 3 ignore, 4 cover me, 5 form up, 6 engage at
+	/// will, 7 return to carrier, 0 close) until one is picked or InterfaceOptions::WingCommsMenuS passes.
 	/// </summary>
 	void UpdateCockpit(const cs::Ref<Core::FighterSeat>& f, Core::DVec3 aim);
 
 	void OrderWing(const cs::Ref<Core::FighterSeat>& f, Core::WingOrder order);
+	/// US-T834: the first wingman's spoken acknowledgement of an order, through the voice arbiter.
+	void AcknowledgeWingOrder(const cs::Ref<Core::FighterSeat>& f, Core::WingOrder order);
+	bool wingCommsOpen = false;
+	float wingCommsOpenedAt = -10.0f;
 
 	// ---------------------------------------------------------------- the self-destruct (US-T97)
 

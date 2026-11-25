@@ -38,6 +38,9 @@ namespace SpaceGod
 		/// US-T830: how far (0 to 30 degrees) a fighter seat's velocity must swing off the nose, with flight assist off or in
 		/// drift, before the prograde and retrograde markers show. 5 by default.
 		static const cs::Ref<Core::RangeSetting>& VelocityMarkerAngle();
+		/// US-T834: how long (2 to 15 real seconds) a fighter seat's wing comms menu (Shift+Z) stays open waiting for a number
+		/// key. 5 by default.
+		static const cs::Ref<Core::RangeSetting>& WingCommsMenuTime();
 
 		// US-T704: the radio, as each machine hears it (never shared in co-op, nothing in the simulation or its digests).
 		/// How busy the ambient chatter is: Off, Low, Normal (the default) or High (ChatterSampler::Density 0, 0.4, 1, 2).
@@ -78,6 +81,9 @@ namespace SpaceGod
 
 		/// The cosine of the velocity markers' angle off the nose (VelocityMarkerAngle): they show below it.
 		static double VelocityMarkerCos();
+
+		/// How long the wing comms menu stays open (WingCommsMenuTime), real seconds.
+		static float WingCommsMenuS();
 
 		/// ChatterSampler::Density for the chosen chatter density.
 		static double ChatterDensity();

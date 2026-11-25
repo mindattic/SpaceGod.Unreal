@@ -291,6 +291,7 @@ namespace SpaceGod::Input
 				{ KeyAction::PadStepRight, "padStepRight", "Pad steps: right", Both, EdgeKind, { Pad(PadButton::DPadRight) }, "At the controls power to engines; in command the next ship." },
 				{ KeyAction::PadStepDown, "padStepDown", "Pad steps: down", Both, EdgeKind, { Pad(PadButton::DPadDown) }, "At the controls an even share of power; in command time slower." },
 				{ KeyAction::RadioTuner, "radioTuner", "Screen: radio tuner", Both, EdgeKind, { InputBinding(Key::C, S) }, "The radio tuner: the dial, this system's channels with their activity, tune, monitor or mute each, presets 1-8 and a scan." }, // US-T677
+				{ KeyAction::WingComms, "wingComms", "Combat: wing comms menu", Controls, EdgeKind, { InputBinding(Key::Z, S) }, "In a fighter seat: the wing's orders, picked with a number key (1 attack, 2 disable, 3 ignore, 4 cover me, 5 form up, 6 engage at will, 7 return to carrier, 0 close)." }, // US-T834
 			};
 			return actions;
 		}

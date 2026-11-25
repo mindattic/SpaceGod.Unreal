@@ -28,6 +28,8 @@
 #include "Embodiment/StationSeat.h"
 #include "Fleet.h"
 #include "Infrastructure/Infrastructure.h"
+#include "InterfaceOptions.h" // US-T834
+#include "Comms/VoiceCasting.h" // US-T834
 #include "Input/MouseFlight.h" // US-T736
 #include "Sensors/SensorPosture.h"
 #include "Session/Commands.h"
@@ -35,10 +37,12 @@
 #include "Session/LocalSession.h"
 #include "Ships.h"
 #include "SimClock.h"
+#include "Voice/VoiceArbiter.h" // US-T834
 #include "World.h"
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 #include <tuple>
 
 using namespace SpaceGod::Core;
@@ -793,6 +797,34 @@ namespace SpaceGod
 					"  (hold the crosshair on it)"));
 		}
 		if (Input.DropMine) f->DropCountermeasures();
+		// US-T834: Shift+Z opens the wing comms menu; while it is open a number key is the order, never also its own.
+		if (Input.WingComms)
+		{
+			wingCommsOpen = !wingCommsOpen;
+			wingCommsOpenedAt = Time::unscaledTime;
+			ShowToast(wingCommsOpen
+				? cs::String("Wing comms: 1 attack my target  2 disable  3 ignore  4 cover me  5 form up  6 engage at will  7 return to carrier  0 close")
+				: cs::String("Wing comms closed"));
+		}
+		if (wingCommsOpen && Time::unscaledTime - wingCommsOpenedAt > InterfaceOptions::WingCommsMenuS()) wingCommsOpen = false;
+		if (wingCommsOpen && Input.NumberKey >= 0)
+		{
+			bool picked = true;
+			switch (Input.NumberKey)
+			{
+				case 1: OrderWing(f, WingOrder::AttackMyTarget); break;
+				case 2: OrderWing(f, WingOrder::Disable); break;
+				case 3: OrderWing(f, WingOrder::Ignore); break;
+				case 4: OrderWing(f, WingOrder::CoverMe); break;
+				case 5: OrderWing(f, WingOrder::FormUp); break;
+				case 6: OrderWing(f, WingOrder::EngageAtWill); break;
+				case 7: OrderWing(f, WingOrder::ReturnToCarrier); break;
+				case 0: ShowToast("Wing comms closed"); break;
+				default: picked = false; break;
+			}
+			if (picked) wingCommsOpen = false;
+			Input.NumberKey = -1; // spent: the menu's pick, never also the cockpit's own number key
+		}
 		switch (Input.NumberKey)
 		{
 			case 1:
@@ -844,9 +876,47 @@ namespace SpaceGod
 				break;
 			}
 			case WingOrder::EngageAtWill: now = "  (each picks its own fight)"; break;
+			case WingOrder::Disable: // US-T834
+				now = lock != nullptr && lock->Present() ? cs::Cat(": ", lock->Name(), ", until it lies disabled") : cs::String("  (nothing locked: lock one with T)");
+				break;
+			case WingOrder::Ignore: // US-T834
+				now = lock != nullptr && lock->Present() ? cs::Cat(": holding fire on ", lock->Name()) : cs::String("  (nothing locked: lock one with T)");
+				break;
+			case WingOrder::ReturnToCarrier: now = "  (landing and staying aboard)"; break; // US-T834
 			default: now = "  (on your wing)"; break;
 		}
 		ShowToast(cs::Cat("Wing (", heard, "): ", Wing::Label(order), now));
+		AcknowledgeWingOrder(f, order);
+	}
+
+	void UnitySpaceApp::AcknowledgeWingOrder(const cs::Ref<FighterSeat>& f, WingOrder order)
+	{
+		// US-T834: the first wingman answers over the radio in its faction's voice, addressed to the player so urgent.
+		auto world = World();
+		if (world == nullptr || world->Fleet == nullptr) return;
+		auto members = Wing::Members(f->Battle, f->Unit);
+		if (members.Count() == 0 || members[0] == nullptr) return;
+		const auto& wingman = members[0];
+		const char* text;
+		switch (order)
+		{
+			case WingOrder::AttackMyTarget: text = "Copy, engaging your target."; break;
+			case WingOrder::CoverMe: text = "On my way, I've got your six."; break;
+			case WingOrder::EngageAtWill: text = "Copy, weapons free."; break;
+			case WingOrder::Disable: text = "Copy, going for the disable."; break;
+			case WingOrder::Ignore: text = "Copy, leaving it alone."; break;
+			case WingOrder::ReturnToCarrier: text = "Copy, heading home."; break;
+			default: text = "Forming up on you."; break;
+		}
+		VoiceCasting cast(world->Fleet->Factions());
+		Voice::RadioLine line;
+		line.Line.Who = wingman->Name();
+		line.Line.Text = text;
+		line.Line.Voice = cast.Of(wingman->Faction);
+		line.Priority = 2;
+		line.Score = std::numeric_limits<float>::max();
+		line.Urgent = true;
+		Voice::VoiceArbiter::Radio(std::move(line));
 	}
 
 	// ---------------------------------------------------------------- the self-destruct (US-T97)

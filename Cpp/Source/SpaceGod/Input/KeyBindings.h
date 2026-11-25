@@ -70,6 +70,7 @@ namespace SpaceGod::Input
 		PadStepLeft, PadStepUp, PadStepRight, PadStepDown,
 		// US-T677: appended at the end (the table is indexed by the enum's order)
 		RadioTuner,
+		WingComms /* US-T834 */,
 		Count,
 	};
 

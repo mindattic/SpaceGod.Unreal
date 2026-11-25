@@ -60,6 +60,9 @@ namespace SpaceGod::Input
 		/// <summary>US-T736: Z at a craft's controls, the throttle set to the locked target's speed.</summary>
 		bool MatchSpeed = false;
 
+		/// <summary>US-T834: Shift+Z in a fighter seat, the wing comms menu opened or closed.</summary>
+		bool WingComms = false;
+
 		/// <summary>Held, while piloting or in a fighter seat (US-T87): Alt, the manoeuvre key. The hull swings its nose onto
 		/// the retrograde for a turn-and-burn (see <see cref="Unity.SpaceGod.Core.PilotFlight.FlipAim"/>).</summary>
 		bool Manoeuvre = false;
