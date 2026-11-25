@@ -45,6 +45,8 @@ public class SpaceGod : ModuleRules
 		// US-T692: -capture, the game's capture events, tour screenshots and hotkeys go through the
 		// MindAttic.Media.Capture.Unreal plugin (MindAttic.Media.Capture/unreal, docs/CAPTURE.md).
 		PrivateDependencyModuleNames.Add("MindAtticMediaCapture");
+		// US-T625: the console's autocomplete colour comes from UConsoleSettings (Console/SpaceGodConsole.cpp).
+		PrivateDependencyModuleNames.Add("EngineSettings");
 		// US-T245: the build number and short commit hash the main menu shows in its corner (BuildInfo.cpp).
 		StampBuild();
 	}
