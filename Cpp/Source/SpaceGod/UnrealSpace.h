@@ -4,7 +4,7 @@
 // (camera pose, view placement, lights, the mouse).
 //
 // Unity (and the Runtime's scene space, and Core's DVec3::SwapYZ() of the ecliptic) is left-handed, Y up, Z forward,
-// X right, in scene units of one metre. Unreal is left-handed too, Z up, in centimetres. The tracks share the SpaceGodRender
+// X right, in scene units. Unreal is left-handed too, Z up, in centimetres. The tracks share the SpaceGodRender
 // plugin's convention (Shared/Plugins/SpaceGodRender/Shaders/SpaceGodCommon.ush, and the C# track's UnrealSpace):
 // Unity (x, y, z) == Unreal (x, -z, y), a proper rotation (a quarter turn about X), so rotations carry over with the
 // same rotation of the quaternion's vector part and nothing is mirrored; the shared materials rely on it.
@@ -24,20 +24,45 @@ namespace SpaceGod::UnrealSpace
 	using UnityCompat::Quaternion;
 	using UnityCompat::Color;
 
-	/// Unreal units (cm) per Unity scene unit (m).
-	inline constexpr double CmPerUnit = 100.0;
+	namespace Detail
+	{
+		inline double CmPerUnit = 100.0;
+		inline uint64 ScaleRevision = 0;
+	}
+
+	/// Unreal units (cm) per Unity scene unit. US-T716: it follows the seat (SetRenderScale, each frame the game runs) so
+	/// that round the camera 1 UU is 1 true cm of hardware; 100 until a game sets it. Every camera-relative position and
+	/// size is scaled by it about the eye, so changing it changes nothing on screen (docs/TrueScale.md section 5.2).
+	inline double CmPerUnit() { return Detail::CmPerUnit; }
+
+	/// US-T716: bumped each time CmPerUnit changes, for what keeps values converted with it (material positions).
+	inline uint64 ScaleRevision() { return Detail::ScaleRevision; }
+
+	/// US-T716: the render scale for a view drawing a true km of hardware as shipUnitsPerKm scene units
+	/// (ScaleModel::ShipLength(1.0)): sg.Origin.CmPerTrueKm / shipUnitsPerKm (100 with that setting 0).
+	void SetRenderScale(double shipUnitsPerKm);
+
+	/// US-T716: the near plane (true cm) while a seat is held (sg.Origin.CockpitNearCm).
+	double CockpitNearCm();
+
+	/// US-T716: past this distance from the camera (cm) a drawn position is log-compressed (sg.Origin.FarFieldCm).
+	double FarFieldCm();
+
+	/// US-T716: a camera-relative position (cm) as drawn: unchanged within FarFieldCm, else log-compressed along its own
+	/// direction, d' = F (1 + ln(d / F)), with shrink = d' / d, the factor its size takes so its angular size is kept.
+	FVector FarField(const FVector& cm, double& shrink);
 
 	/// A Unity-axes point or direction (scene units) as Unreal's (cm).
-	inline FVector ToUnreal(Vector3 v) { return FVector(v.x * CmPerUnit, -v.z * CmPerUnit, v.y * CmPerUnit); }
+	inline FVector ToUnreal(Vector3 v) { return FVector(v.x * CmPerUnit(), -v.z * CmPerUnit(), v.y * CmPerUnit()); }
 
 	/// A double-precision Unity-axes scene point (camera-relative) as Unreal's (cm, LWC doubles).
-	inline FVector ToUnreal(const Core::DVec3& v) { return FVector(v.X * CmPerUnit, -v.Z * CmPerUnit, v.Y * CmPerUnit); }
+	inline FVector ToUnreal(const Core::DVec3& v) { return FVector(v.X * CmPerUnit(), -v.Z * CmPerUnit(), v.Y * CmPerUnit()); }
 
 	/// A Unity-axes direction as Unreal's, unscaled.
 	inline FVector DirectionToUnreal(Vector3 v) { return FVector(v.x, -v.z, v.y); }
 
 	/// Back from Unreal (cm) to Unity axes (scene units).
-	inline Core::DVec3 FromUnreal(const FVector& v) { return Core::DVec3(v.X / CmPerUnit, v.Z / CmPerUnit, -v.Y / CmPerUnit); }
+	inline Core::DVec3 FromUnreal(const FVector& v) { return Core::DVec3(v.X / CmPerUnit(), v.Z / CmPerUnit(), -v.Y / CmPerUnit()); }
 
 	/// A Unity rotation as Unreal's: the vector part turned as the axes are (w unchanged).
 	inline FQuat ToUnreal(Quaternion q) { return FQuat(q.x, -q.z, q.y, q.w); }
@@ -57,7 +82,7 @@ namespace SpaceGod::UnrealSpace
 	}
 
 	/// A clip distance in scene units as Unreal's (cm).
-	inline float ClipToUnreal(float sceneUnits) { return static_cast<float>(sceneUnits * CmPerUnit); }
+	inline float ClipToUnreal(float sceneUnits) { return static_cast<float>(sceneUnits * CmPerUnit()); }
 
 	/// Unreal's mouse position (pixels, origin top-left) as Unity's (origin bottom-left).
 	inline Vector2 MouseToUnity(float x, float y, int screenHeight) { return Vector2(x, screenHeight - y); }

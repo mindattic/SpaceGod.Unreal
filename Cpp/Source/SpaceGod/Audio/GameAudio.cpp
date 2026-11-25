@@ -268,8 +268,8 @@ namespace SpaceGod::Audio
 		USoundAttenuation* Attenuation(float minDistance, float maxDistance)
 		{
 			State& s = S();
-			const float minCm = FMath::Max(0.0f, minDistance) * static_cast<float>(UnrealSpace::CmPerUnit);
-			const float maxCm = FMath::Max(minDistance + 1.0f, maxDistance) * static_cast<float>(UnrealSpace::CmPerUnit);
+			const float minCm = FMath::Max(0.0f, minDistance) * static_cast<float>(UnrealSpace::CmPerUnit());
+			const float maxCm = FMath::Max(minDistance + 1.0f, maxDistance) * static_cast<float>(UnrealSpace::CmPerUnit());
 			const uint64 key = (static_cast<uint64>(FMath::RoundToInt(minCm)) << 32) | static_cast<uint32>(FMath::RoundToInt(maxCm));
 			if (USoundAttenuation** found = s.attenuations.Find(key)) return *found;
 			USoundAttenuation* a = NewObject<USoundAttenuation>(GetTransientPackage());

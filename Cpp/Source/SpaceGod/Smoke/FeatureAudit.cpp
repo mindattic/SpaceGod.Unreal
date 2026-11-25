@@ -1055,7 +1055,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 
 			FVector focus = UnrealSpace::ToUnreal(app->Relative(app->SpaceCamera->FocusTarget == target ? app->FocusScene(target) : app->TargetScene(target)));
 			FQuat frame = UnrealSpace::ToUnreal(app->TargetRotation(target));
-			double radiusCm = FMath::Max(app->TargetRadius(target) * UnrealSpace::CmPerUnit, 1e-9);
+			double radiusCm = FMath::Max(app->TargetRadius(target) * UnrealSpace::CmPerUnit(), 1e-9);
 			FBox box(ForceInit);
 			int drawn = 0;
 			for (const auto& r : app->ModelRenderersOf(target))

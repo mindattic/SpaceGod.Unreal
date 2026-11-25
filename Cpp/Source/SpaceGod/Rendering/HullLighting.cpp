@@ -129,9 +129,10 @@ namespace SpaceGod::Rendering
 			return l;
 		}
 
-		/// How far out a far light sits (cm, 1000 km): every hull in view is a sliver of that from the camera at either scale,
-		/// so its light arrives from one direction and at one strength, as a directional light's would.
-		constexpr double FarCm = 1e8;
+		/// How far out a far light sits (cm, 1000 km at 100 cm per scene unit, and as far in scene units at any render scale,
+		/// US-T716): every hull in view is a sliver of that from the camera at either scale, so its light arrives from one
+		/// direction and at one strength, as a directional light's would.
+		double FarCm() { return 1e6 * US::CmPerUnit(); }
 
 		/// A light standing in for a second directional one: a point light far out with no inverse-square falloff and a reach
 		/// of four times its distance (so across the scene it dims by well under a percent).
@@ -142,7 +143,7 @@ namespace SpaceGod::Rendering
 			l->LightFalloffExponent = 1.0f;
 			l->IntensityUnits = ELightUnits::Unitless;
 			l->SetSourceRadius(0.0f);
-			l->SetAttenuationRadius(static_cast<float>(FarCm * 4));
+			l->SetAttenuationRadius(static_cast<float>(FarCm() * 4));
 			l->SetIntensity(0.0f);
 			Register(host, l);
 			return l;
@@ -191,8 +192,10 @@ namespace SpaceGod::Rendering
 			if (travel.sqrMagnitude() < 1e-12f) return;
 			Camera* screen = UnityCompat::UnityScene::ScreenCamera();
 			FVector cam = screen ? US::ToUnreal(screen->transform->position()) : FVector::ZeroVector;
-			FVector at = cam - US::DirectionToUnreal(travel.normalized()) * FarCm;
-			if (!l->GetComponentLocation().Equals(at, 1.0)) l->SetWorldLocation(at);
+			FVector at = cam - US::DirectionToUnreal(travel.normalized()) * FarCm();
+			if (!l->GetComponentLocation().Equals(at, FarCm() * 1e-8)) l->SetWorldLocation(at);
+			float reach = static_cast<float>(FarCm() * 4);
+			if (FMath::Abs(l->AttenuationRadius - reach) > 1e-3f * reach) l->SetAttenuationRadius(reach);
 		}
 
 		void SetLight(ULightComponent* l, float intensity, FLinearColor color)
@@ -607,7 +610,7 @@ namespace SpaceGod::Rendering
 				if (!on) continue;
 				const auto& c = craft[i];
 				l->SetWorldLocationAndRotation(US::ToUnreal(c.At), US::DirectionToUnreal(c.Dir).Rotation());
-				float radius = static_cast<float>(c.Length * 25 * US::CmPerUnit);
+				float radius = static_cast<float>(c.Length * 25 * US::CmPerUnit());
 				if (FMath::Abs(l->AttenuationRadius - radius) > 0.02f * radius) l->SetAttenuationRadius(radius);
 				SetLight(l, 6.0f * gain, FLinearColor(1.0f, 0.93f, 0.82f));
 				LampsLit++;
@@ -639,7 +642,7 @@ namespace SpaceGod::Rendering
 				Show(l, on);
 				if (!on) continue;
 				l->SetWorldLocation(US::ToUnreal(embers[i].first));
-				float radius = static_cast<float>(reach * 2.4f * US::CmPerUnit);
+				float radius = static_cast<float>(reach * 2.4f * US::CmPerUnit());
 				if (FMath::Abs(l->AttenuationRadius - radius) > 0.02f * radius) l->SetAttenuationRadius(radius);
 				const Vector4& c = embers[i].second;
 				SetLight(l, 5.0f * gain, Hue(c.x, c.y, c.z));

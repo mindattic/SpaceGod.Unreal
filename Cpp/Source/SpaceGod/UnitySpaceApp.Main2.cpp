@@ -6,6 +6,7 @@
 #include "CaptureEvents.h" // US-T72
 #include "GraphicsSettings.h" // US-T251: the flown field of view
 #include "PlayerOptions.h" // US-T555: the camera shake's strength
+#include "UnrealSpace.h" // US-T716: the render scale round the seat
 
 #include "Astro.h"
 #include "BodyCatalog.h"
@@ -1438,7 +1439,11 @@ namespace SpaceGod
 		// Going through a gate, the ring passes close by, nearer than anything else.
 		// US-T442: ClipDistance, which stays sane inside a body or a hull, where the god camera can go.
 		double nearest = cs::Math::Min(ClipDistance(SpaceCamera->ScenePosition), Travel->GateClearance());
-		UnityCamera->nearClipPlane = static_cast<float>(cs::Math::Max(1e-6, cs::Math::Min(nearest * 0.25, 20.0)));
+		// US-T716: 1 UU = 1 true cm round the camera, eased as the seat zoom is; in a seat the near plane is a few true cm.
+		UnrealSpace::SetRenderScale(Scale()->ShipLength(1.0));
+		double nearPlane = cs::Math::Max(1e-6, cs::Math::Min(nearest * 0.25, 20.0));
+		if (InhabitedSizeKm() > 0) nearPlane = cs::Math::Max(nearPlane, UnrealSpace::CockpitNearCm() / UnrealSpace::CmPerUnit());
+		UnityCamera->nearClipPlane = static_cast<float>(nearPlane);
 		UnityCamera->farClipPlane = 5e8f;
 		// US-T170: what is flown this frame (the helm's hull, a cockpit, an EVA worker) has its feel stepped; with nothing
 		// flown it settles back to still. Its shake lays a small turn over the view only, never the camera's own pose.

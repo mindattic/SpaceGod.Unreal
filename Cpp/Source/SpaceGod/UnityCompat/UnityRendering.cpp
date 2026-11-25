@@ -840,7 +840,7 @@ namespace SpaceGod::UnityCompat
 				for (int i = 0; i < 8; i++)
 				{
 					FVector corner((i & 1) ? box.Max.X : box.Min.X, (i & 2) ? box.Max.Y : box.Min.Y, (i & 4) ? box.Max.Z : box.Min.Z);
-					Vector3 u = ToVector3(US::FromUnreal(ImportedToLocal(corner, spec.Scale, spec.Rotation) * US::CmPerUnit));
+					Vector3 u = ToVector3(US::FromUnreal(ImportedToLocal(corner, spec.Scale, spec.Rotation) * US::CmPerUnit()));
 					if (i == 0) b = Bounds(u, Vector3());
 					else b.Encapsulate(u);
 				}

@@ -31,7 +31,7 @@ namespace SpaceGod::UnityCompat
 		TWeakObjectPtr<AActor> HostActor;
 		UnityScene::Stats LastStats, Building;
 		int MaterialInstancesMade = 0;
-		uint64_t PushedGlobals = 0;
+		uint64_t PushedGlobals = 0, PushedGlobalsScale = 0;
 		int64_t Frame = 0;
 		/// US-T53: the screen camera's culling mask this Sync, and the renderer of its clear colour (always drawn).
 		int ScreenMask = -1;
@@ -100,6 +100,7 @@ namespace SpaceGod::UnityCompat
 		{
 			ExitSafeStrong<UMaterialInstanceDynamic> Mid;
 			uint64_t Pushed = 0;
+			uint64_t PushedScale = 0;
 		};
 
 		/// A renderer's component, and its own material instances while it has a property block.
@@ -116,6 +117,7 @@ namespace SpaceGod::UnityCompat
 			std::vector<ExitSafeStrong<UMaterialInstanceDynamic>> BlockMids;
 			std::vector<std::pair<const Material*, uint64_t>> BlockPushed;
 			uint64_t BlockPushedVersion = 0;
+			uint64_t BlockPushedScale = 0;
 			std::vector<UMaterialInterface*> Bound;
 
 			~RendererHandle() override
@@ -463,10 +465,12 @@ namespace SpaceGod::UnityCompat
 				h->Mid.Reset(UMaterialInstanceDynamic::Create(ShaderBinding::Parent(m.shader.get()), GetTransientPackage()));
 				MaterialInstancesMade++;
 			}
-			if (h->Pushed != m.Properties.Version)
+			// US-T716: positions and lengths are pushed in cm, so again when the render scale moves.
+			if (h->Pushed != m.Properties.Version || h->PushedScale != US::ScaleRevision())
 			{
 				ShaderBinding::Push(m.Properties, h->Mid.Get());
 				h->Pushed = m.Properties.Version;
+				h->PushedScale = US::ScaleRevision();
 			}
 			return h->Mid.Get();
 		}
@@ -474,24 +478,26 @@ namespace SpaceGod::UnityCompat
 		// ------------------------------------------------------------ transforms
 
 		/// A Unity world matrix as Unreal's transform: Cm * P * M * P^-1 for the axes change P, translation P * t * Cm.
+		/// US-T716: past the far field the whole of it is shrunk about the camera (US::FarField), which keeps its image.
 		FTransform ToUnreal(const WorldMatrix& w)
 		{
 			// The Unity direction along each Unreal axis.
 			static const Vector3 axis[3] = {
-				ToVector3(US::FromUnreal(FVector(US::CmPerUnit, 0, 0))),
-				ToVector3(US::FromUnreal(FVector(0, US::CmPerUnit, 0))),
-				ToVector3(US::FromUnreal(FVector(0, 0, US::CmPerUnit))),
+				ToVector3(US::FromUnreal(FVector(US::CmPerUnit(), 0, 0))),
+				ToVector3(US::FromUnreal(FVector(0, US::CmPerUnit(), 0))),
+				ToVector3(US::FromUnreal(FVector(0, 0, US::CmPerUnit()))),
 			};
+			double shrink = 1.0;
+			FVector t = US::FarField(US::ToUnreal(w.t), shrink);
 			FMatrix m = FMatrix::Identity;
 			for (int r = 0; r < 3; r++)
 			{
 				// Row r of Unreal's (row-vector) matrix: where Unreal's axis r goes.
-				FVector image = US::ToUnreal(w.MultiplyVector(axis[r]));
+				FVector image = US::ToUnreal(w.MultiplyVector(axis[r])) * shrink;
 				m.M[r][0] = image.X;
 				m.M[r][1] = image.Y;
 				m.M[r][2] = image.Z;
 			}
-			FVector t = US::ToUnreal(w.t);
 			m.M[3][0] = t.X;
 			m.M[3][1] = t.Y;
 			m.M[3][2] = t.Z;
@@ -751,7 +757,7 @@ namespace SpaceGod::UnityCompat
 						MaterialInstancesMade++;
 					}
 					auto& pushed = h->BlockPushed[i];
-					if (pushed.first != m.get() || pushed.second != m->Properties.Version || h->BlockPushedVersion != r.BlockVersion)
+					if (pushed.first != m.get() || pushed.second != m->Properties.Version || h->BlockPushedVersion != r.BlockVersion || h->BlockPushedScale != US::ScaleRevision())
 					{
 						ShaderBinding::Push(m->Properties, mid.Get());
 						ShaderBinding::Push(r.PropertyBlock(), mid.Get());
@@ -767,7 +773,11 @@ namespace SpaceGod::UnityCompat
 					h->Bound[i] = bind;
 				}
 			}
-			if (block) h->BlockPushedVersion = r.BlockVersion;
+			if (block)
+			{
+				h->BlockPushedVersion = r.BlockVersion;
+				h->BlockPushedScale = US::ScaleRevision();
+			}
 			if (auto first = r.sharedMaterial()) c->TranslucencySortPriority = ShaderBinding::SortPriority(first->shader.get());
 			// US-T172: a lit hull casts its shadow (onto itself: its greebles); nothing self-lit does.
 			bool cast = r.shadowCastingMode != ShadowCastingMode::Off && !h->Bound.empty() && LitMaterial(h->Bound[0]);
@@ -978,10 +988,11 @@ namespace SpaceGod::UnityCompat
 		Building.MaterialInstances = MaterialInstancesMade;
 		// The shader globals are the game's own: Unity's Lights never touch them (US-T57).
 		const auto& globals = Shader::Globals();
-		if (globals.Version != PushedGlobals)
+		if (globals.Version != PushedGlobals || PushedGlobalsScale != US::ScaleRevision())
 		{
 			ShaderBinding::PushGlobals(host->GetWorld(), globals);
 			PushedGlobals = globals.Version;
+			PushedGlobalsScale = US::ScaleRevision();
 		}
 		LastStats = Building;
 	}

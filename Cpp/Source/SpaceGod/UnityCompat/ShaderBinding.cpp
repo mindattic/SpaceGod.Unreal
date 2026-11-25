@@ -101,14 +101,15 @@ namespace SpaceGod::UnityCompat
 			}
 			if (n == "_PlanetPosRadius" || n == "_NebulaPosRadius") // US-T145: the nebula volume's centre and radius
 			{
-				// A world position and a radius, both scene lengths.
-				FVector p = US::ToUnreal(Vector3(v.x, v.y, v.z));
-				return FLinearColor(static_cast<float>(p.X), static_cast<float>(p.Y), static_cast<float>(p.Z), static_cast<float>(v.w * US::CmPerUnit));
+				// A world position and a radius, both scene lengths, shrunk with the far field as the volume's mesh is (US-T716).
+				double shrink = 1.0;
+				FVector p = US::FarField(US::ToUnreal(Vector3(v.x, v.y, v.z)), shrink);
+				return FLinearColor(static_cast<float>(p.X), static_cast<float>(p.Y), static_cast<float>(p.Z), static_cast<float>(v.w * US::CmPerUnit() * shrink));
 			}
 			if (n == "_SunMap0")
 			{
 				// (blend, AU -> scene, game offset, game scale): the last three are scene lengths.
-				float k = static_cast<float>(US::CmPerUnit);
+				float k = static_cast<float>(US::CmPerUnit());
 				return FLinearColor(v.x, v.y * k, v.z * k, v.w * k);
 			}
 			return FLinearColor(v.x, v.y, v.z, v.w);

@@ -209,7 +209,7 @@ branch and a log per far object per frame, and only worlds, orbits and lane curv
 |---|---|---|
 | `TrueScale` (real hull lengths) | on | `ScaleModel` (US-T715) |
 | `TrueLengthM(ShipClass)` | the "Real m" column | beside `ScaleModel` (US-T715) |
-| Render cm per true km of hardware | 100 000 | `UnrealSpace` (US-T716) |
-| Cockpit near plane | 5 cm | `UnitySpaceApp::UpdateClipPlanes` (US-T716) |
-| `FarFieldCm` | 1e11 | `UnrealSpace` (US-T716) |
+| Render cm per true km of hardware | 100 000 | `sg.Origin.CmPerTrueKm`, `UnrealSpace` (US-T716) |
+| Cockpit near plane | 5 cm | `sg.Origin.CockpitNearCm`, `UnitySpaceApp::UpdateClipPlanes` (US-T716) |
+| `FarFieldCm` | 1e11 | `sg.Origin.FarFieldCm`, `UnrealSpace` (US-T716) |
 | `NearFieldKm` | 50 | render side (US-T715/US-T716) |
