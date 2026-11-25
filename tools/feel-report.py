@@ -150,6 +150,8 @@ def main():
         print(f'  frame {o["i"]:5d} [{o["step"]}] {o["dfov"]:+.2f}')
     if 'family' in rows[0]:
         handling(rows)
+    if 'pool' in rows[0]:
+        boost(rows)
     return 0
 
 
@@ -163,6 +165,17 @@ TARGETS = {
     'Hauler': dict(top=8.0, stop=7.0, turn180=2.4, roll360=3.0, spinup=0.4, overshoot=1),
     'Capital': dict(stop=6.0),
 }
+
+# US-T821: docs/FlightFeel.md's boost targets, s: the kick to 90% of boost speed, the bleed once let go, the pool's charge
+# at the even share. The refill's target follows the split: 6 s at two engine pips, over the engines' factor.
+BOOST_TARGETS = {
+    'LightFighter': dict(kick=1.0, bleed=2.0, pool=5.0),
+    'Interceptor': dict(kick=1.0, bleed=2.0, pool=5.0),
+    'Runner': dict(kick=1.0, bleed=2.0, pool=10.0),
+    'HeavyFighter': dict(kick=1.4, bleed=3.5, pool=5.0),
+    'Bomber': dict(pool=5.0),
+}
+REFILL_EVEN_S = 6.0
 
 
 def handling(rows):
@@ -270,6 +283,76 @@ def handling(rows):
         ms = [(x + 1) * d * 1000 for x, d in xs]
         print(f'  {label}: {len(xs)} changes, median {statistics.median(frames):.0f} frames, worst {max(frames)} frames'
               f' ({max(ms):.0f} ms)   {want}')
+
+
+def boost(rows):
+    """The boost, from the columns US-T821 added: the kick (boost on, from its speed to 90% of the boosted top), the bleed
+    (boost off, until 90% of the extra speed is gone), and the pool's charge and refill as the rate the pool moved at while
+    draining and refilling, scaled to a whole pool (so a step cut short still measures)."""
+    fr = []
+    t = 0.0
+    for i, r in enumerate(rows):
+        t += float(rows[i - 1]['dt']) if i > 0 else 0.0
+        fr.append(dict(step=r['step'], t=t, family=r['family'], speed=norm(vec(r, 'vx', 'vy', 'vz')), boost=r['boost'] == '1',
+                       pool=float(r['pool']), split=int(r['split']), engines=float(r['engines']),
+                       poolS=float(r['poolS']), refillS=float(r['refillS'])))
+    steps = {}
+    for k, f in enumerate(fr):
+        if f['family'] != 'none':
+            steps.setdefault(f['step'], []).append(k)
+
+    print()
+    print('boost and power (US-T821), against docs/FlightFeel.md; ! marks a miss by more than 10%')
+
+    def report(step, family, what, got, want):
+        tail = f'   target {want:g} s' if want is not None else ''
+        if got is None:
+            print(f'  {step:24s} {family:13s} {what:7s} not reached{tail}')
+            return
+        flag = ' !' if want is not None and got > want * 1.1 else ''
+        print(f'  {step:24s} {family:13s} {what:7s} {got:7.3f} s{tail}{flag}')
+
+    def split(f):
+        code = f['split']
+        return f'{code // 25}/{code // 5 % 5}/{code % 5}'
+
+    kick = steps.get('fighter boost kick', [])
+    if kick:
+        family = fr[kick[0]]['family']
+        on = next((k for k in kick if fr[k]['boost']), None)
+        if on is not None:
+            v0, peak = fr[on]['speed'], max(fr[k]['speed'] for k in kick)
+            hit = next((k for k in kick if k >= on and fr[k]['speed'] >= v0 + 0.9 * (peak - v0)), None) if peak > v0 else None
+            report('fighter boost kick', family, 'kick', fr[hit]['t'] - fr[on]['t'] if hit is not None else None,
+                   BOOST_TARGETS.get(family, {}).get('kick'))
+            bleed = steps.get('fighter boost bleed', [])
+            if bleed and peak > v0:
+                off = bleed[0]
+                extra0 = fr[off]['speed'] - v0
+                hit = next((k for k in bleed if fr[k]['speed'] - v0 <= 0.1 * extra0), None) if extra0 > 0 else None
+                report('fighter boost bleed', family, 'bleed', fr[hit]['t'] - fr[off]['t'] if hit is not None else None,
+                       BOOST_TARGETS.get(family, {}).get('bleed'))
+
+    for name, what, sign in (('fighter boost drain', 'pool', -1), ('fighter boost refill', 'refill', 1)):
+        ks = steps.get(name, [])
+        if not ks:
+            continue
+        f0 = fr[ks[0]]
+        family = f0['family']
+        # From the first frame the pool moves the right way to the last, as seconds a whole pool.
+        live = [k for k in ks[1:] if (fr[k]['pool'] - fr[k - 1]['pool']) * sign > 0]
+        got = None
+        if live:
+            a, b = live[0] - 1, live[-1]
+            moved = (fr[b]['pool'] - fr[a]['pool']) * sign
+            if moved > 0:
+                got = (fr[b]['t'] - fr[a]['t']) / moved
+        want = BOOST_TARGETS.get(family, {}).get('pool')
+        if what == 'refill' and want is not None:
+            want = REFILL_EVEN_S / max(f0['engines'], 0.1)
+        report(name, family, what, got, want)
+        print(f'  {"":24s} {"":13s} split {split(f0)} (weapons/shields/engines), engines x{f0["engines"]:.2f},'
+              f' seat reads pool {f0["poolS"]:g} s, refill {f0["refillS"]:g} s')
 
 
 if __name__ == '__main__':

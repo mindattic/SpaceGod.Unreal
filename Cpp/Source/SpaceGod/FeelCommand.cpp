@@ -20,6 +20,7 @@
 
 #include "BodyCatalog.h"
 #include "Combat/FlightModels.h"
+#include "Embodiment/CraftPower.h"
 #include "Embodiment/Embodiables.h"
 #include "Embodiment/HelmFlight.h"
 #include "Embodiment/Influence.h"
@@ -121,17 +122,21 @@ namespace
 
 		// US-T819: the flown hull as its helm flew it last frame, for feel-report's handling section: its family, nose and roof
 		// and velocity (ecliptic, km/s), what the stick asked (throttle, strafe, roll, the virtual stick, boost, assist,
-		// drift) and how fast it is turning and rolling (deg/s). Zeros while the god holds no helm.
+		// drift) and how fast it is turning and rolling (deg/s). US-T821: then its boost pool (0-1), the reactor split
+		// (PowerDistribution::Code), the engines' factor, and the pool's size and refill at that split as CraftPower reads
+		// them (s, 0 where the seat has none of its own). Zeros while the god holds no helm.
 		static FString HullCols(UnitySpaceApp& app)
 		{
-			if (!app.IsPiloting()) return TEXT("none,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
+			if (!app.IsPiloting()) return TEXT("none,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0");
 			const auto& h = app.PilotHelmFlight();
 			const auto& in = h.Input;
 			auto family = app.TargetFamily(Target::OfShip(app.Piloted.Ship));
-			return FString::Printf(TEXT("%s,%s,%s,%s,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%.3f,%.3f"),
+			auto power = CraftPower::Read(app.HeldSeat());
+			return FString::Printf(TEXT("%s,%s,%s,%s,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%d,%d,%d,%.3f,%.3f,%.5f,%d,%.3f,%.3f,%.3f"),
 				family.has_value() ? UTF8_TO_TCHAR(ToString(*family)) : TEXT("none"), *V(h.State.Forward), *V(h.State.Up), *V(h.State.Vel),
 				in.Throttle, in.StrafeRight, in.StrafeUp, in.Roll, in.StickRight, in.StickUp, in.Boost ? 1 : 0, in.FlightAssistOff ? 0 : 1,
-				in.Drift ? 1 : 0, h.State.TurnRateDegS(), h.State.RollRateDegS());
+				in.Drift ? 1 : 0, h.State.TurnRateDegS(), h.State.RollRateDegS(), power.Boost,
+				power.Weapons * 25 + power.Shields * 5 + power.Engines, power.EnginesFactor, power.BoostPoolS, power.BoostRefillS);
 		}
 
 		// The scripted hand as written for the frame just flown: the keys held and the mouse's move, counts.
@@ -189,7 +194,7 @@ namespace
 			}
 			rows.Insert(TEXT("step,dt,mode,locked,cx,cy,cz,fx,fy,fz,ux,uy,uz,fov,held,show,showT,pilotView,swimSpeed,"
 				"ax,ay,az,ar,bx,by,bz,br,focus,family,hfx,hfy,hfz,hux,huy,huz,vx,vy,vz,throttle,strafeR,strafeU,roll,stickR,stickU,"
-				"boost,assist,drift,turnRate,rollRate,keys,mx,my"), 0);
+				"boost,assist,drift,turnRate,rollRate,pool,split,engines,poolS,refillS,keys,mx,my"), 0);
 			FFileHelper::SaveStringArrayToFile(rows, *csv);
 			if (quit) FPlatformMisc::RequestExit(false);
 			return false;
@@ -290,6 +295,27 @@ namespace
 		push(TEXT("fighter yaw settle"), wait(1.5));
 		push(TEXT("fighter roll 360"), hold({ Key::LeftCtrl, Key::D }, 1.5));
 		push(TEXT("fighter roll settle"), wait(1.0));
+		// US-T821: boost against docs/FlightFeel.md: at top speed with a full pool, the kick, the bleed once let go, then the
+		// pool drained to empty and refilled (each capped short of the step timeout; feel-report takes the rate it saw).
+		auto pool = [](UnitySpaceApp& app) { return CraftPower::Read(app.HeldSeat()).Boost; };
+		auto holdUntil = [r](std::vector<Key> keys, double minS, double capS, std::function<bool(UnitySpaceApp&)> until)
+		{
+			return [r, keys, minS, capS, until](UnitySpaceApp& app, double t)
+			{
+				bool done = t >= capS || (t >= minS && until(app));
+				for (Key k : keys)
+				{
+					if (done) r->Keys.Release(k);
+					else r->Keys.Hold(k);
+				}
+				return done;
+			};
+		};
+		push(TEXT("fighter boost ready"), holdUntil({ Key::W }, 4.0, 80.0, [pool](UnitySpaceApp& app) { return pool(app) >= 0.999; }));
+		push(TEXT("fighter boost kick"), hold({ Key::W, Key::LeftShift }, 2.5));
+		push(TEXT("fighter boost bleed"), hold({ Key::W }, 5.0));
+		push(TEXT("fighter boost drain"), holdUntil({ Key::W, Key::LeftShift }, 0.5, 80.0, [pool](UnitySpaceApp& app) { return pool(app) <= 0; }));
+		push(TEXT("fighter boost refill"), holdUntil({ Key::W }, 0.5, 80.0, [pool](UnitySpaceApp& app) { return pool(app) >= 0.999; }));
 
 		// ---- let go: back to the god's free camera, then a swim and a stop
 		push(TEXT("let go fighter"), [](UnitySpaceApp& app, double)
