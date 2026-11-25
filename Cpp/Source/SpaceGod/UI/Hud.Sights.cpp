@@ -78,7 +78,7 @@ namespace SpaceGod::UI
 		GUI::color = Color(0.6f, 0.95f, 1.0f, 0.22f);
 		for (int i = 0; i < VirtualStickRingDots; i++)
 		{
-			float a = i * 2 * Mathf::PI / VirtualStickRingDots;
+			float a = i * 2 * Mathf::Pi / VirtualStickRingDots;
 			GUI::DrawTexture(Rect(centre.x + Mathf::Cos(a) * full - 1, centre.y + Mathf::Sin(a) * full - 1, 2, 2), w);
 		}
 		GUI::color = old;

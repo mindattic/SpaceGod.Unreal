@@ -13,11 +13,11 @@ namespace SpaceGod::Rendering
 		for (int y = 0; y < rows; y++)
 		{
 			float v = static_cast<float>(y) / latitudeSegments;
-			float lat = (v - 0.5f) * Mathf::PI;
+			float lat = (v - 0.5f) * Mathf::Pi;
 			for (int x = 0; x < cols; x++)
 			{
 				float u = static_cast<float>(x) / longitudeSegments;
-				float lon = (u - 0.5f) * Mathf::PI * 2.0f;
+				float lon = (u - 0.5f) * Mathf::Pi * 2.0f;
 				// East (increasing u) runs toward +Z, so seen from outside with north up the map is
 				// not mirrored and the triangles below wind clockwise (Unity's front face).
 				Vector3 n(Mathf::Cos(lat) * Mathf::Cos(lon), Mathf::Sin(lat), Mathf::Cos(lat) * Mathf::Sin(lon));
@@ -64,7 +64,7 @@ namespace SpaceGod::Rendering
 		std::vector<Vector3> normals(vertices.size());
 		for (int i = 0; i <= segments; i++)
 		{
-			float a = Mathf::PI * 2.0f * i / segments;
+			float a = Mathf::Pi * 2.0f * i / segments;
 			Vector3 dir(Mathf::Cos(a), 0, Mathf::Sin(a));
 			vertices[i * 2] = dir * inner;
 			vertices[i * 2 + 1] = dir * outer;
@@ -168,7 +168,7 @@ namespace SpaceGod::Rendering
 		{
 			for (int s = 0; s <= segments; s++)
 			{
-				float a = Mathf::PI * 2.0f * s / segments;
+				float a = Mathf::Pi * 2.0f * s / segments;
 				Vector3 p(Mathf::Cos(a) * r, y, Mathf::Sin(a) * r);
 				v.push_back(p);
 				n.push_back((p - Vector3(0, centreY, 0)).normalized());
@@ -178,13 +178,13 @@ namespace SpaceGod::Rendering
 		int rowsDone = 0;
 		for (int i = 0; i <= rings; i++) // bottom hemisphere, south pole up to the equator
 		{
-			float lat = -Mathf::PI * 0.5f + Mathf::PI * 0.5f * i / rings;
+			float lat = -Mathf::Pi * 0.5f + Mathf::Pi * 0.5f * i / rings;
 			ringAt(-0.5f + Mathf::Sin(lat) * 0.5f, Mathf::Cos(lat) * 0.5f, -0.5f, 0.25f * i / rings);
 			rowsDone++;
 		}
 		for (int i = 0; i <= rings; i++) // top hemisphere, equator up to the north pole
 		{
-			float lat = Mathf::PI * 0.5f * i / rings;
+			float lat = Mathf::Pi * 0.5f * i / rings;
 			ringAt(0.5f + Mathf::Sin(lat) * 0.5f, Mathf::Cos(lat) * 0.5f, 0.5f, 0.75f + 0.25f * i / rings);
 			rowsDone++;
 		}

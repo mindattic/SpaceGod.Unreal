@@ -336,7 +336,7 @@ namespace SpaceGod::Views
 		if (radial) radial->clear();
 		for (int i = 0; i <= segments; i++)
 		{
-			float a = Mathf::PI * 2.0f * i / segments;
+			float a = Mathf::Pi * 2.0f * i / segments;
 			for (int j = 0; j < rings; j++)
 			{
 				vertices.push_back(Vector3(Mathf::Sin(a), Mathf::Cos(a), 0) * radii[j]); // a measured from +Y
@@ -795,7 +795,7 @@ namespace SpaceGod::Views
 		lines.Segment(Vector3(0, -1.25f, 0), Vector3(0, 1.25f, 0), axis);
 		for (int i = 0; i < 12; i++)
 		{
-			float a = 2.0f * Mathf::PI * static_cast<float>(i) / 12.0f;
+			float a = 2.0f * Mathf::Pi * static_cast<float>(i) / 12.0f;
 			lines.Segment(Vector3::zero(), Vector3(Mathf::Cos(a), 0, Mathf::Sin(a)), Color(axis.r, axis.g, axis.b, 0.45f));
 		}
 		interiorWire = InteriorWire::Attach(Body->Name + " Interior", Root->transform, InteriorWire::Build(Body->Name + " Interior", lines));

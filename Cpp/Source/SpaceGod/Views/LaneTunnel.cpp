@@ -158,7 +158,7 @@ namespace SpaceGod::Views
 			float tail = head - dir * len;
 			if (tail < 0 || tail > 1) continue;
 			auto c = Color::Lerp(StreakWhite, spur ? SpurRipple : StreakViolet, h2) * (0.55f * ambient * (0.4f + 0.6f * h4));
-			Streak(tail, head, h1 * 2.0f * Mathf::PI + j, 0.72f + 0.24f * h4, c);
+			Streak(tail, head, h1 * 2.0f * Mathf::Pi + j, 0.72f + 0.24f * h4, c);
 		}
 		if (rider == nullptr) return;
 
@@ -178,7 +178,7 @@ namespace SpaceGod::Views
 			float q = o / window;
 			float fade = 1.0f - q * q;
 			auto c = Color::Lerp(StreakWhite, spur ? SpurRipple : StreakViolet, h2) * (1.3f * strength * fade * (0.3f + 0.7f * h5 * h5));
-			Streak(a, b, h4 * 2.0f * Mathf::PI, 0.55f + 0.42f * h1, c);
+			Streak(a, b, h4 * 2.0f * Mathf::Pi, 0.55f + 0.42f * h1, c);
 		}
 	}
 
@@ -267,11 +267,11 @@ namespace SpaceGod::Views
 			float seg = (ds[Mathf::Min(i + 1, n - 1)] - ds[Mathf::Max(i - 1, 0)]) * 0.5f;
 			float carried = seg > 0 ? Mathf::Clamp01((wavelength / seg - 2.5f) * 0.5f) : 1.0f;
 			float phase = ds[i] / wavelength + now * rate;
-			float ripple = Mathf::Pow(0.5f + 0.5f * Mathf::Cos(2.0f * Mathf::PI * phase), 6.0f) * carried;
+			float ripple = Mathf::Pow(0.5f + 0.5f * Mathf::Cos(2.0f * Mathf::Pi * phase), 6.0f) * carried;
 			float visible = Mathf::Clamp01((rs[i] / PixelSize(pts[i], 1.0f) - 0.8f) / 2.5f);
 			for (int k = 0; k <= sides; k++)
 			{
-				float theta = k * 2.0f * Mathf::PI / sides;
+				float theta = k * 2.0f * Mathf::Pi / sides;
 				auto normal = us[i] * Mathf::Cos(theta) + vs[i] * Mathf::Sin(theta);
 				auto p = pts[i] + normal * rs[i];
 				float dist = p.magnitude();

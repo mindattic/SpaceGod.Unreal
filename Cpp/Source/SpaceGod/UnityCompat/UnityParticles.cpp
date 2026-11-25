@@ -70,7 +70,7 @@ namespace SpaceGod::UnityCompat
 			{
 				// Unity's cone: born on a disc of the shape's radius at the base, heading out within the cone's angle,
 				// the further from the axis the more splayed (as the cone's walls would send it).
-				float a = Random::value() * Mathf::PI * 2;
+				float a = Random::value() * Mathf::Pi * 2;
 				float r = Mathf::Sqrt(Random::value());
 				Vector3 at(Mathf::Cos(a) * r, Mathf::Sin(a) * r, 0);
 				float spread = Mathf::Tan(shape.angle * Mathf::Deg2Rad);

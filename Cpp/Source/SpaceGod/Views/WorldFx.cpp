@@ -219,7 +219,7 @@ namespace SpaceGod::Views
 				Vector3 b = Vector3::Cross(aft, a);
 				for (int k = 0; k < Tune::BoostRingPuffs; k++)
 				{
-					float ang = Mathf::PI * 2 * k / Tune::BoostRingPuffs;
+					float ang = Mathf::Pi * 2 * k / Tune::BoostRingPuffs;
 					Cloud c;
 					c.P0 = mid;
 					c.V0 = e.Vel * Tune::ExhaustInherit + ((a * Mathf::Cos(ang) + b * Mathf::Sin(ang)) * 0.8f + aft * 0.6f) * (len * Mathf::Lerp(1.4f, 0.5f, heft));

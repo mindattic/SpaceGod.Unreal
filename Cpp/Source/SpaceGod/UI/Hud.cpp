@@ -1835,7 +1835,7 @@ namespace SpaceGod::UI
 		GUI::color = color;
 		for (int i = 0; i < 8; i++)
 		{
-			float a = i * Mathf::PI / 4;
+			float a = i * Mathf::Pi / 4;
 			GUI::DrawTexture(Rect(p.x + Mathf::Cos(a) * radius - 1.5f, p.y + Mathf::Sin(a) * radius - 1.5f, 3, 3), Icons::White());
 		}
 		GUI::color = old;
@@ -1894,7 +1894,7 @@ namespace SpaceGod::UI
 			float h1 = Frac(Mathf::Sin(k * 12.9898f) * 43758.55f);
 			float h2 = Frac(Mathf::Sin(k * 78.233f) * 12345.67f);
 			float h3 = Frac(Mathf::Sin(k * 37.719f) * 24634.63f);
-			float angle = h1 * Mathf::PI * 2.0f;
+			float angle = h1 * Mathf::Pi * 2.0f;
 			float phase = Frac(t * (0.12f + 0.55f * strength) * (0.5f + h2) + h3);
 			// Cubed, so a mote creeps out of the distance and rushes past at the edge, as if coming nearer.
 			float r = 20.0f + phase * phase * phase * reach;
@@ -1930,7 +1930,7 @@ namespace SpaceGod::UI
 			float h1 = Frac(Mathf::Sin(k * 12.9898f) * 43758.55f);
 			float h2 = Frac(Mathf::Sin(k * 78.233f) * 12345.67f);
 			float h3 = Frac(Mathf::Sin(k * 37.719f) * 24634.63f);
-			float angle = h1 * Mathf::PI * 2.0f;
+			float angle = h1 * Mathf::Pi * 2.0f;
 			float phase = Frac(t * (0.35f + 1.6f * strength) * (0.6f + h2) + h3);
 			auto dir = Vector2(Mathf::Cos(angle), Mathf::Sin(angle));
 			float r = 30.0f + phase * phase * reach;

@@ -467,7 +467,7 @@ namespace SpaceGod::UI
 			int lit = static_cast<int>(steps * charge);
 			for (int k = 0; k < lit; k++)
 			{
-				float a0 = -Mathf::PI * 0.5f + 2.0f * Mathf::PI * k / steps, a1 = -Mathf::PI * 0.5f + 2.0f * Mathf::PI * (k + 1) / steps;
+				float a0 = -Mathf::Pi * 0.5f + 2.0f * Mathf::Pi * k / steps, a1 = -Mathf::Pi * 0.5f + 2.0f * Mathf::Pi * (k + 1) / steps;
 				DrawLine(p + Vector2(Mathf::Cos(a0), Mathf::Sin(a0)) * radius, p + Vector2(Mathf::Cos(a1), Mathf::Sin(a1)) * radius,
 					WithAlpha(EscapeSpoolColor, beat), 3.0f);
 			}

@@ -218,7 +218,7 @@ namespace SpaceGod::Rendering
 				float y = s * OpenBand, r = Mathf::Sqrt(1 - y * y) * 0.975f;
 				for (int k = 0; k < segments; k++)
 				{
-					float a0 = Mathf::PI * 2 * k / segments, a1 = Mathf::PI * 2 * (k + 1) / segments;
+					float a0 = Mathf::Pi * 2 * k / segments, a1 = Mathf::Pi * 2 * (k + 1) / segments;
 					Vector3 p0(Mathf::Cos(a0) * r, y, Mathf::Sin(a0) * r), p1(Mathf::Cos(a1) * r, y, Mathf::Sin(a1) * r);
 					b.Beam(p0, p1, Vector3(p0.x, 0, p0.z).normalized(), 0.03f, 0.04f, Steel);
 					if (k % (segments / 8) == 0)
@@ -240,7 +240,7 @@ namespace SpaceGod::Rendering
 		{
 			for (int k = 0; k < segments; k++)
 			{
-				float a0 = Mathf::PI * 2 * k / segments, a1 = Mathf::PI * 2 * (k + 1) / segments;
+				float a0 = Mathf::Pi * 2 * k / segments, a1 = Mathf::Pi * 2 * (k + 1) / segments;
 				Vector3 p0(Mathf::Cos(a0) * radius, 0, Mathf::Sin(a0) * radius), p1(Mathf::Cos(a1) * radius, 0, Mathf::Sin(a1) * radius);
 				b.Beam(p0, p1, Vector3::up(), width, depth, colorOf(k));
 			}
@@ -284,7 +284,7 @@ namespace SpaceGod::Rendering
 		int blocks = which == 0 ? 6 : 4;
 		for (int k = 0; k < blocks; k++)
 		{
-			float a = Mathf::PI * 2 * (k + 0.5f) / blocks;
+			float a = Mathf::Pi * 2 * (k + 0.5f) / blocks;
 			Vector3 dir(Mathf::Cos(a), 0, Mathf::Sin(a));
 			Vector3 tangent(-dir.z, 0, dir.x);
 			b.Beam(dir * radius - tangent * 0.05f, dir * radius + tangent * 0.05f, Vector3::up(), 0.04f, 0.07f, Girder);
@@ -306,7 +306,7 @@ namespace SpaceGod::Rendering
 		auto gap = [](int k) { return (k >= 14 && k < 23) || (k >= 61 && k < 66) || (k >= 92 && k < 104); };
 		for (int k = 0; k < segments; k++)
 		{
-			float a0 = Mathf::PI * 2 * k / segments, a1 = Mathf::PI * 2 * (k + 1) / segments;
+			float a0 = Mathf::Pi * 2 * k / segments, a1 = Mathf::Pi * 2 * (k + 1) / segments;
 			Vector3 d0(Mathf::Cos(a0), 0, Mathf::Sin(a0)), d1(Mathf::Cos(a1), 0, Mathf::Sin(a1));
 			if (gap(k))
 			{
@@ -332,7 +332,7 @@ namespace SpaceGod::Rendering
 		for (int k = 0; k < 10; k++)
 		{
 			if (k == 2 || k == 3 || k == 7) continue;
-			float a0 = Mathf::PI * 2 * k / 10, a1 = a0 + Mathf::PI * 2 / 22;
+			float a0 = Mathf::Pi * 2 * k / 10, a1 = a0 + Mathf::Pi * 2 / 22;
 			Vector3 d0(Mathf::Cos(a0), 0, Mathf::Sin(a0)), d1(Mathf::Cos(a1), 0, Mathf::Sin(a1));
 			b.Beam(d0 * 0.42f, d1 * 0.42f, Vector3::up(), 0.006f, 0.16f, Soot);
 		}

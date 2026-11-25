@@ -125,7 +125,7 @@ namespace SpaceGod::Rendering
 			float z0 = center.z - length * 0.5f, z1 = center.z + length * 0.5f;
 			for (int s = 0; s < segments; s++)
 			{
-				float a0 = Mathf::PI * 2 * s / segments, a1 = Mathf::PI * 2 * (s + 1) / segments;
+				float a0 = Mathf::Pi * 2 * s / segments, a1 = Mathf::Pi * 2 * (s + 1) / segments;
 				auto p0 = Vector3(Mathf::Cos(a0) * radius, Mathf::Sin(a0) * radius, 0) + Vector3(center.x, center.y, 0);
 				auto p1 = Vector3(Mathf::Cos(a1) * radius, Mathf::Sin(a1) * radius, 0) + Vector3(center.x, center.y, 0);
 				Quad(Vector3(p0.x, p0.y, z0), Vector3(p1.x, p1.y, z0), Vector3(p1.x, p1.y, z1), Vector3(p0.x, p0.y, z1), color);
@@ -143,7 +143,7 @@ namespace SpaceGod::Rendering
 			Keep(center.z);
 			auto P = [&](int band, int seg)
 			{
-				float lat = Mathf::PI * band / bands - Mathf::PI * 0.5f, lon = Mathf::PI * 2 * seg / segments;
+				float lat = Mathf::Pi * band / bands - Mathf::Pi * 0.5f, lon = Mathf::Pi * 2 * seg / segments;
 				float r = Mathf::Cos(lat) * radius;
 				return center + Vector3(Mathf::Cos(lon) * r, Mathf::Sin(lon) * r, Mathf::Sin(lat) * radius);
 			};
@@ -355,7 +355,7 @@ namespace SpaceGod::Rendering
 		b.Box(Vector3(0, 0, 0), Vector3(0.2f, 0.06f, 0.2f), b.Dark);
 		for (int k = 0; k < 8; k++)
 		{
-			float a = Mathf::PI * 2 * k / 8;
+			float a = Mathf::Pi * 2 * k / 8;
 			auto p = Vector3(Mathf::Cos(a) * 0.4f, 0, Mathf::Sin(a) * 0.4f);
 			b.Box(p, Vector3(0.12f, 0.035f, 0.12f), k % 2 == 0 ? b.Accent : b.Hull);
 		}
@@ -472,7 +472,7 @@ namespace SpaceGod::Rendering
 					b.Cylinder(Vector3(0, 0, 0.012f), 0.004f, 0.012f, b.Accent);
 					for (int k = 0; k < 6; k++)
 					{
-						float a = Mathf::PI * 2 * k / 6;
+						float a = Mathf::Pi * 2 * k / 6;
 						b.Cylinder(Vector3(Mathf::Cos(a) * 0.0045f, Mathf::Sin(a) * 0.0045f, 0.024f), 0.0014f, 0.034f, b.Dark);
 					}
 				}
@@ -486,7 +486,7 @@ namespace SpaceGod::Rendering
 					b.Cylinder(Vector3(0, 0, 0.008f), 0.0045f, 0.016f, b.Accent);
 					for (int k = 0; k < 6; k++)
 					{
-						float a = Mathf::PI * 2 * k / 6;
+						float a = Mathf::Pi * 2 * k / 6;
 						b.Cylinder(Vector3(Mathf::Cos(a) * 0.0035f, Mathf::Sin(a) * 0.0035f, 0.03f), 0.0011f, 0.046f, b.Dark);
 					}
 				}
@@ -508,7 +508,7 @@ namespace SpaceGod::Rendering
 				b.Cylinder(Vector3(0, 0.008f, 0), 0.008f, 0.034f, b.Hull);
 				for (int k = 0; k < 6; k++)
 				{
-					float a = Mathf::PI * 2 * k / 6;
+					float a = Mathf::Pi * 2 * k / 6;
 					b.Box(Vector3(Mathf::Cos(a) * 0.0045f, 0.008f + Mathf::Sin(a) * 0.0045f, 0.0175f), Vector3(0.0025f, 0.0025f, 0.002f), b.Dark);
 				}
 				break;
@@ -536,7 +536,7 @@ namespace SpaceGod::Rendering
 				b.Cylinder(Vector3(0, 0.006f, 0), 0.01f, 0.012f, b.Dark);
 				for (int k = 0; k < 4; k++)
 				{
-					float a = k * Mathf::PI * 0.5f;
+					float a = k * Mathf::Pi * 0.5f;
 					b.Box(Vector3(Mathf::Cos(a) * 0.009f, 0.013f, Mathf::Sin(a) * 0.009f), Vector3(0.004f, 0.003f, 0.004f), b.Glow(Color(0.45f, 1.0f, 0.55f)));
 				}
 				break;
@@ -697,8 +697,8 @@ namespace SpaceGod::Rendering
 	{
 		for (int k = 0; k < segments; k++)
 		{
-			float a = Mathf::PI * 2 * (k + 0.5f) / segments;
-			float chord = 2 * r * Mathf::Sin(Mathf::PI / segments) * 1.04f;
+			float a = Mathf::Pi * 2 * (k + 0.5f) / segments;
+			float chord = 2 * r * Mathf::Sin(Mathf::Pi / segments) * 1.04f;
 			auto c = Vector3(Mathf::Cos(a) * r, Mathf::Sin(a) * r, z);
 			b.BoxRotated(c, Vector3(chord, thickness, depth), a * Mathf::Rad2Deg + 90, color);
 		}
@@ -782,7 +782,7 @@ namespace SpaceGod::Rendering
 			Torus(b, 0.44f, 0.02f, 0.15f, 24, b.Glow(Color(1.0f, 0.92f, 0.75f)));
 			for (int k = 0; k < 4; k++)
 			{
-				float a = Mathf::PI * 0.5f * k;
+				float a = Mathf::Pi * 0.5f * k;
 				b.BoxRotated(Vector3(Mathf::Cos(a) * 0.22f, Mathf::Sin(a) * 0.22f, 0), Vector3(0.44f, 0.025f, 0.025f), a * Mathf::Rad2Deg, b.Dark);
 			}
 			b.Cylinder(Vector3::zero(), 0.07f, 0.5f, b.Accent, false, 10);
@@ -805,7 +805,7 @@ namespace SpaceGod::Rendering
 				Torus(b, 0.75f, 0.03f, 0.17f, 32, derelict ? b.Dark : b.Glow(Color(1.0f, 0.9f, 0.7f)), z);
 				for (int k = 0; k < 3; k++)
 				{
-					float a = Mathf::PI * 2 * k / 3 + z;
+					float a = Mathf::Pi * 2 * k / 3 + z;
 					auto c = Vector3(Mathf::Cos(a) * 0.38f, Mathf::Sin(a) * 0.38f, z);
 					b.BoxRotated(c, Vector3(0.68f, 0.04f, 0.04f), a * Mathf::Rad2Deg, trim);
 				}
@@ -818,7 +818,7 @@ namespace SpaceGod::Rendering
 			}
 			for (int k = 0; k < 6; k++)
 			{
-				float a = Mathf::PI * 2 * k / 6;
+				float a = Mathf::Pi * 2 * k / 6;
 				b.BoxRotated(Vector3(Mathf::Cos(a) * 0.2f, Mathf::Sin(a) * 0.2f, 0.95f), Vector3(0.24f, 0.03f, 0.03f), a * Mathf::Rad2Deg, b.Dark);
 				b.Box(Vector3(Mathf::Cos(a) * 0.32f, Mathf::Sin(a) * 0.32f, 0.95f), Vector3(0.03f, 0.03f, 0.03f), b.Glow(Color(0.6f, 0.9f, 1.0f)));
 			}
@@ -839,7 +839,7 @@ namespace SpaceGod::Rendering
 			Torus(b, 0.48f, 0.03f, 0.08f, 40, b.Accent);
 			for (int k = 0; k < 8; k++)
 			{
-				float a = Mathf::PI * 2 * k / 8;
+				float a = Mathf::Pi * 2 * k / 8;
 				auto c = Vector3(Mathf::Cos(a) * 0.56f, Mathf::Sin(a) * 0.56f, 0);
 				b.BoxRotated(c, Vector3(0.14f, 0.035f, 0.05f), a * Mathf::Rad2Deg, b.Dark);
 				b.Box(Vector3(Mathf::Cos(a) * 0.64f, Mathf::Sin(a) * 0.64f, 0), Vector3(0.025f, 0.025f, 0.06f), b.Glow(Color(1.0f, 0.4f, 0.3f)));
@@ -892,7 +892,7 @@ namespace SpaceGod::Rendering
 				auto gold = Color(1.0f, 0.78f, 0.3f, 1.0f);
 				for (int k = 0; k < 6; k++)
 				{
-					float a = Mathf::PI * 2 * k / 6;
+					float a = Mathf::Pi * 2 * k / 6;
 					b.BoxRotated(Vector3(Mathf::Cos(a) * 0.14f, Mathf::Sin(a) * 0.14f, 0.15f), Vector3(0.16f, 0.14f, 0.01f), a * Mathf::Rad2Deg, gold);
 				}
 				b.Box(Vector3(0, 0, 0.15f), Vector3(0.12f, 0.12f, 0.01f), gold);
@@ -1133,7 +1133,7 @@ namespace SpaceGod::Rendering
 			float a = 360.0f * i / segments;
 			float rad = a * Mathf::Deg2Rad;
 			auto at = Vector3(Mathf::Cos(rad) * ring, Mathf::Sin(rad) * ring, 0);
-			b.BoxRotated(at, Vector3(2 * Mathf::PI * ring / segments * 1.05f, 0.02f, 0.04f), a + 90, i % 2 == 0 ? glow : b.Accent);
+			b.BoxRotated(at, Vector3(2 * Mathf::Pi * ring / segments * 1.05f, 0.02f, 0.04f), a + 90, i % 2 == 0 ? glow : b.Accent);
 		}
 		// Four struts from the hull out to the ring.
 		for (int i = 0; i < 4; i++)
@@ -1333,7 +1333,7 @@ namespace SpaceGod::Rendering
 		b.Frustum(0.14f, 0.5f, Vector2(0.2f, 0.2f), Vector2(0.015f, 0.015f), 0, steel);
 		for (int k = 0; k < 4; k++)
 		{
-			float a = Mathf::PI * 0.5f * k + 0.4f;
+			float a = Mathf::Pi * 0.5f * k + 0.4f;
 			b.Box(Vector3(Mathf::Cos(a) * 0.06f, Mathf::Sin(a) * 0.05f, 0.27f), Vector3(0.02f, 0.02f, 0.22f), Color(0.42f, 0.4f, 0.37f, 1.0f));
 		}
 		b.Box(Vector3(0, 0, -0.43f), Vector3(0.18f, 0.18f, 0.05f), b.Dark);
@@ -1388,7 +1388,7 @@ namespace SpaceGod::Rendering
 		auto ringGlow = b.Glow(Color(0.55f, 1.0f, 0.85f));
 		for (int k = 0; k < 12; k++)
 		{
-			float a = Mathf::PI * 2 * k / 12.0f;
+			float a = Mathf::Pi * 2 * k / 12.0f;
 			b.BoxRotated(Vector3(Mathf::Cos(a) * 0.16f, Mathf::Sin(a) * 0.16f, 0.42f), Vector3(0.085f, 0.022f, 0.03f), a * Mathf::Rad2Deg + 90, k % 3 == 0 ? ringGlow : b.Dark);
 		}
 		b.Box(Vector3(0, 0, -0.38f), Vector3(0.18f, 0.12f, 0.08f), b.Dark);

@@ -123,7 +123,7 @@ namespace SpaceGod
 				float h1 = CruiseFrac(Mathf::Sin(k * 12.9898f) * 43758.55f);
 				float h2 = CruiseFrac(Mathf::Sin(k * 78.233f) * 12345.67f);
 				float h3 = CruiseFrac(Mathf::Sin(k * 37.719f) * 24634.63f);
-				float angle = h1 * Mathf::PI * 2.0f;
+				float angle = h1 * Mathf::Pi * 2.0f;
 				float phase = CruiseFrac(t * (0.4f + 2.2f * strength) * (0.6f + h2) + h3);
 				auto dir = Vector2(Mathf::Cos(angle), Mathf::Sin(angle));
 				float r = 40.0f + phase * phase * reach;

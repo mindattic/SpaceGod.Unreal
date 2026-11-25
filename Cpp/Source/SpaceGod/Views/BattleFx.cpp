@@ -368,7 +368,7 @@ namespace SpaceGod::Views
 				auto cam = app->UnityCamera->transform;
 				for (int k = 0; k < n; k++)
 				{
-					float ang = Mathf::PI * 2 * k / n;
+					float ang = Mathf::Pi * 2 * k / n;
 					auto across = (cam->right() * Mathf::Cos(ang) + cam->up() * Mathf::Sin(ang)) * ahead.magnitude() * 0.6f;
 					auto tip = c + (ahead + across) * (0.4f + 1.4f * t);
 					Ribbon(c + (ahead + across) * (0.2f + 1.2f * t), tip, 1.2f, e.Color * fade);

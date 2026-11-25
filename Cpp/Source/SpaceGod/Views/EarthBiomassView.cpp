@@ -264,14 +264,14 @@ namespace SpaceGod::Views
 		double jd = app->Clock->Jd;
 		double step = std::clamp((jd - lastJd) * 86400.0, -0.25, 0.25);
 		lastJd = jd;
-		breathPhase += step * BreathsPerMinute / 60.0 * 2 * Mathf::PI;
+		breathPhase += step * BreathsPerMinute / 60.0 * 2 * Mathf::Pi;
 		float breath = static_cast<float>(0.5 + 0.5 * std::sin(breathPhase));
 		root->transform->localScale = Vector3::one() * (1 + BreathLift * (breath * 2 - 1));
 		flesh->SetColor("_Color", Color(1, 1, 1) * (FleshGain * (0.92f + 0.1f * breath)));
 
 		// "At certain times of day, when atmospheric conditions are right": a slow swell over hours, on the day side only.
 		double hours = jd * 24;
-		float conditions = SmoothStep(0.55f, 0.9f, static_cast<float>(0.5 + 0.5 * std::sin(hours * 2 * Mathf::PI / 7.3 + 1.3 * std::sin(hours * 2 * Mathf::PI / 31))));
+		float conditions = SmoothStep(0.55f, 0.9f, static_cast<float>(0.5 + 0.5 * std::sin(hours * 2 * Mathf::Pi / 7.3 + 1.3 * std::sin(hours * 2 * Mathf::Pi / 31))));
 		Vector4 sun4 = Shader::GetGlobalVector("_SunPositionWS");
 		Vector3 sun(sun4.x, sun4.y, sun4.z);
 		Quaternion rot = earth->rotation();

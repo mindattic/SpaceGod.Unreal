@@ -22,7 +22,7 @@ namespace SpaceGod::Views
 		if (radius <= 0 || steps < 3) return;
 		auto at = [&](int i)
 		{
-			float a = 2.0f * Mathf::PI * static_cast<float>(i) / static_cast<float>(steps);
+			float a = 2.0f * Mathf::Pi * static_cast<float>(i) / static_cast<float>(steps);
 			return centre + (u * Mathf::Cos(a) + v * Mathf::Sin(a)) * radius;
 		};
 		for (int i = 0; i < steps; i++) Segment(at(i), at(i + 1), c);
@@ -33,12 +33,12 @@ namespace SpaceGod::Views
 		// Parallels between the poles (none at a pole itself), and meridians as full great circles through both poles.
 		for (int p = 1; p <= parallels; p++)
 		{
-			float lat = Mathf::PI * (static_cast<float>(p) / static_cast<float>(parallels + 1) - 0.5f);
+			float lat = Mathf::Pi * (static_cast<float>(p) / static_cast<float>(parallels + 1) - 0.5f);
 			Circle(Vector3(0, radius * Mathf::Sin(lat), 0), Vector3::right(), Vector3::forward(), radius * Mathf::Cos(lat), steps, c);
 		}
 		for (int m = 0; m < meridians; m++)
 		{
-			float lon = Mathf::PI * static_cast<float>(m) / static_cast<float>(meridians);
+			float lon = Mathf::Pi * static_cast<float>(m) / static_cast<float>(meridians);
 			Circle(Vector3::zero(), Vector3(Mathf::Cos(lon), 0, Mathf::Sin(lon)), Vector3::up(), radius, steps, c);
 		}
 	}

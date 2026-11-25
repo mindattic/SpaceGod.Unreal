@@ -107,7 +107,7 @@ namespace SpaceGod::Rendering
 				for (int k = 0; k < segments; k++)
 				{
 					if (!keep(k)) continue;
-					float a0 = Mathf::PI * 2 * k / segments, a1 = Mathf::PI * 2 * (k + 1) / segments;
+					float a0 = Mathf::Pi * 2 * k / segments, a1 = Mathf::Pi * 2 * (k + 1) / segments;
 					auto p0 = centre + (u * Mathf::Cos(a0) + v * Mathf::Sin(a0)) * radius;
 					auto p1 = centre + (u * Mathf::Cos(a1) + v * Mathf::Sin(a1)) * radius;
 					Beam(p0, p1, a, width, depth, colorOf(k));
@@ -328,7 +328,7 @@ namespace SpaceGod::Rendering
 			int spars = 4 + static_cast<int>(d.Next() % 3);
 			for (int k = 0; k < spars; k++)
 			{
-				float a = Mathf::PI * 2 * (k + d.Range(-0.15f, 0.15f)) / spars;
+				float a = Mathf::Pi * 2 * (k + d.Range(-0.15f, 0.15f)) / spars;
 				float lift = d.Range(-0.35f, 0.25f);
 				Vector3 dir = Vector3(Mathf::Cos(a), lift, Mathf::Sin(a)).normalized();
 				float reach = d.Range(0.95f, 1.15f);
@@ -385,7 +385,7 @@ namespace SpaceGod::Rendering
 						Vector3 ring[sides];
 						for (int s = 0; s < sides; s++)
 						{
-							float a = Mathf::PI * 2 * s / sides + t * 0.8f;
+							float a = Mathf::Pi * 2 * s / sides + t * 0.8f;
 							ring[s] = c + (u0 * Mathf::Cos(a) + v0 * Mathf::Sin(a)) * width;
 						}
 						if (r > 0)
@@ -421,7 +421,7 @@ namespace SpaceGod::Rendering
 							[&](int k) { return !broken || (k < 17 || k > 21); });
 						for (int s = 0; s < 4; s++)
 						{
-							float a = Mathf::PI * 0.5f * s + h * 0.4f;
+							float a = Mathf::Pi * 0.5f * s + h * 0.4f;
 							b.Beam(Vector3(0, y, 0), Vector3(Mathf::Cos(a) * 0.48f, y, Mathf::Sin(a) * 0.48f), Vector3::up(), 0.03f, 0.03f, dark);
 						}
 					}
@@ -444,7 +444,7 @@ namespace SpaceGod::Rendering
 					Lumps lumps(d, 0.6f, 0.0f);
 					auto P = [&](int i, int j)
 					{
-						float a = Mathf::PI * 2 * i / segments, c = Mathf::PI * 2 * j / sides;
+						float a = Mathf::Pi * 2 * i / segments, c = Mathf::Pi * 2 * j / sides;
 						Vector3 radial(Mathf::Cos(a), 0, Mathf::Sin(a));
 						Vector3 tube = radial * Mathf::Cos(c) + Vector3::up() * Mathf::Sin(c);
 						float r = minor * lumps.At(tube.normalized()).magnitude() * (1 + 0.1f * Mathf::Sin(a * 5));
@@ -454,7 +454,7 @@ namespace SpaceGod::Rendering
 						for (int j = 0; j < sides; j++)
 						{
 							auto p0 = P(i, j), p1 = P(i + 1, j), p2 = P(i + 1, j + 1), p3 = P(i, j + 1);
-							float a = Mathf::PI * 2 * (i + 0.5f) / segments;
+							float a = Mathf::Pi * 2 * (i + 0.5f) / segments;
 							auto out = (p0 + p2) * 0.5f - Vector3(Mathf::Cos(a), 0, Mathf::Sin(a)) * major;
 							b.Quad(p0, p1, p2, p3, out, Shade(base, d.Range(0.8f, 1.15f)));
 						}

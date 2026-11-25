@@ -987,7 +987,7 @@ namespace SpaceGod::UI
 		int n = Mathf::Clamp(static_cast<int>(r / 5), 24, 360);
 		for (int i = 0; i < n; i++)
 		{
-			float a0 = i * Mathf::PI * 2 / n, a1 = (i + 1) * Mathf::PI * 2 / n;
+			float a0 = i * Mathf::Pi * 2 / n, a1 = (i + 1) * Mathf::Pi * 2 / n;
 			auto q0 = p + Vector2(Mathf::Cos(a0), Mathf::Sin(a0)) * r, q1 = p + Vector2(Mathf::Cos(a1), Mathf::Sin(a1)) * r;
 			if ((q0.x < -4 && q1.x < -4) || (q0.y < -4 && q1.y < -4) || (q0.x > canvas.width + 4 && q1.x > canvas.width + 4) || (q0.y > canvas.height + 4 && q1.y > canvas.height + 4)) continue;
 			Line(q0, q1, c, thickness);

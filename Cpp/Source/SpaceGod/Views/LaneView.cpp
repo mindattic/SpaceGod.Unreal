@@ -154,7 +154,7 @@ namespace SpaceGod::Views
 		auto prev = centre + u * radius;
 		for (int k = 1; k <= RingSegments; k++)
 		{
-			float t = k * Mathf::PI * 2.0f / RingSegments;
+			float t = k * Mathf::Pi * 2.0f / RingSegments;
 			auto p = centre + (u * Mathf::Cos(t) + v * Mathf::Sin(t)) * radius;
 			Ribbon(prev, p, width, color);
 			prev = p;
@@ -209,7 +209,7 @@ namespace SpaceGod::Views
 		auto prev = centre + u * radius;
 		for (int k = 1; k <= RingSegments; k++)
 		{
-			float t = k * Mathf::PI * 2.0f / RingSegments;
+			float t = k * Mathf::Pi * 2.0f / RingSegments;
 			auto p = centre + (u * Mathf::Cos(t) + v * Mathf::Sin(t)) * radius;
 			Ribbon(prev, p, width, color);
 			prev = p;
