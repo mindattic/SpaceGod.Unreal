@@ -637,12 +637,18 @@ namespace SpaceGod
 		// US-T736: mouse flight on the virtual stick, a launched craft's nose flown by the cursor's offset as a turn rate, the
 		// view on the nose; the flip still swings onto the retrograde by aim.
 		auto cockpitSeat = cs::As<FighterSeat>(held);
-		bool rateStick = cockpitSeat != nullptr && ::SpaceGod::Input::MouseFlight::VirtualStick() && !Input.Manoeuvre;
+		// US-T826: a bound joystick flies the same rate stick, its deflection the stick.
+		bool rateStick = cockpitSeat != nullptr && (::SpaceGod::Input::MouseFlight::VirtualStick() || Input.JoyStickBound) && !Input.Manoeuvre;
 		Vector2 stickOut = Vector2::zero();
 		if (rateStick)
 		{
 			float k = Cameras::SpaceCamera::LookSensitivity();
-			stickOut = ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * k, Cameras::SpaceCamera::LookY(look.y) * k));
+			if (Input.JoyStickBound)
+			{
+				::SpaceGod::Input::MouseFlight::Centre();
+				stickOut = Input.JoyStick;
+			}
+			else stickOut = ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * k, Cameras::SpaceCamera::LookY(look.y) * k));
 			seatAim = ToVector(cockpitSeat->Unit->Forward.SwapYZ()).normalized();
 		}
 		else
@@ -659,6 +665,7 @@ namespace SpaceGod
 		input.AutoLevelS = cockpitSeat != nullptr ? ::SpaceGod::Input::MouseFlight::AutoLevelS() : 0;
 		input.Aim = DVec3(seatAim.x, seatAim.y, seatAim.z).SwapYZ();
 		input.Throttle = Mathf::Clamp(Input.Move.z, -1.0f, 1.0f);
+		input.ThrottleSet = Input.ThrottleAxis; // US-T826
 		input.StrafeRight = Mathf::Clamp(Input.Move.x, -1.0f, 1.0f);
 		input.StrafeUp = Mathf::Clamp(Input.Move.y, -1.0f, 1.0f);
 		input.Roll = Mathf::Clamp(Input.Roll, -1.0f, 1.0f);

@@ -218,6 +218,10 @@ namespace SpaceGod::Core
 		/// <summary>Forward/reverse thrust, strafe and roll, each -1..1, for things that move.</summary>
 		double Throttle = 0, StrafeRight = 0, StrafeUp = 0, Roll = 0;
 
+		/// <summary>A joystick's throttle lever (US-T826), 0..1, set absolutely; -1 with none, <see cref="Throttle"/> then
+		/// winding the lever at its rate.</summary>
+		double ThrottleSet = -1;
+
 		/// <summary>The main trigger (guns) and the secondary (missiles), held this frame.</summary>
 		bool Primary = false, Secondary = false;
 

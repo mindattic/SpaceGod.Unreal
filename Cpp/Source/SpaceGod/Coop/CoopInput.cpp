@@ -57,7 +57,8 @@ namespace SpaceGod::Coop
 				SG_FIELD(Drift), // US-T165: R held at a fighter's controls
 				SG_FIELD(DropMine), SG_FIELD(EngageFtl), SG_FIELD(Escape), SG_FIELD(Fire), SG_FIELD(FireEmp), SG_FIELD(FireGroupKey), // U.SPC-T277
 				SG_FIELD(Focus), SG_FIELD(GroupModeKey), // U.SPC-T277
-				SG_FIELD(HailPolity), SG_FIELD(Home), SG_FIELD(JumpToCraft), // US-T106: Shift+/
+				SG_FIELD(HailPolity), SG_FIELD(Home), SG_FIELD(JoyStick), SG_FIELD(JoyStickBound), // US-T826
+				SG_FIELD(JumpToCraft), // US-T106: Shift+/
 				SG_FIELD(LockAttacker), // US-T307: Shift+B at the controls, an edge
 				SG_FIELD(LockTarget), SG_FIELD(LookDelta), SG_FIELD(LookHeld), SG_FIELD(ManGun),
 				SG_FIELD(Manoeuvre), SG_FIELD(MouseDelta), SG_FIELD(MousePosition), SG_FIELD(Move), SG_FIELD(MoveToHost), SG_FIELD(NumberKey), SG_FIELD(Pilot),
@@ -67,7 +68,7 @@ namespace SpaceGod::Coop
 				SG_FIELD(SelectClicked), SG_FIELD(SelectDoubleClicked),
 				SG_FIELD(SelfDestructArm), SG_FIELD(SelfDestructHoldS), SG_FIELD(SelfDestructTap), // US-T97: the self-destruct's key
 				SG_FIELD(SensorPing), // US-T93: Tab at a helm, the active ping, an edge
-				SG_FIELD(Slow), SG_FIELD(SpawnPractice), SG_FIELD(ThrottleStep),
+				SG_FIELD(Slow), SG_FIELD(SpawnPractice), SG_FIELD(ThrottleAxis), SG_FIELD(ThrottleStep),
 				SG_FIELD(TimeFaster), SG_FIELD(TimeSlower), SG_FIELD(ToggleBoarding), SG_FIELD(ToggleBounties), SG_FIELD(ToggleCargo),
 				SG_FIELD(ToggleContracts), SG_FIELD(ToggleFleet), SG_FIELD(ToggleFlightAssist), SG_FIELD(ToggleFtlAutopilot),
 				SG_FIELD(ToggleGalaxyMap), SG_FIELD(ToggleHelp), SG_FIELD(ToggleHud), SG_FIELD(ToggleLabels), SG_FIELD(ToggleLanes),
@@ -84,7 +85,8 @@ namespace SpaceGod::Coop
 		/// Held from one message to the next, as a stick stays where it is put (the rest are edges, deltas or picks).
 		bool Held(const char* n)
 		{
-			for (const char* h : { "Move", "Roll", "Boost", "Slow", "Cruise", "Manoeuvre", "Drift", "Fire", "FireEmp", "LookHeld", "MousePosition" })
+			for (const char* h : { "Move", "Roll", "Boost", "Slow", "Cruise", "Manoeuvre", "Drift", "Fire", "FireEmp", "LookHeld", "MousePosition",
+				"JoyStick", "JoyStickBound", "ThrottleAxis" })
 				if (std::strcmp(n, h) == 0) return true;
 			return false;
 		}
@@ -96,6 +98,7 @@ namespace SpaceGod::Coop
 		{
 			PilotValue p;
 			if (std::strcmp(f.Name, "NumberKey") == 0 || std::strcmp(f.Name, "FireGroupKey") == 0 || std::strcmp(f.Name, "GroupModeKey") == 0) p.I = -1;
+			if (std::strcmp(f.Name, "ThrottleAxis") == 0) p.F[0] = -1; // US-T826: no lever
 			return p;
 		}
 

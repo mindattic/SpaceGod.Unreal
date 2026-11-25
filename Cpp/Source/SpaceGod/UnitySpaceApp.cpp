@@ -1364,16 +1364,19 @@ namespace SpaceGod
 			&& !SystemCruiseActive() && PilotStunSeconds() <= 0;
 		// US-T736: mouse flight's virtual stick flies a fighter's or hauler's nose at the helm as in a cockpit, the view on
 		// the nose; a capital's mouse stays its look-around, and the flip still swings onto the retrograde by aim.
-		bool rateStick = control != PilotControl::Helm && ::SpaceGod::Input::MouseFlight::VirtualStick() && !Input.Manoeuvre;
+		// US-T826: a bound joystick flies the same rate stick, its deflection the stick.
+		bool rateStick = control != PilotControl::Helm && (::SpaceGod::Input::MouseFlight::VirtualStick() || Input.JoyStickBound)
+			&& !Input.Manoeuvre;
 		Vector2 stickOut = Vector2::zero();
-		if (!rateStick) ::SpaceGod::Input::MouseFlight::Centre();
+		if (!rateStick || Input.JoyStickBound) ::SpaceGod::Input::MouseFlight::Centre();
 		switch (control)
 		{
 			default:
 			{
 				if (rateStick)
 				{
-					stickOut = ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * PilotLookSensitivity(), look.y * PilotLookSensitivity()));
+					stickOut = Input.JoyStickBound ? Input.JoyStick
+						: ::SpaceGod::Input::MouseFlight::Step(Vector2(look.x * PilotLookSensitivity(), look.y * PilotLookSensitivity()));
 					pilotAim = pilot().Forward;
 					pilotViewUp = pilot().Up;
 					pilotLookOwedRight = pilotLookOwedUp = 0;
@@ -1438,7 +1441,7 @@ namespace SpaceGod
 		// its own tanks, with what its role's controls add (a hauler's load, a capital's telegraph and weak-patch roll).
 		EmbodimentInput stick;
 		stick.Aim = desiredForward;
-		stick.Throttle = Input.Move.z;
+		stick.Throttle = Input.ThrottleAxis >= 0 ? Input.ThrottleAxis : Input.Move.z; // US-T826: the lever, absolute
 		stick.StrafeRight = strafeRight;
 		stick.StrafeUp = strafeUp;
 		stick.Roll = Input.Roll;

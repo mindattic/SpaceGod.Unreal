@@ -108,7 +108,8 @@ namespace SpaceGod::Core
 			return;
 		}
 		if (input.Aim.LengthSquared() > 1e-12) stick->Aim = input.Aim.Normalized();
-		stick->Throttle = cs::Math::Max(0.0, cs::Math::Min(1.0, stick->Throttle + input.Throttle * ThrottlePerSecond * dt));
+		stick->Throttle = input.ThrottleSet >= 0 ? cs::Math::Min(1.0, input.ThrottleSet) // US-T826
+			: cs::Math::Max(0.0, cs::Math::Min(1.0, stick->Throttle + input.Throttle * ThrottlePerSecond * dt));
 		// With assist off the same keys are raw thrust (US-T87): the lever only matters to the flight computer.
 		stick->Burn = input.Throttle;
 		stick->Flip = input.Manoeuvre;
