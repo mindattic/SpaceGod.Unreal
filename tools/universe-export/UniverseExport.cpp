@@ -52,6 +52,7 @@
 #include "Systems/Graveyards.h"
 #include "Systems/InterstellarWars.h"
 #include "Systems/JumpGate.h"
+#include "Systems/ManalithSystem.h"
 #include "Systems/Polities.h"
 #include "Systems/SpaceFeatures.h"
 #include "Systems/StarDiscovery.h"
@@ -535,6 +536,7 @@ namespace
 		void System(const cs::Ref<StarSystem>& s)
 		{
 			if (s->IsVoidBase && VoidStationName(s->Name)) { VoidStation(s->Name, s); return; }
+			if (ManalithSystem::Gateless(s->Name)) return; // US-T860: Nightglass is a non-canon easter egg, never exported.
 			std::string sys = SysSlug(s->Name);
 			std::string id = "system-" + sys;
 			placeByName[Lower(s->Name)] = id;
@@ -1010,7 +1012,7 @@ namespace
 		void ChartedStars()
 		{
 			auto one = [&](const NearbyStar& n, bool discovered) {
-				if (VoidStationName(n.Name) || placeByName.count(Lower(n.Name))) return;
+				if (VoidStationName(n.Name) || ManalithSystem::Gateless(n.Name) || placeByName.count(Lower(n.Name))) return;
 				std::string id = "charted-star-" + Slug(n.Name);
 				placeByName[Lower(n.Name)] = id;
 				Entity e{ id, "star", n.Name,

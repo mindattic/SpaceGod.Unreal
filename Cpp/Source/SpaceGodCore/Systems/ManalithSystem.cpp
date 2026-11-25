@@ -88,7 +88,7 @@ namespace SpaceGod::Core
 			b->PoleRaDeg = 0; b->PoleDecDeg = 90; b->RotationHours = 2; b->FacesParent = true;
 			b->Color = Rgb(0.2f, 0.18f, 0.26f);
 			b->Status = BodyStatus::Fictional;
-			b->Summary = "Fiction. A crystal-veined mass 3 km across, black glass shot through with mana blue, tumbling slowly in orbit and "
+			b->Summary = "Fiction. A crystal-veined mass 3 km across, black glass shot through with glowing blue, tumbling slowly in orbit and "
 				"shedding shards as it goes. Nobody knows who put it there, or whether anyone did.";
 			r.Add(b);
 		}
