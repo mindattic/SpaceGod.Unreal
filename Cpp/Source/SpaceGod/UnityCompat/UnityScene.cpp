@@ -1104,7 +1104,7 @@ namespace SpaceGod::UnityCompat
 		}
 		if (e.Built != mesh.get() || e.BuiltVersion != mesh->Version)
 		{
-			e.Static.Reset(StaticMeshOf(*mesh));
+			e.Static.Reset(mesh->ImportedAsset.empty() ? StaticMeshOf(*mesh) : LoadObject<UStaticMesh>(nullptr, UTF8_TO_TCHAR(mesh->ImportedAsset.c_str())));
 			c->SetStaticMesh(e.Static.Get());
 			e.Built = mesh.get();
 			e.BuiltVersion = mesh->Version;
@@ -1115,7 +1115,10 @@ namespace SpaceGod::UnityCompat
 		c->TranslucencySortPriority = ShaderBinding::SortPriority(material->shader.get());
 
 		// Each copy's Unity world matrix (the parent's times its own TRS), to Unreal as a renderer's transform is.
+		// An imported mesh is drawn in its import's frame: corrected to the Unity mesh first, as a renderer's is.
 		WorldMatrix w = WorldMatrix::Of(*p);
+		bool imported = !mesh->ImportedAsset.empty();
+		FTransform correction = imported ? ImportedCorrection(mesh->ImportedScale, mesh->ImportedRotation) : FTransform::Identity;
 		e.Transforms.Reset();
 		for (int n = 0; n < count; n++)
 		{
@@ -1130,7 +1133,7 @@ namespace SpaceGod::UnityCompat
 				iw.m[2][k] = wc.z;
 			}
 			iw.t = w.MultiplyPoint(it.Position);
-			e.Transforms.Add(ToUnreal(iw));
+			e.Transforms.Add(imported ? correction * ToUnreal(iw) : ToUnreal(iw));
 		}
 		// The instance buffer only grows: copies past this frame's count are collapsed to nothing.
 		const FTransform collapsed(FQuat::Identity, FVector::ZeroVector, FVector::ZeroVector);

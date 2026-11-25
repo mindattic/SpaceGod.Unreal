@@ -8,22 +8,20 @@
 
 #include "Assembly/ModularAssembler.h"
 #include "Combat/VehicleData.h"
+#include "Rendering/DesignMeshes.h"
 #include "Rendering/EnginePorts.h"
 #include "Rendering/HullLighting.h"
-#include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
 #include "Rendering/ShipModels.h"
-#include "Rendering/StarSparrowKit.h"
-#include "Rendering/UscKit.h"
 #include "Ships.h"
 
-#include "Engine/StaticMesh.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/Paths.h"
 
 #include <algorithm>
 #include <cmath>
-#include <unordered_map>
+#include <memory>
+#include <vector>
 
 using namespace SpaceGod::Core;
 using namespace SpaceGod::Rendering;
@@ -58,67 +56,6 @@ namespace
 
 	Vector3 ToVector(const DVec3& v) { return Vector3(static_cast<float>(v.X), static_cast<float>(v.Y), static_cast<float>(v.Z)); }
 
-	/// A part's imported mesh, fitted to the catalogue's box in the model frame: turned from the import's frame (USC's nose
-	/// -Z, Star Sparrow's +X; whichever turn makes the mesh's box the catalogue's) and scaled to its size.
-	struct Fitted
-	{
-		cs::Ref<Mesh> Drawn;
-		Quaternion Turn;
-		float Scale = 1;
-		bool Ok = false;
-	};
-
-	const Fitted& FitOf(const KitPart& part)
-	{
-		static std::unordered_map<cs::String, Fitted> fits;
-		auto it = fits.find(part.Asset);
-		if (it != fits.end()) return it->second;
-		Fitted f;
-		cs::String leaf = part.Asset.substr(part.Asset.find_last_of('/') + 1);
-		cs::String path = cs::Cat(part.Asset, ".", leaf);
-		if (UStaticMesh* asset = LoadObject<UStaticMesh>(nullptr, UTF8_TO_TCHAR(path.c_str()), nullptr, LOAD_NoWarn | LOAD_Quiet))
-		{
-			FBox box = asset->GetBoundingBox();
-			// Unreal (x, y, z) cm is Unity (x, z, -y) / 100 (UnrealSpace).
-			Vector3 mn = Vector3(static_cast<float>(box.Min.X), static_cast<float>(box.Min.Z), static_cast<float>(-box.Max.Y)) / 100.0f;
-			Vector3 mx = Vector3(static_cast<float>(box.Max.X), static_cast<float>(box.Max.Z), static_cast<float>(-box.Min.Y)) / 100.0f;
-			Vector3 size = mx - mn;
-			Vector3 want = ToVector(part.Max - part.Min);
-			f.Scale = want.magnitude() / Mathf::Max(size.magnitude(), 1e-4f);
-			float guess = part.Pack() == "starsparrow" ? -90.0f : 180.0f;
-			float best = 1e30f;
-			for (float yaw : { guess, guess + 90.0f })
-			{
-				Quaternion q = Quaternion::Euler(0, yaw, 0);
-				Vector3 s = q * size;
-				float miss = Mathf::Abs(Mathf::Abs(s.x) * f.Scale - want.x) + Mathf::Abs(Mathf::Abs(s.z) * f.Scale - want.z);
-				if (miss < best - 1e-3f)
-				{
-					best = miss;
-					f.Turn = q;
-				}
-			}
-			auto mesh = cs::New<Mesh>(leaf);
-			mesh->ImportedAsset = path;
-			mesh->ImportedScale = 0.01f;
-			mesh->SetBounds(Bounds((mn + mx) * 0.5f, size));
-			f.Drawn = mesh;
-			f.Ok = true;
-		}
-		return fits.emplace(part.Asset, f).first->second;
-	}
-
-	cs::Ref<Material> MaterialOf(const KitPart& part)
-	{
-		static std::unordered_map<cs::String, cs::Ref<Material>> materials;
-		if (part.Pack() == "starsparrow") return StarSparrowKit::Livery(nullptr);
-		auto it = materials.find(part.Atlas);
-		if (it != materials.end()) return it->second;
-		cs::String leaf = cs::Cat("MI_USC_", part.Atlas, "_Grey");
-		auto m = Materials::MarkShared(cs::New<Material>(Shader::Find(HullLighting::LitVariant(cs::Cat(UscKit::Root, "/Materials/", leaf))), cs::Cat("Assembled_", part.Atlas)));
-		return materials.emplace(part.Atlas, m).first->second;
-	}
-
 	void Draw(const cs::Ref<GameObject>& go, const cs::Ref<Mesh>& mesh, const cs::Ref<Material>& material)
 	{
 		AddComponent<MeshFilter>(go)->sharedMesh = mesh;
@@ -128,7 +65,7 @@ namespace
 		mr->receiveShadows = false;
 	}
 
-	cs::Ref<GameObject> BuildModel(const ModularDesign& design, const KitCatalogue& catalogue, int& imported)
+	cs::Ref<GameObject> BuildModel(const ModularDesign& design, const KitCatalogue& catalogue, int& imported, std::vector<cs::Ref<GameObject>>& bodies)
 	{
 		static cs::Ref<Mesh> cube;
 		if (!cube) cube = MeshFactory::BuiltinCube();
@@ -145,14 +82,15 @@ namespace
 
 			auto body = NewGameObject("Mesh");
 			body->transform->SetParent(go->transform, false);
+			bodies.push_back(body);
 			Vector3 middle = ToVector((part.Min + part.Max) * 0.5);
-			const Fitted* fit = part.Asset.empty() ? nullptr : &FitOf(part);
+			const DesignMeshes::Fitted* fit = part.Asset.empty() ? nullptr : &DesignMeshes::FitOf(part);
 			if (fit && fit->Ok)
 			{
 				body->transform->localPosition = part.PivotOrigin ? Vector3::zero() : middle;
 				body->transform->localRotation = fit->Turn;
 				body->transform->localScale = Vector3::one() * fit->Scale;
-				Draw(body, fit->Drawn, MaterialOf(part));
+				Draw(body, fit->Drawn, DesignMeshes::MaterialOf(part));
 				imported++;
 			}
 			else
@@ -210,7 +148,8 @@ namespace
 			static_cast<int>(geometry.Bridges.size()));
 
 		int imported = 0;
-		auto model = BuildModel(design, catalogue, imported);
+		std::vector<cs::Ref<GameObject>> bodies;
+		auto model = BuildModel(design, catalogue, imported, bodies);
 		cs::String name = cs::Cat(ToString(cls), " #", design.Seed);
 		if (!ModelViewer::ShowBuilt(model, name))
 		{
@@ -220,6 +159,23 @@ namespace
 		}
 		UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: shown in the model viewer, %d of %d parts drawn with their own mesh, the rest as boxes"), imported,
 			static_cast<int>(design.Parts.size()));
+
+		// US-T839: the parts swap to the design merged into one mesh once it is built; the nozzle marks stay on the parts.
+		std::weak_ptr<GameObject> shown = model;
+		std::vector<std::weak_ptr<GameObject>> parts(bodies.begin(), bodies.end());
+		DesignMeshes::Request(design, catalogue, [shown, parts](const cs::Ref<Mesh>& merged, const std::vector<cs::Ref<Material>>& materials)
+		{
+			cs::Ref<GameObject> root = shown.lock();
+			if (!root || root->destroyed) return;
+			for (const auto& part : parts)
+				if (cs::Ref<GameObject> body = part.lock()) Destroy(body);
+			AddComponent<MeshFilter>(root)->sharedMesh = merged;
+			auto mr = AddComponent<MeshRenderer>(root);
+			mr->SetSharedMaterials(materials);
+			mr->shadowCastingMode = HullLighting::Enabled() ? ShadowCastingMode::On : ShadowCastingMode::Off;
+			mr->receiveShadows = false;
+			UE_LOG(LogSpaceGod, Display, TEXT("sg.Assemble: swapped to the merged mesh, %d sections"), static_cast<int>(materials.size()));
+		});
 	}
 
 	FAutoConsoleCommand GAssembleCommand(
