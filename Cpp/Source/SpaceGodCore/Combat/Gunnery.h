@@ -9,6 +9,32 @@ namespace SpaceGod::Core
 	class BattleUnit;
 	class RangeSetting;
 
+	/// <summary>US-T748: what a player's missile seeker is doing: nothing to lock, building a lock (the seek tone's beeps), or locked
+	/// (its solid tone).</summary>
+	enum class SeekerState : int { None = 0, Seeking = 1, Locked = 2 };
+
+	/// <summary>US-T748: what a HUD and the cockpit's tones show of missile lock and of the rounds coming in, read each frame
+	/// (<see cref="Battle.ReadLock"/>).</summary>
+	struct LockReadout
+	{
+		SeekerState State = SeekerState::None;
+		/// <summary>The lock built, 0-1, the target it is on, and the aspect it is seen from (0 astern, 1 head-on).</summary>
+		double Progress = 0, Aspect = 0;
+		cs::Ref<BattleUnit> Target;
+		/// <summary>The seek tone's beep interval, s (<see cref="Gunnery.ToneIntervalS"/>); 0 a solid tone when locked or silent
+		/// with nothing to seek.</summary>
+		double ToneIntervalS = 0;
+		/// <summary>Moves each time a cloud spoofs the lock (<see cref="BattleUnit.LockSpoofs"/>).</summary>
+		int Spoofs = 0;
+		/// <summary>The guided rounds homing on the craft and not yet drawn off, the nearest's range (km), time to impact (s) and
+		/// the way it comes from (unit, world); 0 and zero with none.</summary>
+		int Incoming = 0;
+		double NearestKm = 0, NearestEtaS = 0;
+		DVec3 NearestFrom;
+		/// <summary>Hostiles with a loaded launcher and the craft within their lock hold off the nose: being locked up.</summary>
+		int LockingOn = 0;
+	};
+
 	/// <summary>
 	/// Aimed fire (U.SPC-T270): the geometry that decides whether a shot actually lands, for the guns the
 	/// player points and for every shot fired at the player's hull. A beam is a ray, a round a swept
@@ -37,6 +63,25 @@ namespace SpaceGod::Core
 		/// locked target, over <see cref="LockSeconds"/>; once made it holds while the target stays within
 		/// <see cref="LockHoldDeg"/> of the nose.</summary>
 		static constexpr double LockConeDeg = 4; static constexpr double LockSeconds = 1.5; static constexpr double LockHoldDeg = 35;
+
+		/// <summary>US-T748: how many times <see cref="LockSeconds"/> a lock takes on a target met head-on (a seeker up its
+		/// engines locks in the base time; the aspect between sways it): tune.missiles.headOnLock.</summary>
+		static const cs::Ref<RangeSetting>& HeadOnLock();
+
+		/// <summary>US-T748: the seek tone's beep interval as a lock starts and as it is about to be made, seconds; a made lock
+		/// is a solid tone.</summary>
+		static constexpr double ToneSlowS = 0.45; static constexpr double ToneFastS = 0.08;
+
+		/// <summary>US-T748: the aspect a seeker at <paramref name="seekerPos"/> sees a target at <paramref name="targetPos"/>
+		/// flying down <paramref name="targetForward"/> from: 0 dead astern of it (up its engines), 1 head-on.</summary>
+		static double Aspect(DVec3 seekerPos, DVec3 targetPos, DVec3 targetForward);
+
+		/// <summary>US-T748: how long a lock takes at <paramref name="aspect"/>, seconds, before jamming.</summary>
+		static double LockSecondsAt(double aspect);
+
+		/// <summary>US-T748: the seek tone's beep interval at lock <paramref name="progress"/> (0-1), seconds; 0 for the solid
+		/// tone of a made lock.</summary>
+		static double ToneIntervalS(double progress);
 
 		/// <summary>How long a gunner takes to read a change in a target's course, seconds (see
 		/// <see cref="BattleUnit.SeenVel"/>): a steady course is tracked, a jink is aimed behind.</summary>

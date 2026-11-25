@@ -294,6 +294,8 @@ namespace SpaceGod::Core
 		return Battle->MissileInbound(Unit, Core::Countermeasures::ReachKm * 1.5) != nullptr;
 	}
 
+	LockReadout FighterSeat::Lock() const { return Battle->ReadLock(Unit); }
+
 	cs::String FighterSeat::Readout()
 	{
 		auto u = Unit;

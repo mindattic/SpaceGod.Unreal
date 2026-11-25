@@ -3,6 +3,7 @@
 
 #include "Cs/Cs.h"
 #include "DVec3.h"
+#include "Combat/Gunnery.h"
 #include "Embodiment/Embodiment.h"
 
 namespace SpaceGod::Core
@@ -134,6 +135,9 @@ namespace SpaceGod::Core
 
 		/// <summary>A guided round closing on the craft (within flare reach), for the HUD's warning.</summary>
 		bool MissileWarning() const;
+
+		/// <summary>US-T748: the craft's missile lock (seek tone, aspect, spoofs) and the rounds and seekers on it, for the HUD.</summary>
+		LockReadout Lock() const;
 
 		/// <summary>
 		/// The cockpit's readout for the HUD: the craft, hull and shields, throttle and boost, power, the second trigger's

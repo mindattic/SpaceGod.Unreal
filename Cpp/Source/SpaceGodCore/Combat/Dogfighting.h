@@ -347,6 +347,14 @@ namespace SpaceGod::Core
 
 		static const cs::Ref<RangeSetting>& Effectiveness();
 
+		/// <summary>US-T748: how far a hostile seeker's lock on an AI pilot must have built before it throws a cloud to spoof
+		/// it, 0-1.</summary>
+		static constexpr double AiSpoofAt = 0.6;
+
+		/// <summary>US-T748: whether AI pilots throw clouds to spoof a player's missile lock building on them, as well as at a
+		/// round homing in (only a player's seeker is tracked, so a fight nobody flies in is untouched).</summary>
+		static const cs::Ref<ToggleSetting>& AiSpoofLocks();
+
 		/// <summary>The chance a cloud seduces a round of <paramref name="kind"/>; never an EMP round or a boarding pod.</summary>
 		static double SeduceChance(MissileKind kind);
 	};

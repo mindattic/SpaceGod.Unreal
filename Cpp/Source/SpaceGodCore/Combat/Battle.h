@@ -7,6 +7,7 @@
 #include "Cs/Cs.h"
 #include "DVec3.h"
 #include "Combat/DogfightManeuvers.h"
+#include "Combat/Gunnery.h"
 #include "Hyperlanes.h"
 #include "Persistence/Serializable.h"
 
@@ -147,6 +148,16 @@ namespace SpaceGod::Core
 
 		/// <summary>The missile lock on <see cref="PlayerLockTarget"/>, 0-1: made at 1 (see <see cref="Gunnery.LockSeconds"/>).</summary>
 		double LockProgress = 0;
+
+		/// <summary>US-T748: the aspect the player's seeker last saw <see cref="PlayerLockTarget"/> from (0 astern, 1 head-on,
+		/// <see cref="Gunnery.Aspect"/>), and how many times a cloud has spoofed its lock (a HUD that saw fewer flashes
+		/// "SPOOFED"). Not saved.</summary>
+		double LockAspect = 0;
+		int LockSpoofs = 0;
+
+		/// <summary>US-T748: the player's craft whose seeker last worked on this unit (see <see cref="ElectronicWarfare.SeekedBy"/>),
+		/// what an AI pilot reads to spoof the lock. Not saved.</summary>
+		cs::Ref<BattleUnit> SeekedBy;
 
 		/// <summary>A dogfighting small craft's manoeuvre (see <see cref="Battle.Dogfight"/>, U.SPC-T274), the seconds
 		/// it holds it for, and the way it breaks.</summary>
@@ -1210,6 +1221,10 @@ namespace SpaceGod::Core
 
 		/// <summary>The nearest guided round homing on <paramref name="u"/> within <paramref name="km"/> and not already drawn off, or null.</summary>
 		cs::Ref<Missile> MissileInbound(const cs::Ref<BattleUnit>& u, double km);
+
+		/// <summary>US-T748: the missile lock and incoming-round warning a HUD shows for <paramref name="u"/>, read each frame; it
+		/// walks the battle's rounds and hulls once and changes nothing.</summary>
+		LockReadout ReadLock(const cs::Ref<BattleUnit>& u);
 
 	private:
 		/// <summary>Clouds drift and burn out.</summary>

@@ -91,6 +91,15 @@ namespace SpaceGod::Core
 		/// painted target.</summary>
 		static double SeduceChance(const cs::Ref<Battle>& b, const cs::Ref<Missile>& m);
 
+		/// <summary>US-T748: a flare-and-chaff cloud <paramref name="u"/> has just thrown spoofs the missile locks on it: each
+		/// player seeker locking it (made or building) loses <see cref="Countermeasures.Effectiveness"/> of its lock, so a made
+		/// lock breaks and must be built again.</summary>
+		static void SpoofLocks(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u);
+
+		/// <summary>US-T748: whether a player's seeker has its lock on <paramref name="u"/> built to at least
+		/// <paramref name="atLeast"/> (0-1).</summary>
+		static bool SeekedBy(const cs::Ref<BattleUnit>& u, double atLeast);
+
 		/// <summary>
 		/// The mark a recon craft goes for: the enemy capital the nearest of its own side's bombers is attacking, else the
 		/// hostile it would most help to paint (a capital before anything smaller, the biggest and nearest first), never a

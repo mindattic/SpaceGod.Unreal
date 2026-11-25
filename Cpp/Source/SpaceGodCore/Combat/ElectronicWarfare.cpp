@@ -128,6 +128,25 @@ namespace SpaceGod::Core
 		return chance;
 	}
 
+	void ElectronicWarfare::SpoofLocks(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u)
+	{
+		// Only a player's seeker keeps a lock; nobody has sought this craft in a fight nobody flies in, and nothing is walked.
+		if (u->SeekedBy == nullptr) return;
+		double keep = 1 - cs::Math::Max(0.0, cs::Math::Min(1.0, Countermeasures::Effectiveness()->Value));
+		for (const auto& o : b->Units)
+		{
+			if (!o->PlayerControlled() || o->PlayerLockTarget != u || o->LockProgress <= 0) continue;
+			o->LockProgress = o->LockProgress >= 1 ? cs::Math::Min(keep, 0.999) : o->LockProgress * keep;
+			o->LockSpoofs++;
+		}
+	}
+
+	bool ElectronicWarfare::SeekedBy(const cs::Ref<BattleUnit>& u, double atLeast)
+	{
+		auto s = u->SeekedBy;
+		return s != nullptr && s->Present() && s->PlayerControlled() && s->PlayerLockTarget == u && s->LockProgress >= atLeast;
+	}
+
 	cs::Ref<BattleUnit> ElectronicWarfare::ChooseMark(const cs::Ref<Battle>& b, const cs::Ref<BattleUnit>& u)
 	{
 		// US-T338: a player's helm that called for a hull to be painted comes first (null in any fight nobody holds).

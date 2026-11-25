@@ -1975,7 +1975,9 @@ namespace SpaceGod::Core
 
 	void Battle::ThrowDecoy(const cs::Ref<BattleUnit>& u, const cs::Ref<Subsystem>& s, const cs::Ref<WeaponSpec>& w)
 	{
-		bool want = u->PlayerControlled() ? u->PlayerDecoyRequested : MissileInbound(u, Countermeasures::AiReactKm) != nullptr;
+		// US-T748: a pilot also spoofs a player's seeker locking it up (only a player's seeker is tracked).
+		bool want = u->PlayerControlled() ? u->PlayerDecoyRequested : MissileInbound(u, Countermeasures::AiReactKm) != nullptr
+			|| (Countermeasures::AiSpoofLocks()->Value && ElectronicWarfare::SeekedBy(u, Countermeasures::AiSpoofAt));
 		if (!want || s->Ammo <= 0 || u->Stunned > 0) return;
 		s->Ammo--;
 		s->Cooldown = w->Cooldown;
@@ -2005,6 +2007,7 @@ namespace SpaceGod::Core
 			// A bomber's torpedo riding a recon fighter's paint is seldom fooled (U.SPC-T485).
 			if (rng.NextDouble() < ElectronicWarfare::SeduceChance(shared_from_this(), m)) m->Decoy = decoy;
 		}
+		ElectronicWarfare::SpoofLocks(shared_from_this(), u);
 	}
 
 	cs::Ref<Missile> Battle::MissileInbound(const cs::Ref<BattleUnit>& u, double km)
@@ -2022,6 +2025,52 @@ namespace SpaceGod::Core
 			}
 		}
 		return best;
+	}
+
+	LockReadout Battle::ReadLock(const cs::Ref<BattleUnit>& u)
+	{
+		LockReadout r;
+		if (u == nullptr) return r;
+		r.Spoofs = u->LockSpoofs;
+		auto t = u->PlayerLockTarget;
+		if (t != nullptr && t->Present() && Hostile(u, t))
+		{
+			r.Target = t;
+			r.Progress = cs::Math::Max(0.0, cs::Math::Min(1.0, u->LockProgress));
+			r.Aspect = u->LockAspect;
+			r.State = r.Progress >= 1 ? SeekerState::Locked : SeekerState::Seeking;
+			r.ToneIntervalS = Gunnery::ToneIntervalS(r.Progress);
+		}
+		double nearest = cs::Double::MaxValue;
+		for (const auto& m : Missiles)
+		{
+			if (m->Gone || m->Target != u || m->Decoy != nullptr || m->Kind == MissileKind::Pod || m->Kind == MissileKind::Breacher) continue;
+			r.Incoming++;
+			auto to = m->Pos - u->Pos;
+			double d = to.Length();
+			if (d >= nearest) continue;
+			nearest = d;
+			r.NearestKm = d;
+			r.NearestFrom = d > 1e-9 ? to / d : DVec3();
+			double closing = -DVec3::Dot(m->Vel - u->Vel, r.NearestFrom);
+			r.NearestEtaS = closing > 1e-9 ? d / closing : 0;
+		}
+		double hold = cs::Math::Cos(Gunnery::LockHoldDeg * Astro::Deg2Rad);
+		for (const auto& o : Units)
+		{
+			if (!o->Present() || o->Target != u || o->Combat == nullptr || !Hostile(o, u) || o->Captured || o->Surrendering) continue;
+			auto to = u->Pos - o->Pos;
+			double d = to.Length();
+			if (d < 1e-9 || DVec3::Dot(o->Forward, to / d) < hold) continue;
+			for (const auto& s : o->Combat->Subsystems)
+			{
+				auto w = s->Def != nullptr ? s->Def->Weapon : nullptr;
+				if (w == nullptr || !w->Missile || s->Ammo <= 0 || Arsenal::IsRocket(w) || d - u->Radius() > CombatTuning::RangeKm(w)) continue;
+				r.LockingOn++;
+				break;
+			}
+		}
+		return r;
 	}
 
 	void Battle::StepDecoys(double dt)
@@ -2173,13 +2222,18 @@ namespace SpaceGod::Core
 		if (to.LengthSquared() < 1e-12) return;
 		auto dir = to.Normalized();
 		auto aim = u->PlayerAim.LengthSquared() > 1e-12 ? u->PlayerAim.Normalized() : u->Forward;
+		// US-T748: the target knows it is being sought (an AI pilot spoofs it), and the lock builds by aspect, slowest head-on
+		// and slower again while jammed.
+		t->SeekedBy = u;
+		u->LockAspect = Gunnery::Aspect(u->Pos, t->Pos, t->Forward);
 		if (u->LockProgress >= 1)
 		{
 			if (DVec3::Dot(u->Forward, dir) < cs::Math::Cos(Gunnery::LockHoldDeg * Astro::Deg2Rad)) u->LockProgress = 0;
 			return;
 		}
 		bool onIt = DVec3::Dot(aim, dir) >= cs::Math::Cos(Gunnery::LockConeDeg * Astro::Deg2Rad);
-		u->LockProgress = onIt ? cs::Math::Min(1.0, u->LockProgress + dt / Gunnery::LockSeconds) : cs::Math::Max(0.0, u->LockProgress - 2 * dt / Gunnery::LockSeconds);
+		double lockS = Gunnery::LockSecondsAt(u->LockAspect) / cs::Math::Max(0.1, ElectronicWarfare::JamFactor(shared_from_this(), u));
+		u->LockProgress = onIt ? cs::Math::Min(1.0, u->LockProgress + dt / lockS) : cs::Math::Max(0.0, u->LockProgress - 2 * dt / Gunnery::LockSeconds);
 	}
 
 	cs::Ref<BattleUnit> Battle::PlayerLockedTarget(const cs::Ref<BattleUnit>& u, const cs::Ref<WeaponSpec>& w, DVec3 origin)

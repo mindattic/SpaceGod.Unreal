@@ -31,6 +31,32 @@ namespace SpaceGod::Core
 		return s;
 	}
 
+	const cs::Ref<RangeSetting>& Gunnery::HeadOnLock()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("missiles", "headOnLock", "Head-on lock time", 1.8, 1, 4, 0.1, "x",
+			TuningScope::Simulation, "How many times the base lock time a missile lock takes on a target met head-on rather than from astern.");
+		return s;
+	}
+
+	double Gunnery::Aspect(DVec3 seekerPos, DVec3 targetPos, DVec3 targetForward)
+	{
+		auto from = seekerPos - targetPos;
+		if (from.LengthSquared() < 1e-12 || targetForward.LengthSquared() < 1e-12) return 0.5;
+		return cs::Math::Max(0.0, cs::Math::Min(1.0, (1 + DVec3::Dot(from.Normalized(), targetForward.Normalized())) / 2));
+	}
+
+	double Gunnery::LockSecondsAt(double aspect)
+	{
+		return LockSeconds * (1 + (cs::Math::Max(1.0, HeadOnLock()->Value) - 1) * cs::Math::Max(0.0, cs::Math::Min(1.0, aspect)));
+	}
+
+	double Gunnery::ToneIntervalS(double progress)
+	{
+		if (progress >= 1) return 0;
+		double p = cs::Math::Max(0.0, progress);
+		return ToneSlowS + (ToneFastS - ToneSlowS) * p;
+	}
+
 	double Gunnery::HitRadius(const cs::Ref<BattleUnit>& u) { return cs::Math::Max(MinHitRadiusKm, u->Radius()); }
 
 	double Gunnery::RaySphere(DVec3 origin, DVec3 dir, double maxT, DVec3 centre, double radius)

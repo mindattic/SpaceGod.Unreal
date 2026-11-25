@@ -532,6 +532,15 @@ namespace SpaceGod::Core
 		return setting;
 	}
 
+	const cs::Ref<ToggleSetting>& Countermeasures::AiSpoofLocks()
+	{
+		static const cs::Ref<ToggleSetting> setting = cs::New<ToggleSetting>("dogfight.aiSpoofLocks", SettingGroups::Dogfighting,
+			"AI pilots spoof missile locks", true,
+			"An enemy pilot whose tail the player's seeker is locking up throws flares and chaff to break the lock, not only at a missile already inbound.",
+			"flares chaff decoy missile lock seek dogfight");
+		return setting;
+	}
+
 	double Countermeasures::SeduceChance(MissileKind kind)
 	{
 		// A hive round and its seekers are fooled as a missile is; a dumb-fire rocket has no seeker to fool (US-T101).
