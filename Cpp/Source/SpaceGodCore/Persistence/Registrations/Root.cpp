@@ -3,6 +3,7 @@
 // them by reflection; here each lists its C# instance fields by .NET name (the registry orders them as FieldsOf
 // does). Generated from Unity.SpaceGod.Core.dll's metadata; regenerate rather than hand-edit when a C# class changes.
 
+#include "Assembly/ShipDesigns.h"
 #include "BodyCatalog.h"
 #include "BodyDefinition.h"
 #include "Combat/AlphaStrike.h"
@@ -234,7 +235,8 @@ namespace SpaceGod::Core
 		SG_F(StrandedInFlight), SG_F(Tow), SG_F(TripsCompleted), SG_F(Voyage), SG_F(WaitingForPropellant),
 		SG_F(Wander), SG_F(personalHold), SG_F(propellant),
 		SG_OPT(JumpRing), // US-T86: a small craft docked to a jump ring, absent from older saves
-		SG_OPT(Dread), SG_OPT(DreadJd)) // US-T178: the crew's dread of the void, absent from older saves
+		SG_OPT(Dread), SG_OPT(DreadJd), // US-T178: the crew's dread of the void, absent from older saves
+		SG_FN("Design", DesignRecord).Optional()) // US-T869: the design a warship was built to, absent from older saves
 
 	SG_SERIALIZE(ShipClassSpec, "Unity.SpaceGod.Core.ShipClassSpec",
 		SG_P(AccelG), SG_P(Class), SG_P(DisplayName), SG_P(IsMilitary))

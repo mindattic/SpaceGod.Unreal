@@ -2,6 +2,7 @@
 
 #include "Combat/War.h"
 
+#include "Assembly/ShipDesigns.h"
 #include "Astro.h"
 #include "BodyCatalog.h"
 #include "BodyDefinition.h"
@@ -3633,6 +3634,7 @@ namespace SpaceGod::Core
 		if (group != nullptr)
 		{
 			ship = Fleet()->AddShip(name, cls, yard->Owner, ShipRole::Escort);
+			ship->DesignRecord = ShipDesigns::For(*world, yard->Owner, cls); // US-T869
 			FleetPatterns::Commission(ship, yard, plan);
 			Fleet()->AddEscort(group, ship, Core::Fleet::SlotFor(FreeSlot(group)));
 			if (command && !GroupHasCommandShip(group, ship)) TakeCommand(group, ship);
@@ -3640,6 +3642,7 @@ namespace SpaceGod::Core
 		else
 		{
 			ship = Fleet()->AddShip(name, cls, yard->Owner, ShipRole::Patrol);
+			ship->DesignRecord = ShipDesigns::For(*world, yard->Owner, cls); // US-T869
 			FleetPatterns::Commission(ship, yard, plan);
 			auto own = cs::List<int>();
 			for (const auto& s : Economy()->Settlements)

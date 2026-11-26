@@ -14,6 +14,7 @@
 namespace SpaceGod::Core
 {
 	class Settlement;
+	class ShipDesign;
 	class ConicTransfer;
 	class Lane;
 	class CapturedRock;
@@ -631,6 +632,10 @@ namespace SpaceGod::Core
 		/// fades in a system's light; <see cref="DreadJd"/> is when it was last brought up to date (NaN: never).</summary>
 		double Dread = 0;
 		double DreadJd = cs::Double::NaN;
+
+		/// <summary>The design it was built to (US-T869, see <see cref="ShipDesigns"/>): stamped on warships at launch, null
+		/// for other hulls and in older saves. Saved as "Design"; named DesignRecord because Design() is its CombatSpec.</summary>
+		cs::Ref<ShipDesign> DesignRecord;
 
 		/// <summary>Ran dry in flight: drifting dead where the tanks gave out, calling for a tanker.</summary>
 		bool OutOfPropellant = false;

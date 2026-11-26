@@ -18,6 +18,8 @@
 #include "Views/MechView.h"
 #include "SpaceGodLog.h"
 
+#include "Assembly/FactionStyles.h"
+#include "Assembly/ShipDesigns.h"
 #include "Combat/BulkFreighters.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
@@ -61,6 +63,13 @@ namespace SpaceGod::VehicleExport
 
 	void FindData()
 	{
+		// US-T869: the faction style book every ShipDesign is styled from, registered once (else every design is neutral).
+		{
+			const FString styles = FPaths::ConvertRelativePathToFull(FPaths::Combine(FPaths::ProjectDir(), TEXT(".."), TEXT("Data"), TEXT("FactionStyles.json")));
+			auto book = std::make_shared<const FactionStyleBook>(FactionStyleBook::Load(cs::String(TCHAR_TO_UTF8(*styles))));
+			if (!book->Loaded()) UE_LOG(LogSpaceGod, Display, TEXT("FactionStyles: %s, designs are neutral"), UTF8_TO_TCHAR(book->Problem().c_str()));
+			ShipDesigns::UseStyles(book);
+		}
 		if (FParse::Param(FCommandLine::Get(), TEXT("NoVehicleData")))
 		{
 			VehicleData::SetPath(cs::String());
