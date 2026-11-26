@@ -1,5 +1,6 @@
 // US-T172: real light on the prebuilt hulls (see HullLighting.h).
 #include "Rendering/HullLighting.h"
+#include "Rendering/HullMaterial.h"
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
 #include "Rendering/SpaceLighting.h"
@@ -899,6 +900,11 @@ namespace SpaceGod::Rendering
 		static std::unordered_map<cs::String, cs::String> known;
 		auto it = known.find(path);
 		if (it != known.end()) return it->second;
+		if (cs::String(suffix) == "_Lit")
+		{
+			cs::String hull = HullMaterial::Variant(path);
+			if (hull != path) return known.emplace(path, hull).first->second;
+		}
 		cs::String lit = path + suffix;
 		auto slash = lit.rfind('/');
 		cs::String leaf = slash == cs::String::npos ? lit : lit.substr(slash + 1);

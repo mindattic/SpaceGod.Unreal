@@ -1,5 +1,6 @@
 // Port of Unity.SpaceGod Runtime/Views/ShipView.cs (US-T30).
 #include "Views/ShipView.h"
+#include "Rendering/HullMaterial.h"
 #include "Rendering/Materials.h"
 #include "Rendering/MeshFactory.h"
 #include "Rendering/ShipMeshFactory.h"
@@ -87,6 +88,7 @@ namespace SpaceGod::Views
 			for (const auto& r : renderers)
 				if (r->gameObject() && r->gameObject()->name.rfind(Rendering::StarSparrowKit::CargoName, 0) == 0) cargo.Add(r);
 		EnsureStatics();
+		SetHullSpan();
 
 		auto plumeGo = NewGameObject("Plume");
 		plumeGo->transform->SetParent(Root->transform, false);
@@ -148,6 +150,11 @@ namespace SpaceGod::Views
 		BuiltFor = ship->Combat;
 		Root->name = ship->Name;
 		sectionsSeen = false;
+		if (std::any_of(sectionDamage.begin(), sectionDamage.end(), [](float d) { return d != 0; }))
+		{
+			std::fill(sectionDamage.begin(), sectionDamage.end(), 0.0f);
+			Rendering::HullMaterial::SetDamage(block, sectionDamage);
+		}
 		hasSpeed = false;
 		lastSpeed = 0;
 		speedRate = 0;
@@ -398,6 +405,59 @@ namespace SpaceGod::Views
 			for (int v = 0; v < count; v++) shieldVertexColors[start + v] = c;
 		}
 		shieldRingMesh->SetColors(shieldVertexColors);
+	}
+
+	/// <summary>US-T850: M_HullMaster's keel span from the biggest imported hull mesh (along its nose axis, in the mesh's own
+	/// units) and its panel size from the ship's length, once at build.</summary>
+	void ShipView::SetHullSpan()
+	{
+		cs::Ref<Renderer> main;
+		Bounds box;
+		float best = 0;
+		for (const auto& r : renderers)
+		{
+			auto filter = r->gameObject() ? GetComponent<MeshFilter>(r->gameObject()) : nullptr;
+			if (!filter || !filter->sharedMesh || filter->sharedMesh->ImportedAsset.empty()) continue;
+			Bounds b = filter->sharedMesh->bounds();
+			Vector3 size = b.size();
+			float volume = size.x * size.y * size.z;
+			if (volume <= best) continue;
+			best = volume;
+			box = b;
+			main = r;
+		}
+		if (!main) return;
+		auto filter = GetComponent<MeshFilter>(main->gameObject());
+		float toNative = 1.0f / Mathf::Max(filter->sharedMesh->ImportedScale, 1e-6f);
+		float lo = box.min().z * toNative, hi = box.max().z * toNative;
+		// Which way the mesh's own +z runs along the hull (nose +Z in the root's frame).
+		Vector3 nose = Quaternion::Inverse(Root->transform->rotation()) * (main->transform()->rotation() * Vector3(0, 0, 1));
+		bool forward = nose.z >= 0;
+		Rendering::HullMaterial::SetSpan(block, forward ? lo : hi, forward ? hi : lo, ModularHull::KeelSections(Ship->LengthKm()), Ship->LengthKm() * 1000.0);
+	}
+
+	/// <summary>US-T850: each keel section's damage on the block (its own structure lost, or its sponsons', whichever is
+	/// worse; 1 once it has come away), pushed only when it changes. Read only from a structure the hull already has.</summary>
+	void ShipView::UpdateSectionDamage(const cs::Ref<ShipCombat>& combat)
+	{
+		if (combat == nullptr || !combat->HasStructure()) return;
+		float now[8] = {};
+		for (const auto& m : combat->Structure()->Modules)
+		{
+			int s = std::clamp(m->Section, 0, 7);
+			float d = m->Detached ? 1.0f : static_cast<float>(1.0 - m->Condition());
+			now[s] = Mathf::Max(now[s], d);
+		}
+		bool changed = false;
+		for (int i = 0; i < 8; i++)
+			if (Mathf::Abs(now[i] - sectionDamage[i]) > 0.004f)
+			{
+				sectionDamage[i] = now[i];
+				changed = true;
+			}
+		if (!changed) return;
+		Rendering::HullMaterial::SetDamage(block, sectionDamage);
+		SetBlock();
 	}
 
 	cs::Ref<Transform> ShipView::SectionFor(float z) const { return bow && z >= ShipMeshFactory::SplitZ ? bow : stern; }
@@ -691,6 +751,7 @@ namespace SpaceGod::Views
 		if (visible) UpdateLostSections(combat, now);
 		if (!visible || !detailed) return;
 		UpdateShieldRing(fighting);
+		UpdateSectionDamage(combat);
 		if (!bow) return;
 		Quaternion inverse = Quaternion::Inverse(Root->transform->rotation());
 		for (const auto& p : parts)
