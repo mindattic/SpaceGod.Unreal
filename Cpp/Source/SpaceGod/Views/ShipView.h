@@ -39,6 +39,8 @@ namespace SpaceGod::Views
 		cs::Ref<ParticleSystem> exhaust;
 		bool exhaustPlaying = false;
 		MaterialPropertyBlock block;
+		/// <summary>US-T850: the keel sections' damage last put on the block for M_HullMaster (0 the stern, 0..1).</summary>
+		std::vector<float> sectionDamage = std::vector<float>(8, 0.0f);
 		cs::Ref<Transform> stern, bow;
 
 		class Part;
@@ -228,6 +230,8 @@ namespace SpaceGod::Views
 		static cs::Ref<Material> GlowMaterial(const cs::String& name, Color c, float intensity, float falloff);
 		static cs::Ref<ParticleSystem> BuildExhaust(const cs::Ref<Transform>& parent);
 		void BuildShieldRing();
+		void SetHullSpan();
+		void UpdateSectionDamage(const cs::Ref<Core::ShipCombat>& combat);
 		void BuildUtilityMarks();
 		void ShowUtilityMarks(const cs::Ref<Core::ShipCombat>& combat, bool show);
 		void UpdateShieldRing(bool fighting);
