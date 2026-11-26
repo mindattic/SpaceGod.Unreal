@@ -28,7 +28,8 @@ namespace SpaceGod
 		// US-T651: the frame budget counts this frame's TtsService::Tick (run before this, still in Cycles) and the rest of
 		// this function; the previous frame's host tick is reserved before the sampler and event pump.
 		const uint64_t budgetStart = FPlatformTime::Cycles64();
-		const uint64_t ttsCycles = Radio::RadioStats::Get().Cycles[static_cast<size_t>(Radio::RadioStage::TtsTick)];
+		const uint64_t ttsCycles = Radio::RadioStats::Get().Cycles[static_cast<size_t>(Radio::RadioStage::TtsTick)]
+			+ Radio::RadioStats::Get().Cycles[static_cast<size_t>(Radio::RadioStage::Arbiter)]; // US-T701: ticked before this too
 		// US-T650: every stage below is timed (stat SpaceGodRadio, Insights, sg.Radio stats); the counters go out on return.
 		Radio::RadioStats::Get().BeginFrame();
 		const double reserveMs = Radio::RadioStats::Get().LastMs(Radio::RadioStage::HostTick);
@@ -71,11 +72,7 @@ namespace SpaceGod
 			}
 		} publishOnReturn { radio };
 		SG_RADIO_SCOPE(Tick);
-		{
-			// US-T685: the spoken radio lines take their turns on the one voice; under high warp only urgent ones are kept.
-			SG_RADIO_SCOPE(Arbiter);
-			Voice::VoiceArbiter::Tick(static_cast<float>(warp));
-		}
+		// US-T701: VoiceArbiter::Tick runs in UnitySpaceAppActor::Step, before CommsVoice::Tick (its cycles counted above).
 		radioHeard.DropAfter(Clock->Jd); // a rewind or a load
 		cs::Ref<Newswire> news = Galaxy != nullptr && Galaxy->Traffic != nullptr ? Galaxy->Traffic->News : nullptr;
 		if (news != radioNews)

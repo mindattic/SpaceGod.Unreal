@@ -7,6 +7,8 @@
 #include "Voice/CommsVoice.h" // US-T589
 #include "Voice/TtsService.h" // US-T587
 #include "Voice/VoiceArbiter.h" // US-T685
+#include "Radio/RadioStats.h" // US-T701: the arbiter's tick is timed with the radio's stages
+#include "SimClock.h" // US-T701: the warp the arbiter quiets under
 #include "UnitySpaceApp.h"
 #include "SessionAudio.h"
 #include "UnrealSpace.h"
@@ -145,6 +147,14 @@ void AUnitySpaceAppActor::Step(float RealDelta)
 	const double raceT0 = Race::Probe::Now(); // US-T46: the whole Unity frame, for the race (docs/RACE.md)
 	RefreshUnityStatics(RealDelta);
 	SpaceGod::Voice::TtsService::Tick(); // US-T587: finished spoken lines to their callbacks (never waits on the worker)
+	{
+		// US-T701: the spoken radio lines take their turns on the one voice before CommsVoice starts its next line; under
+		// high warp only urgent ones are kept. No app (the menu): real time.
+		SG_RADIO_SCOPE(Arbiter);
+		const SpaceGod::Core::SimClock* clock = App ? App->Clock.get() : nullptr;
+		const double warp = clock == nullptr ? 1.0 : clock->Paused() ? 0.0 : clock->Warp().SimSecondsPerSecond * clock->Speed;
+		SpaceGod::Voice::VoiceArbiter::Tick(static_cast<float>(warp));
+	}
 	SpaceGod::Voice::CommsVoice::Tick(); // US-T589: the next comms line on the Voice bus once the last has ended
 	// Unity's player loop: finished loads and particles first (UnityScene's BeginFrame), then every Update.
 	UnityScene::BeginFrame(Time::deltaTime);
