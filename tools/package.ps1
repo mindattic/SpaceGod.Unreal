@@ -2,7 +2,7 @@
 param(
   # Kept for the old command lines; the C++ game is the only track in this repo.
   [ValidateSet('Cpp')][string]$Track = 'Cpp',
-  [ValidateSet('Development', 'Shipping')][string]$Configuration = 'Development',
+  [ValidateSet('Development', 'DebugGame', 'Shipping')][string]$Configuration = 'Development',
   [int]$MaxParallelActions = 4,
   [string]$EngineVersion = '5.8',
   # Skip the editor build that cooking needs (use when tools/build.ps1 has just run).
@@ -42,6 +42,7 @@ SpaceGod.exe and the inner exe keeps the target name; -Verify boots the renamed 
 .EXAMPLE
   ./tools/package.ps1
   ./tools/package.ps1 -Configuration Shipping -Verify
+  ./tools/package.ps1 -Configuration DebugGame
 #>
 
 $ErrorActionPreference = 'Stop'
