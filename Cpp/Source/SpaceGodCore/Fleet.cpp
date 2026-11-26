@@ -522,8 +522,13 @@ namespace SpaceGod::Core
 		// US-T725: the Mid fleets due a step this frame: sidestepped on a worker (MidSidestep), not in the solve below.
 		auto mid = cs::List<cs::Ref<Ship>>();
 		// A held ship (the one the player is flying) isn't where its schedule says: nobody steers round that ghost.
+		// US-T877: braced, so the else below is this if's: unbraced it bound to the loop's inner if, and with no observer every
+		// hull not flying free re-ran the tiered sweep below, adding every free hull again (n in the thousands, an O(n^2) solve).
 		if (!tiered)
-			for (const auto& s : ships) if (Manoeuvrable(s) && (IsHeld == nullptr || !IsHeld(s))) list.Add(s);
+		{
+			for (const auto& s : ships)
+				if (Manoeuvrable(s) && (IsHeld == nullptr || !IsHeld(s))) list.Add(s);
+		}
 		else
 		{
 			// US-T724: only the fleets due a step this frame (Near every frame, Mid about once a second, Far never), each
