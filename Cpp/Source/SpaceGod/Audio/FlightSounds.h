@@ -28,5 +28,9 @@ namespace SpaceGod::Audio
 		/// Once a frame after the app's Update: <paramref name="app"/> is null in a scene without the app (the main menu),
 		/// which stills every engine.
 		void Poll(UnitySpaceApp* app);
+
+		/// US-T867: a close, felt knock-thump of fire striking the held hull (Effects bus, 2D), <paramref name="weight"/> 0..1
+		/// louder and deeper for a heavier hit; at most one every 0.12 s, so a burst reads as a run of knocks.
+		void HullThud(float weight);
 	}
 }

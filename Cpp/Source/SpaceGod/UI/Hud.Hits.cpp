@@ -5,6 +5,7 @@
 
 #include "UnitySpaceApp.h"
 #include "Audio/InterfaceSounds.h" // US-T751
+#include "Audio/FlightSounds.h" // US-T867: the hull thud
 #include "UI/Icons.h"
 
 #include "Camera/SpaceCamera.h"
@@ -504,6 +505,13 @@ namespace SpaceGod::UI
 				if (fx.Kind != FxKind::ShieldHit && !(fx.Kind == FxKind::Impact && fx.Size > 0)) continue;
 				bool shield = fx.Kind == FxKind::ShieldHit;
 				if (shield) shieldHitAt = now; // US-T866
+				else
+				{
+					// US-T867: felt through the frame, heavier as the hit takes more of what hull is left.
+					double left = me->Combat != nullptr ? me->Combat->Hull : 0;
+					float share = static_cast<float>(fx.Size / cs::Math::Max(left + fx.Size, 1e-9));
+					Audio::FlightSounds::HullThud(0.3f + 0.7f * Mathf::Clamp01(share));
+				}
 				(shield ? hitTally.TakenShield : hitTally.TakenHull)++;
 				if (hitTally.TakenShield + hitTally.TakenHull == 1) // US-T364
 					AddMoment(fx.By != nullptr && fx.By != me ? cs::Cat("First fire taken, from the ", fx.By->Name()) : cs::String("First fire taken"), HullArcColor);

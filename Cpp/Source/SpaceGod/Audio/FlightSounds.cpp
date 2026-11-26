@@ -444,6 +444,25 @@ namespace SpaceGod::Audio::FlightSounds
 			return clip;
 		}
 
+		const SoundClip& HullThudClip()
+		{
+			static const SoundClip clip = []
+			{
+				// US-T867: a round striking the held hull, felt through the frame: a low knock falling away, a dull thump
+				// of plating under it and a short low rattle.
+				auto b = Buffer(0.4f);
+				Tone(b, 0, 0.32f, 90, 45, 0.9f, Wave::Sine, 0.001f);
+				Tone(b, 0, 0.12f, 180, 90, 0.25f, Wave::Triangle, 0.001f);
+				Noise(b, 0, 0.18f, 0.5f, 0.25f, 0.001f, 72);
+				return Finish(b, "HullThud", 0.8f);
+			}();
+			return clip;
+		}
+
+		/// <summary>US-T867: the last hull thud's time, so a burst of hits is one knock every HullThudGapS, not a roar.</summary>
+		double hullThudAt = -100.0;
+		constexpr double HullThudGapS = 0.12;
+
 		void Fx(const SoundClip& clip, float volume = 1.0f, float pitch = 1.0f) { GameAudio::Play2D(clip, AudioBus::Effects, volume, pitch); }
 		void Alert(const SoundClip& clip, float volume = 1.0f, float pitch = 1.0f) { GameAudio::Play2D(clip, AudioBus::Interface, volume, pitch); }
 
@@ -1052,6 +1071,17 @@ namespace SpaceGod::Audio::FlightSounds
 				GameAudio::SetLoopPitch(v.id, v.basePitch * doppler);
 			}
 		}
+	}
+
+	void HullThud(float weight)
+	{
+		if (!GameAudio::Enabled() || !(weight > 0)) return;
+		const double now = FPlatformTime::Seconds();
+		if (now - hullThudAt < HullThudGapS) return;
+		hullThudAt = now;
+		const float w = std::clamp(weight, 0.0f, 1.0f);
+		// A heavier hit is louder and a touch deeper.
+		Fx(HullThudClip(), 0.45f + 0.5f * w, 1.08f - 0.16f * w);
 	}
 
 	void Poll(UnitySpaceApp* app)
