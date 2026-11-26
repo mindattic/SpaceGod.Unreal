@@ -36,7 +36,7 @@ tape, and so does free RAM under 2 GB (parallel Unreal builds); the valve's reas
 
 ## 2. Output
 
-- Root: `R:\MindAttic\Capture\{RepoName}\`. If `R:` is missing: `%USERPROFILE%\Videos\MindAttic\Capture\{RepoName}\`.
+- Root: `R:\MindAttic\Media\Capture\{RepoName}\`. If `R:` is missing: `%USERPROFILE%\Videos\MindAttic\Capture\{RepoName}\`.
 - `{RepoName}` is the copy's own repo name: `SpaceGod.Unity.CSharp`, `SpaceGod.Unreal.CSharp`, `SpaceGod`,
   so the three never write into one folder. Unity stamps it into `StreamingAssets/mindattic-capture-app.txt` at build time.
 - Per session, MindAttic.Media.Capture's standard layout: the session video (`.mkv`, `.mp4`), every screenshot, clip and

@@ -173,5 +173,5 @@ Notes on the demo run:
   C:\Apps\SpaceGod still holds `f2daceb`. The next Deploy & Run publishes this.
 - 2026-11-08: since the promotion (US-T76) this copy's `{RepoName}` is `SpaceGod`, but the game still named its host's
   app `SpaceGod.Unreal.Cpp`, so its sessions landed in the archived repo's folder. The host now gets `--app SpaceGod`
-  (`R:\MindAttic\Capture\SpaceGod\`, as section 2 says), and `tools/play.ps1` looks there. docs/CAPTURE.md is
+  (`R:\MindAttic\Capture\SpaceGod\`, as section 2 says), and `tools/play.ps1` looks there. US-T697: the root is now `R:\MindAttic\Media\Capture\`; play.ps1 looks there first and in the old root for one release. docs/CAPTURE.md is
   re-mirrored at Unity's `e29d871` (section 7: the smoke's `hail` is raised on the client).

@@ -86,7 +86,7 @@ SpaceGod.exe -demo -capture video        # the scripted tour, each stop a screen
 SpaceGod.exe -capture -capture-config my.json   # your own rules instead of the shipped ones
 ```
 
-Output goes to `R:\MindAttic\Capture\SpaceGod\`. The game raises its gameplay events (battles, arrivals,
+Output goes to `R:\MindAttic\Media\Capture\SpaceGod\`. The game raises its gameplay events (battles, arrivals,
 gate jumps, trades, hails, saves, co-op joins...) so the shipped rules save replays of victories, defeats and a lost
 ship, and screenshots of arrivals and discoveries. While capturing, **Alt+F9** takes a screenshot, **Alt+F10** starts or
 stops a recording and **Alt+F11** saves the last 30 s.
@@ -107,7 +107,7 @@ the game quits (the detached export means the game never waits on it).
   must be installed to run it.
 - **ffmpeg** on PATH for video and replays (not bundled). Screenshots alone don't need it.
 - **Project settings.** `Cpp/Config/DefaultGame.ini`, section `[/Script/MindAtticMediaCapture.MindAtticCaptureSettings]`
-  (editor: Project Settings > Plugins > Media Capture): `AppName` (the folder under `R:\MindAttic\Capture`, here
+  (editor: Project Settings > Plugins > Media Capture): `AppName` (the folder under `R:\MindAttic\Media\Capture`, here
   `SpaceGod`) and `DefaultsFile=Content/Capture/SpaceGod.capture.json`, the shipped rules. `Capture` is staged as
   non-UFS so a packaged game finds the file.
 - **No window.** Under `-RenderOffScreen` (or `-capture-source=frames`) the plugin reads the GPU frames back and feeds

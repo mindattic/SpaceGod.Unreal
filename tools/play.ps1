@@ -114,7 +114,8 @@ if ($Offscreen) {
   # The host (and the detached "capture finalize" it hands the tape to) exports after the game ends.
   $deadline = (Get-Date).AddMinutes(5)
   while ((Get-Date) -lt $deadline -and (Get-Process -Name capture -ErrorAction SilentlyContinue | Where-Object { $_.StartTime -ge $t0 })) { Start-Sleep -Seconds 1 }
-  $roots = @('R:\MindAttic\Capture\SpaceGod', (Join-Path ([Environment]::GetFolderPath('MyVideos')) 'MindAttic\Capture\SpaceGod'))
+  # US-T697: the root moved to R:\MindAttic\Media\Capture; the old R:\MindAttic\Capture is still looked in for one release.
+  $roots = @('R:\MindAttic\Media\Capture\SpaceGod', 'R:\MindAttic\Capture\SpaceGod', (Join-Path ([Environment]::GetFolderPath('MyVideos')) 'MindAttic\Capture\SpaceGod'))
   $session = Get-ChildItem -LiteralPath $roots -Directory -ErrorAction SilentlyContinue | Where-Object LastWriteTime -ge $t0 |
     Sort-Object LastWriteTime | Select-Object -Last 1
   if ($session) {
@@ -331,7 +332,7 @@ if ($Mode -eq 'coop-smoke') {
     $events = @([regex]::Matches($hostText, '\[capture\] event (\S+)') | ForEach-Object { $_.Groups[1].Value })
     $where = 'the host log'
     if ($events.Count -eq 0) {
-      $roots = @('R:\MindAttic\Capture\SpaceGod', (Join-Path ([Environment]::GetFolderPath('MyVideos')) 'MindAttic\Capture\SpaceGod'))
+      $roots = @('R:\MindAttic\Media\Capture\SpaceGod', 'R:\MindAttic\Capture\SpaceGod', (Join-Path ([Environment]::GetFolderPath('MyVideos')) 'MindAttic\Capture\SpaceGod'))
       $gameLog = Get-ChildItem -LiteralPath $roots -Recurse -Filter '*.game.log' -ErrorAction SilentlyContinue |
         Where-Object LastWriteTime -ge $captureStart | Sort-Object LastWriteTime | Select-Object -Last 1
       if ($gameLog) {

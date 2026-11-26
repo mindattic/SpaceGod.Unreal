@@ -43,11 +43,11 @@ namespace SpaceGod
 	/// Started by <c>-demo</c> (see Bootstrap): runs the SceneTour
 	/// once, then quits. Used to verify a build visually and to produce the README images. Add
 	/// <c>-capture screen</c> (or <c>video</c>, or both) to save a screenshot at each stop through
-	/// MindAttic.Media.Capture — shots go to R:\MindAttic\Capture\Unity.SpaceGod\Unity.SpaceGod_{timestamp}.png,
+	/// MindAttic.Media.Capture — shots go to R:\MindAttic\Media\Capture\Unity.SpaceGod\Unity.SpaceGod_{timestamp}.png,
 	/// each sidecar tagged with its stop. Without <c>-capture</c> the tour still plays, just with no screenshots.
 	///
 	/// Unreal (US-T72): with <c>-capture</c> each stop is <c>ScreenshotAsync(&lt;stop&gt;)</c> through MindAttic.Media.Capture's
-	/// host (the MindAttic.Media.Capture.Unreal plugin), into the session folder under R:\MindAttic\Capture\SpaceGod\, as in
+	/// host (the MindAttic.Media.Capture.Unreal plugin), into the session folder under R:\MindAttic\Media\Capture\SpaceGod\, as in
 	/// Unity. With tools/play.ps1's <c>-capturedir=&lt;dir&gt;</c> the stops stay Unreal screenshots through CaptureBackend,
 	/// saved as <c>&lt;dir&gt;/&lt;stop&gt;.png</c>, with no capture host.
 	///
