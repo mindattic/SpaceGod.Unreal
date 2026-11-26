@@ -439,6 +439,18 @@ namespace SpaceGod::Views
 			shieldRingRenderer->enabled = false;
 			for (const auto& shell : hullShields) shell->enabled = shown;
 			if (!shown) return;
+			double charge = 0;
+			for (const auto& gen : shieldGenerators)
+				if (!gen->Destroyed()) charge += gen->ShieldFraction();
+			float strength = Mathf::Clamp01(static_cast<float>(charge / shieldGenerators.Count()));
+			if (Mathf::Abs(strength - shieldShown) < 0.01f) return;
+			shieldShown = strength;
+			Rendering::HullMaterial::SetShield(shieldBlock, strength, ShieldColor(strength));
+			for (const auto& shell : hullShields) shell->SetPropertyBlock(shieldBlock);
+			return;
+		}
+		shieldRingRenderer->enabled = shown;
+		if (!shown) return;
 		constexpr float ShieldPatchGain = 0.12f;
 		for (int gi = 0; gi < shieldGenerators.Count(); gi++)
 		{
