@@ -146,6 +146,7 @@ namespace SpaceGod::Views
 
 		for (int i = 0; i < parts.Count(); i++) parts[i]->Sub = subs[i];
 		shieldGenerators = shields;
+		shieldShown = -1;
 		Ship = ship;
 		BuiltFor = ship->Combat;
 		Root->name = ship->Name;
@@ -380,14 +381,64 @@ namespace SpaceGod::Views
 		shieldRingRenderer->shadowCastingMode = ShadowCastingMode::Off;
 		shieldRingRenderer->enabled = false;
 		shieldVertexColors = cols.ToArray();
+		BuildHullShield();
+	}
+
+	/// <summary>
+	/// US-T881: the shield shell (built only when M_HullShield is): every hull mesh at least a tenth the size of the biggest,
+	/// drawn again a few percent larger about its own centre, unshadowed, hidden until the ship fights.
+	/// </summary>
+	void ShipView::BuildHullShield()
+	{
+		auto material = Rendering::HullMaterial::Shield();
+		if (!material) return;
+		constexpr float Scale = 1.04f;
+		float biggest = 0;
+		for (const auto& r : renderers)
+		{
+			auto filter = r->gameObject() ? GetComponent<MeshFilter>(r->gameObject()) : nullptr;
+			if (!filter || !filter->sharedMesh) continue;
+			Vector3 size = filter->sharedMesh->bounds().size();
+			biggest = Mathf::Max(biggest, size.x * size.y * size.z);
+		}
+		if (biggest <= 0) return;
+		for (const auto& r : renderers)
+		{
+			auto filter = r->gameObject() ? GetComponent<MeshFilter>(r->gameObject()) : nullptr;
+			if (!filter || !filter->sharedMesh) continue;
+			Bounds b = filter->sharedMesh->bounds();
+			Vector3 size = b.size();
+			if (size.x * size.y * size.z < biggest * 0.1f) continue;
+			auto go = NewGameObject("HullShield");
+			go->transform->SetParent(r->transform(), false);
+			go->transform->localPosition = b.center * (1 - Scale);
+			go->transform->localScale = Vector3(Scale, Scale, Scale);
+			AddComponent<MeshFilter>(go)->sharedMesh = filter->sharedMesh;
+			auto shell = AddComponent<MeshRenderer>(go);
+			shell->SetSharedMaterial(material);
+			shell->shadowCastingMode = ShadowCastingMode::Off;
+			shell->receiveShadows = false;
+			shell->enabled = false;
+			hullShields.Add(shell);
+		}
+	}
+
+	void ShipView::HideShields()
+	{
+		if (shieldRingRenderer) shieldRingRenderer->enabled = false;
+		for (const auto& s : hullShields) s->enabled = false;
 	}
 
 	/// <summary>Recolours each patch's disc from its own emitter's live field (none for one shot away); only shown while fighting.</summary>
 	void ShipView::UpdateShieldRing(bool fighting)
 	{
 		if (!shieldRingRenderer) return;
-		shieldRingRenderer->enabled = fighting && visible;
-		if (!fighting || !visible) return;
+		bool shown = fighting && visible;
+		if (hullShields.Count() > 0)
+		{
+			shieldRingRenderer->enabled = false;
+			for (const auto& shell : hullShields) shell->enabled = shown;
+			if (!shown) return;
 		constexpr float ShieldPatchGain = 0.12f;
 		for (int gi = 0; gi < shieldGenerators.Count(); gi++)
 		{
@@ -845,7 +896,7 @@ namespace SpaceGod::Views
 			return false;
 		}
 		SetVisible(true);
-		if (shieldRingRenderer) shieldRingRenderer->enabled = false;
+		HideShields();
 		auto t = Root->transform;
 		t->localPosition = relative;
 		t->localRotation = rotation;
@@ -981,7 +1032,7 @@ namespace SpaceGod::Views
 	void ShipView::Derelict(Vector3 relative, Quaternion rotation, float length, float now)
 	{
 		SetVisible(true);
-		if (shieldRingRenderer) shieldRingRenderer->enabled = false;
+		HideShields();
 		auto t = Root->transform;
 		t->localPosition = relative;
 		t->localRotation = rotation * Quaternion::Euler(now * 1.3f, now * 0.7f, now * 2.1f);
@@ -1039,7 +1090,7 @@ namespace SpaceGod::Views
 			HideThrusters();
 			for (const auto& g : glows) g->R->enabled = false;
 			for (const auto& g : breaches) g->R->enabled = false;
-			if (shieldRingRenderer) shieldRingRenderer->enabled = false;
+			HideShields();
 		}
 	}
 
@@ -1062,7 +1113,7 @@ namespace SpaceGod::Views
 			HardStopExhaust();
 			HideThrusters();
 			for (const auto& g : glows) g->R->enabled = false;
-			if (shieldRingRenderer) shieldRingRenderer->enabled = false;
+			HideShields();
 		}
 		else
 		{

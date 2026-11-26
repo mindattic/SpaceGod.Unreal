@@ -103,6 +103,12 @@ namespace SpaceGod::Views
 		cs::Ref<Mesh> shieldRingMesh;
 		cs::List<int> shieldWedgeStart, shieldWedgeCount;
 		cs::List<Color> shieldVertexColors;
+		/// <summary>US-T881: the hull's shield shell, a slightly scaled copy of each big hull mesh drawn with M_HullShield in
+		/// place of the patches while fighting; empty while that material is not built. Its block is pushed only as the
+		/// generators' mean charge moves.</summary>
+		cs::List<cs::Ref<MeshRenderer>> hullShields;
+		MaterialPropertyBlock shieldBlock;
+		float shieldShown = -1;
 
 		/// <summary>US-T442: the god view from inside the hull: its decks, compartments and structural modules as a
 		/// wireframe (built the first time the camera goes in), and its hull renderers drawn in a see-through skin, their own
@@ -230,6 +236,8 @@ namespace SpaceGod::Views
 		static cs::Ref<Material> GlowMaterial(const cs::String& name, Color c, float intensity, float falloff);
 		static cs::Ref<ParticleSystem> BuildExhaust(const cs::Ref<Transform>& parent);
 		void BuildShieldRing();
+		void BuildHullShield();
+		void HideShields();
 		void SetHullSpan();
 		void UpdateSectionDamage(const cs::Ref<Core::ShipCombat>& combat);
 		void BuildUtilityMarks();

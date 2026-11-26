@@ -29,5 +29,12 @@ namespace SpaceGod::Rendering
 
 		/// <summary>The 8 keel sections' damage (0 the stern, 0..1) on a hull's block.</summary>
 		static void SetDamage(UnityCompat::MaterialPropertyBlock& block, const std::vector<float>& damage);
+
+		/// <summary>US-T881: the shared M_HullShield material (translucent additive Fresnel shell over the hull), or null while
+		/// the asset is not built: the caller keeps its shield patches then. Looked up once.</summary>
+		static cs::Ref<UnityCompat::Material> Shield();
+
+		/// <summary>US-T881: a shield shell's charge (0..1 of its generators' caps) and colour on its block.</summary>
+		static void SetShield(UnityCompat::MaterialPropertyBlock& block, float strength, UnityCompat::Color color);
 	};
 }
