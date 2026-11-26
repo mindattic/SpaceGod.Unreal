@@ -250,7 +250,7 @@ namespace
 		ShipClass cls{};
 		if (args.Num() < 2 || !ParseClass(args[0], cls))
 		{
-			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported] [faction=<style id>] [tubes=<per hangar>] [lineup], e.g. sg.Assemble Carrier 42"));
+			UE_LOG(LogSpaceGod, Warning, TEXT("sg.Assemble <class> <seed> [family=<kit set>] [pack=<pack>] [imported] [faction=<style id>] [tubes=<per hangar>] [kardashev=<index>] [lineup], e.g. sg.Assemble Carrier 42"));
 			return;
 		}
 		uint64 seed = FCString::Strtoui64(*args[1], nullptr, 10);

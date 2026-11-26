@@ -84,3 +84,22 @@ checks the camera stayed where it was put (no push back out onto the skin) and l
   sees them as from outside.
 - A hull's compartments are the simulation's (a keel position and a height each): their boxes are a diagram of the
   spaces, not modelled rooms.
+
+## Kardashev milestones (US-T815)
+
+A civilisation's Kardashev index is Sagan's interpolation of the power it uses, (log10 W - 6) / 10: 0 at a megawatt, 1 at
+10^16 W. It reads people, industry, ships' fusion drives and orbital structures, and the god view shows it per faction.
+Milestones on that scale open bigger hulls to the assembler (`Kardashev.cpp`, `KardashevSteps`):
+
+| Index | Opens |
+|-------|-------|
+| 0.30 | destroyers |
+| 0.40 | cruisers |
+| 0.50 | carriers |
+| 0.60 | battleships |
+| 0.65 | heavy carriers (built at their heaviest) |
+| 0.75 | heavy battleships (built at their heaviest) |
+
+`sg.Assemble <class> <seed> kardashev=<index>` builds as a civilisation at that index would: a class not yet open is
+refused, and a capital class past its milestone is built longer and heavier-armed, reaching full heft `HeftSpan` (0.15)
+past it. The 0.30-0.60 thresholds are first guesses; retune them against real god-view readings.

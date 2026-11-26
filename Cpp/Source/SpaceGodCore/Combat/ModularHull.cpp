@@ -2,6 +2,7 @@
 
 #include "Combat/ModularHull.h"
 
+#include "Assembly/ModularAssembler.h"
 #include "Combat/CombatSpecs.h"
 #include "Combat/CombatState.h"
 #include "Combat/FireCones.h"
@@ -189,6 +190,29 @@ namespace SpaceGod::Core
 			}
 		}
 		return best;
+	}
+
+	cs::List<int> ModularHull::PartModules(const ModularDesign& design) const
+	{
+		cs::List<int> ids;
+		double perM = design.LengthM > 0 ? 1.0 / design.LengthM : 0.0;
+		for (const auto& p : design.Parts)
+		{
+			DVec3 local = p.Pos * perM;
+			cs::Ref<HullModule> best = nullptr;
+			double bestD = cs::Double::MaxValue;
+			for (const auto& m : Modules)
+			{
+				double d = m->DistanceTo(local);
+				if (d < bestD || (d == bestD && best->Kind == HullModuleKind::Sponson && m->Kind != HullModuleKind::Sponson))
+				{
+					bestD = d;
+					best = m;
+				}
+			}
+			ids.Add(best ? best->Id : -1);
+		}
+		return ids;
 	}
 
 	cs::Ref<HullModule> ModularHull::ModuleOf(int subsystem) const

@@ -96,6 +96,8 @@ private:
 	float hitCueAt = -100.0f;
 	HitMark hitCueMark = HitMark::Hull;
 	float shieldDownAt = -100.0f;
+	/// US-T866: when the held hull's shield last took a hit (a brief shimmer round the screen's edge).
+	float shieldHitAt = -100.0f;
 	float hullCriticalAt = -100.0f;
 	bool hadShield = false;
 	bool hullWasCritical = false;
