@@ -7,6 +7,7 @@
 #include "Views/DustField.h"
 #include "Views/EffectsTune.h"
 #include "Views/GateView.h"
+#include "Views/HullSparks.h"
 #include "Views/HullThrusters.h"
 #include "Views/ShipView.h"
 #include "Views/WorldFx.h"
@@ -49,6 +50,7 @@ namespace SpaceGod
 		{
 			worldFx = cs::New<Views::WorldFx>(this, systemRoot);
 			dustField = cs::New<Views::DustField>(this, systemRoot);
+			hullSparks = cs::New<Views::HullSparks>(this, systemRoot);
 			worldFxRoot = systemRoot;
 			fxShipsSeen.Clear();
 			fxShipCount = -1;
@@ -207,5 +209,6 @@ namespace SpaceGod
 
 		worldFx->Draw();
 		if (dustField != nullptr) dustField->Update();
+		if (hullSparks != nullptr) hullSparks->Update();
 	}
 }

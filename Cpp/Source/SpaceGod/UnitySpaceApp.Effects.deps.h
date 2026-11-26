@@ -8,5 +8,6 @@
 namespace SpaceGod::Views
 {
 	class DustField;
+	class HullSparks;
 	class WorldFx;
 }

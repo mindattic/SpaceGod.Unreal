@@ -11,12 +11,16 @@
 public:
 	/// <summary>The world's effects for this system (null before one is shown): BattleFx hands it a fight's hits and kills.</summary>
 	Views::WorldFx* Effects() const { return worldFx.get(); }
+	/// <summary>US-T880: the sparks of a hull hit on the held craft (null before a system is shown): the HUD hands it each hit.</summary>
+	Views::HullSparks* Sparks() const { return hullSparks.get(); }
 
 private:
 	cs::Ref<Views::WorldFx> worldFx;
 	cs::Ref<Transform> worldFxRoot;
 	/// <summary>US-T729: the space dust round a held seat, made with the effects for this system.</summary>
 	cs::Ref<Views::DustField> dustField;
+	/// <summary>US-T880: hull-hit sparks off the camera, made with the effects for this system.</summary>
+	cs::Ref<Views::HullSparks> hullSparks;
 
 	/// <summary>Each ship as last drawn (by its index in the fleet): where a gate took it from, and whether it is new here.</summary>
 	struct FxShipSeen

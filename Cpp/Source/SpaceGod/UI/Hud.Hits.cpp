@@ -21,6 +21,7 @@
 #include "Combat/FlightDecks.h"
 #include "Embodiment/HelmAbilities.h" // US-T370
 #include "Embodiment/MountedTurret.h"
+#include "Views/HullSparks.h" // US-T880
 #include "InterfaceOptions.h" // US-T560
 #include "PlayerOptions.h" // US-T252
 
@@ -504,13 +505,14 @@ namespace SpaceGod::UI
 			{
 				if (fx.Kind != FxKind::ShieldHit && !(fx.Kind == FxKind::Impact && fx.Size > 0)) continue;
 				bool shield = fx.Kind == FxKind::ShieldHit;
+				float struck = 0;
 				if (shield) shieldHitAt = now; // US-T866
 				else
 				{
 					// US-T867: felt through the frame, heavier as the hit takes more of what hull is left.
 					double left = me->Combat != nullptr ? me->Combat->Hull : 0;
-					float share = static_cast<float>(fx.Size / cs::Math::Max(left + fx.Size, 1e-9));
-					Audio::FlightSounds::HullThud(0.3f + 0.7f * Mathf::Clamp01(share));
+					struck = Mathf::Clamp01(static_cast<float>(fx.Size / cs::Math::Max(left + fx.Size, 1e-9)));
+					Audio::FlightSounds::HullThud(0.3f + 0.7f * struck);
 				}
 				(shield ? hitTally.TakenShield : hitTally.TakenHull)++;
 				if (hitTally.TakenShield + hitTally.TakenHull == 1) // US-T364
@@ -518,6 +520,7 @@ namespace SpaceGod::UI
 				auto from = fx.By != nullptr && fx.By != me && (fx.By->Pos - me->Pos).LengthSquared() > 1e-18 ? fx.By->Pos - me->Pos : fx.A - me->Pos;
 				if (from.LengthSquared() < 1e-18) from = -me->Forward;
 				from = from.Normalized();
+				if (!shield && app->Sparks() != nullptr) app->Sparks()->Hit(from, struck); // US-T880: seen where it struck
 				bool merged = false;
 				for (auto& a : hitArcs)
 				{
