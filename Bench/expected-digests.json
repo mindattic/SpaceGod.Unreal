@@ -1,8 +1,8 @@
 {
-  "_comment": "The digestHash every scenario must produce (Bench/README.md, 'Digest format'). First recorded from Unity.SpaceGod's C# Core (Bench.CSharp, US-T23); this repo is C++-only since c965508, so the C++ Core is the reference and these are re-recorded from it whenever a sim change legitimately moves them (last: US-T411, after US-T229: a git bisect over the 87 commits since found 1891497 'Stoppable escapes' (US-T98, an AI hull's spoolable FTL escape, gunners aiming for its engines while it charges) as the first to move them, a deliberate new AI mechanic, not a bug; nothing in US-T296 through US-T413 moved them further, confirmed by running Bench on the commit right before that session and on this commit and getting byte-identical digests both times).",
-  "sol-idle": "12ADEAFC29C2FE00",
-  "high-warp": "9A82A39F36854CA0",
-  "economy-year": "F945447FEE069CD3",
-  "battle": "E80E32852A674A0D",
-  "galaxy-ftl": "793766F0C2F38492"
+  "_comment": "The digestHash every scenario must produce (Bench/README.md, 'Digest format'). First recorded from Unity.SpaceGod's C# Core (Bench.CSharp, US-T23); this repo is C++-only since c965508, so the C++ Core is the reference and these are re-recorded from it whenever a sim change legitimately moves them (last: US-T411, after US-T229: a git bisect over the 87 commits since found 1891497 'Stoppable escapes' (US-T98, an AI hull's spoolable FTL escape, gunners aiming for its engines while it charges) as the first to move them, a deliberate new AI mechanic, not a bug; nothing in US-T296 through US-T413 moved them further, confirmed by running Bench on the commit right before that session and on this commit and getting byte-identical digests both times). Re-recorded (US-T876, US-T871) at ea2c5ca, after US-T754's dogfight AI (9d11dd2) and US-T877's StepAvoidance fix (d579afa) moved all five; two runs of tools/bench.ps1 -NoBuild gave byte-identical digests.",
+  "sol-idle": "37B7A44262E3E0DA",
+  "high-warp": "8B076AB79D8CDB9B",
+  "economy-year": "AF4885197D47326D",
+  "battle": "AEC18DCD9869F31A",
+  "galaxy-ftl": "AD9D91F8916A44D1"
 }
