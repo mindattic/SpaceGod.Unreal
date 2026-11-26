@@ -16,6 +16,7 @@ namespace SpaceGod::Core
 	class SubsystemDef;
 	class ShipCombat;
 	class Settlement;
+	struct ModularDesign;
 
 	/// <summary>
 	/// What part of a hull's structure a <see cref="HullModule"/> is (U.SPC-T596). Not to be confused with
@@ -196,6 +197,13 @@ namespace SpaceGod::Core
 		/// <summary>The module a point on the hull (ship lengths, hull frame) lies in, or the nearest one to it, among
 		/// those not yet come away (the root always is one, so there is always an answer).</summary>
 		cs::Ref<HullModule> ModuleAt(DVec3 local) const;
+
+		/// <summary>The module each of <paramref name="design"/>'s parts belongs to (US-T870), one id per
+		/// <see cref="ModularDesign::Parts"/> entry: the part's pivot (metres, design frame, about the hull's middle) over
+		/// the design's length is a point in ship lengths, hull frame, and the part goes to the module nearest it, detached
+		/// ones too, a keel section before a sponson on a tie; -1 for every part when there are no modules. So a renderer can
+		/// hide the parts whose module has come away and shade the rest by its <see cref="HullModule::Condition"/>.</summary>
+		cs::List<int> PartModules(const ModularDesign& design) const;
 
 		/// <summary>The module hardpoint <paramref name="subsystem"/> is mounted on.</summary>
 		cs::Ref<HullModule> ModuleOf(int subsystem) const;
