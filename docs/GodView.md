@@ -102,4 +102,4 @@ Milestones on that scale open bigger hulls to the assembler (`Kardashev.cpp`, `K
 
 `sg.Assemble <class> <seed> kardashev=<index>` builds as a civilisation at that index would: a class not yet open is
 refused, and a capital class past its milestone is built longer and heavier-armed, reaching full heft `HeftSpan` (0.15)
-past it. The 0.30-0.60 thresholds are first guesses; retune them against real god-view readings.
+past it. The 0.30-0.60 thresholds were checked against readings (US-T879: the Bench sim, seed 1977, warp 8, ticks 0-100, 40 factions): minor and trader factions read 0 to 0.25, mid powers 0.35-0.50, the great powers 0.50-0.65 (Sol Federation 0.61 rising to 0.65, Belt Consortium 0.57-0.61, Indus Gas and Ore 0.63), so destroyers open for nearly every polity, carriers for about 40 percent and battleships for the handful at the top; they stay as set. Drive power dominates the high readings and swings with fleet traffic, so a faction can cross a step and back.
