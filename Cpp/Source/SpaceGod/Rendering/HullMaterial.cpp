@@ -43,9 +43,9 @@ namespace SpaceGod::Rendering
 		return known.emplace(path, ok ? hull : path).first->second;
 	}
 
-	void HullMaterial::SetSpan(MaterialPropertyBlock& block, float sternZ, float bowZ, int sections, double lengthM)
+	void HullMaterial::SetSpan(MaterialPropertyBlock& block, float stern, float bow, int keelAxis, int sections, double lengthM)
 	{
-		block.SetVector("HullSpan", Vector4(sternZ, bowZ, static_cast<float>(std::clamp(sections, 1, 8)), 0));
+		block.SetVector("HullSpan", Vector4(stern, bow, static_cast<float>(std::clamp(sections, 1, 8)), static_cast<float>(std::clamp(keelAxis, -3, 3))));
 		double panel = std::max(0.5, static_cast<double>(CVarPanelMetres.GetValueOnGameThread()));
 		block.SetFloat("PanelCells", static_cast<float>(std::clamp(lengthM / panel, 4.0, 512.0)));
 	}

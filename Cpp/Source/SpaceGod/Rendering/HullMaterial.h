@@ -21,9 +21,11 @@ namespace SpaceGod::Rendering
 		/// enabled and imported; otherwise the path as given.</summary>
 		static cs::String Variant(const cs::String& path);
 
-		/// <summary>The keel's span and panel size on a hull's block: (stern z, bow z, keel sections) in the mesh's own
-		/// units, and panel cells per hull length from its length in metres.</summary>
-		static void SetSpan(UnityCompat::MaterialPropertyBlock& block, float sternZ, float bowZ, int sections, double lengthM);
+		/// <summary>The keel's span and panel size on a hull's block: HullSpan (stern, bow, keel sections, keel axis), the
+		/// stern and bow as positions along the keel axis in the mesh's own (native Unreal) units and the axis as 1, 2 or 3
+		/// for the mesh's x, y or z, negative when the nose runs down it; and panel cells per hull length from its length in
+		/// metres.</summary>
+		static void SetSpan(UnityCompat::MaterialPropertyBlock& block, float stern, float bow, int keelAxis, int sections, double lengthM);
 
 		/// <summary>The 8 keel sections' damage (0 the stern, 0..1) on a hull's block.</summary>
 		static void SetDamage(UnityCompat::MaterialPropertyBlock& block, const std::vector<float>& damage);

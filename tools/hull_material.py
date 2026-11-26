@@ -14,7 +14,10 @@ What it builds:
                                             one beside each MI_<TAG>_<Atlas>_<Colour>_Lit already imported (USC and
                                             SSC), parented to M_HullMaster with the same maps
 
-The hull's keel runs along object-space Z. HullSpan is (stern z, bow z, keel section count) in the mesh's own units;
+The hull's keel runs along one object-space axis, which ShipView::SetHullSpan picks per hull (the mesh-local axis that
+points along the ship's nose; the pack meshes' nose is their native +Y). HullSpan is (stern, bow, keel section count,
+keel axis) in the mesh's own units: the stern and bow are positions along that axis, and the axis is 1, 2 or 3 for x, y
+or z, negated when the nose runs down it (0 reads as +z);
 panel cells are sized from that length, so a frigate and a carrier carry the same number of panels per hull length.
 SectionDamage is the 8 keel sections' damage (0 = stern, 0..1); ShaderBinding pushes a SetFloatArray("SectionDamage")
 as the vectors SectionDamage_0 (sections 0-3) and SectionDamage_1 (sections 4-7).
@@ -49,9 +52,11 @@ def _fail(msg):
 # in-plane object axes (the face normal from the position's screen derivatives, so no tangent frame is needed), a hash
 # per panel, and the battle damage of the keel section under the pixel, blended across section boundaries.
 HULL_COMMON = r"""
+float ka = abs(HullSpan.w);
+float3 keel = ka < 0.5 ? float3(0, 0, 1) : float3(ka < 1.5, ka >= 1.5 && ka < 2.5, ka >= 2.5) * sign(HullSpan.w);
 float hullLen = HullSpan.y - HullSpan.x;
 if (abs(hullLen) < 1.0) hullLen = 1.0;
-float t = saturate((P.z - HullSpan.x) / hullLen);
+float t = saturate((dot(P, keel) - HullSpan.x) / hullLen);
 float3 q = P / abs(hullLen) * PanelCells;
 float3 fn = cross(ddy(P), ddx(P));
 fn = (dot(fn, fn) > 1e-12 && !any(isnan(fn))) ? normalize(fn) : float3(0, 0, 1);
@@ -296,7 +301,7 @@ def build_master(defaults):
     position = g.node(unreal.MaterialExpressionLocalPosition)
     hull = [
         ("P", (position, "")),
-        ("HullSpan", g.vec("HullSpan", (-1000.0, 1000.0, 8.0))),
+        ("HullSpan", g.vec4("HullSpan", (-1000.0, 1000.0, 8.0, 3.0))),
         ("PanelCells", g.scalar("PanelCells", 24.0)),
         ("PanelLineWidth", g.scalar("PanelLineWidth", 0.03)),
         ("PanelLineDepth", g.scalar("PanelLineDepth", 0.35)),

@@ -427,13 +427,28 @@ namespace SpaceGod::Views
 			main = r;
 		}
 		if (!main) return;
-		auto filter = GetComponent<MeshFilter>(main->gameObject());
-		float toNative = 1.0f / Mathf::Max(filter->sharedMesh->ImportedScale, 1e-6f);
-		float lo = box.min().z * toNative, hi = box.max().z * toNative;
-		// Which way the mesh's own +z runs along the hull (nose +Z in the root's frame).
-		Vector3 nose = Quaternion::Inverse(Root->transform->rotation()) * (main->transform()->rotation() * Vector3(0, 0, 1));
-		bool forward = nose.z >= 0;
-		Rendering::HullMaterial::SetSpan(block, forward ? lo : hi, forward ? hi : lo, ModularHull::KeelSections(Ship->LengthKm()), Ship->LengthKm() * 1000.0);
+		const auto& mesh = GetComponent<MeshFilter>(main->gameObject())->sharedMesh;
+		// The shader reads the mesh's native Unreal position (cm, before ImportedCorrection): Unity (x, y, z) there is
+		// Unreal (x, -z, y). The nose (root +Z) in the renderer's frame, back through ImportedRotation, then to native, and
+		// the native axis nearest it is the keel (the pack meshes' nose is their native +Y).
+		Vector3 u = Quaternion::Inverse(mesh->ImportedRotation) *
+			(Quaternion::Inverse(main->transform()->rotation()) * (Root->transform->rotation() * Vector3(0, 0, 1)));
+		Vector3 native(u.x, -u.z, u.y);
+		int axis = Mathf::Abs(native.x) >= Mathf::Abs(native.y) && Mathf::Abs(native.x) >= Mathf::Abs(native.z) ? 0
+			: (Mathf::Abs(native.y) >= Mathf::Abs(native.z) ? 1 : 2);
+		float sign = native[axis] >= 0 ? 1.0f : -1.0f;
+		Vector3 k = Vector3::zero();
+		if (axis == 0) k.x = sign;
+		else if (axis == 1) k.y = sign;
+		else k.z = sign;
+		// That axis in the bounds' (renderer) frame, and the box's span along it, in native units.
+		Vector3 e = mesh->ImportedRotation * Vector3(k.x, k.z, -k.y);
+		float mid = Vector3::Dot(box.center, e);
+		float half = Mathf::Abs(e.x) * box.extents.x + Mathf::Abs(e.y) * box.extents.y + Mathf::Abs(e.z) * box.extents.z;
+		float toNative = 1.0f / Mathf::Max(mesh->ImportedScale, 1e-6f);
+		int keel = static_cast<int>(sign) * (axis + 1);
+		Rendering::HullMaterial::SetSpan(block, (mid - half) * toNative, (mid + half) * toNative, keel, ModularHull::KeelSections(Ship->LengthKm()),
+			Ship->LengthKm() * 1000.0);
 	}
 
 	/// <summary>US-T850: each keel section's damage on the block (its own structure lost, or its sponsons', whichever is
