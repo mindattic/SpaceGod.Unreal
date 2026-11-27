@@ -314,7 +314,11 @@ namespace SpaceGod::Rendering
 				for (int g = 0; g < groups; g++)
 				{
 					FName slot(*FString::Printf(TEXT("Section%d"), g));
-					sm->GetStaticMaterials().Add(FStaticMaterial(nullptr, slot, slot));
+					FStaticMaterial material(nullptr, slot);
+#if WITH_EDITORONLY_DATA
+					material.ImportedMaterialSlotName = slot;
+#endif
+					sm->GetStaticMaterials().Add(material);
 				}
 				UStaticMesh::FBuildMeshDescriptionsParams params;
 				params.bMarkPackageDirty = false;
