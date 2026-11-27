@@ -30,10 +30,14 @@ namespace SpaceGod
 			appliedStat = index;
 		}
 
+		UWorld* ViewportWorld()
+		{
+			return GEngine && GEngine->GameViewport ? GEngine->GameViewport->GetWorld() : nullptr;
+		}
+
 		void ApplyStatNow()
 		{
-			UWorld* world = GEngine && GEngine->GameViewport ? GEngine->GameViewport->GetWorld() : nullptr;
-			ApplyStat(world, GameConsole::StatsOverlay()->Index);
+			ApplyStat(ViewportWorld(), GameConsole::StatsOverlay()->Index);
 		}
 
 		void ApplyLogVerbosity(int index)
@@ -55,7 +59,7 @@ namespace SpaceGod
 		static const cs::Ref<ChoiceSetting> value = cs::New<ChoiceSetting>("dev.statsOverlay", SettingGroups::Developer, "Stats overlay",
 			cs::List<cs::String>{ "Off", "FPS", "Unit", "Unit graph" }, 0,
 			"Shows the engine's FPS, frame-time (Unit) or frame-time graph stat in the viewport.", "stats overlay fps unit frame time graph stat")
-			->Applying([](int) { ApplyStatNow(); });
+			->Applying([](int index) { ApplyStat(ViewportWorld(), index); });
 		return value;
 	}
 
