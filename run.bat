@@ -1,29 +1,18 @@
 @echo off
-rem Desktop shortcut target ("SpaceGod"). Asks first: 1) Deploy pulls latest, rebuilds and republishes to
-rem C:\Apps\SpaceGod only when something the game is built from changed, and refreshes the shortcut;
-rem 2) Deploy ^& Run does the same, then starts the game recording through MindAttic.Media.Capture (-capture video hq,
-rem US-T74). run.ps1 does the work. Arguments skip the menu and pass through to run.ps1 -Launch (e.g. run.bat -Force).
-rem deploy.bat keeps the 1) Deploy ^& Run (-Force) / 2) Run menu (US-T73).
-setlocal
+rem The MindAttic standard run.bat (MAT-T279), written by deploy-lib.ps1's Write-RunBat - edits here are overwritten.
+rem Double-click: the run.ps1 menu (1 Redeploy, 2 Run Debug, 3 Run Release). Arguments pass through to run.ps1.
 title SpaceGod
-set "LAUNCH=-Launch"
-if not "%~1"=="" goto deploy
-echo.
-echo   SpaceGod
-echo     1^) Deploy
-echo     2^) Deploy ^& Run
-echo.
-choice /c 12 /n /m "  Choose 1 or 2: "
-if errorlevel 2 goto deploy
-set "LAUNCH="
-
-:deploy
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run.ps1" %LAUNCH% %*
-if errorlevel 1 (
-    echo.
-    echo   Deploy failed. See the output above.
+set "RUN_PS1=%~dp0run.ps1"
+if not exist "%RUN_PS1%" (
+    echo run.ps1 not found at "%RUN_PS1%".
     pause
     exit /b 1
 )
-timeout /t 5
+powershell -NoProfile -ExecutionPolicy Bypass -File "%RUN_PS1%" %*
+if errorlevel 1 (
+    echo.
+    echo run.ps1 failed ^(exit %errorlevel%^).
+    pause
+    exit /b 1
+)
 exit /b 0
