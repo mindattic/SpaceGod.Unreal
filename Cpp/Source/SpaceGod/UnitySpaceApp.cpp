@@ -655,7 +655,7 @@ namespace SpaceGod
 	{
 		if (Selected.IsShip() && Selected.Ship->Destroyed) Select(Target::None());
 		if (Hovered.IsShip() && Hovered.Ship->Destroyed) Hovered = Target::None();
-		if (IsPiloting() && Piloted.Ship->Destroyed) ExitPiloting();
+		if (IsPiloting() && Piloted.Ship->Destroyed) ReturnToCommand(cs::String("destroyed")); // US-T904: the ghost leaves the wreck for the god's eye
 		else if (IsPiloting() && World()->PilotedShip != Piloted.Ship) LoseHelm();
 		else if (SpaceCamera->FocusTarget.IsShip() && SpaceCamera->FocusTarget.Ship->Destroyed) SpaceCamera->ExitFocus();
 	}
@@ -1305,7 +1305,8 @@ namespace SpaceGod
 		}
 		if (ship == nullptr || ship->Destroyed)
 		{
-			ExitPiloting();
+			if (ship == nullptr) ExitPiloting();
+			else ReturnToCommand(cs::String("destroyed")); // US-T904
 			return;
 		}
 		// US-T417: lost or taken in the fight but its fate held back for the hold rewind's window: the helm follows the
