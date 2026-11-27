@@ -8,7 +8,9 @@ forbid redistributing the raw assets, and this repo is public, so **none of it i
 
 are both in `.gitignore`. What is committed is the import script for each pack, so any machine that has the pack's
 download can rebuild the assets exactly. Never `git add -f` anything under those two folders. A packaged build that
-uses these assets must be built on a machine that has run the import.
+uses these assets must be built on a machine that has run the import: the game loads them by path, so
+`Cpp/Config/DefaultGame.ini` names `/Game/ThirdParty/USC` and `/Game/ThirdParty/StarSparrow` in
+`DirectoriesToAlwaysCook` (US-T913), and the cooker finds nothing there on a machine without them.
 
 ## Star Sparrow (Ebal Studios)
 
@@ -147,6 +149,32 @@ Mechlab (US-T89) would choose another hull or gun.
 The order is USC, then Star Sparrow, then procedural: without USC (or with `-NoUSC`) the Star Sparrow kit draws them,
 without that too (or headless) the procedural hulls. `-SpaceGodShipLineup=<dir>` adds a `usc-models` sheet of every
 model the classes use.
+
+### The combat loop's hulls (US-T913)
+
+What each class the Fly-this combat loop shows draws (`UscKit::PickOf`; the navy model, then the pirates'). Every one
+is one of the pack's prebuilt example ships, none an assembled design (`DesignMeshes` draws only `sg.Assemble`'s
+designs) and none procedural while the pack is there, so nothing was swapped; the gap was the package, which cooked
+none of `/Game/ThirdParty` and so drew every hull from `ShipMeshFactory` until US-T913 added the pack folders to the
+cook. Meshes are `/Game/ThirdParty/USC/Meshes/SM_USC_<Model>_<Piece>_<Section>`, `Piece` `Main` and `Parts` for the
+two-atlas sets and `Hull` for the rest, `Section` `Bow` and `Stern` for warships and `Whole` otherwise. The picks are
+fixed per class (and faction), so the choice spends no random draw and the bench digests do not move; the meshes keep
+the pack's nose along native +Y that `HullMaterial`'s keel axis (US-T850) reads, and `ScaleModel::TrueLengthM`
+(US-T715) still sets their length.
+
+| Class | Model (navy / pirate) | Why |
+|---|---|---|
+| Fighter | `HyperFalcon07` / `HyperFalcon10` (`..._Hull_Whole`) | Hyper Falcon is the pack's light single-seat fighter set: the balanced space superiority fighter |
+| Interceptor | `HyperFalcon17` / `HyperFalcon08` | another Hyper Falcon, so it reads as a light fighter, distinct from the fighter's model |
+| Heavy fighter (Gunship) | `StriderOx14` / `StriderOx10` | Strider Ox is the pack's bulkier small-craft set: the armoured multi-crew gunship |
+| Carrier | `GalacticLeopard44` / `VoidWhale10` (`..._Main_Bow`, `_Stern`, `_Parts_...`) | Galactic Leopard (navies) and Void Whale (pirates) are the pack's capital sets; one model per capital class, kept from US-T142 |
+| Destroyer | `GalacticLeopard43` / `VoidWhale16` | as the carrier: the set's model kept for this class since US-T142 |
+| Cruiser | `GalacticLeopard41` / `VoidWhale8` | as the carrier |
+| Battleship | `GalacticLeopard31` / `VoidWhale30` | as the carrier |
+| Freighter (truss) | `GalacticLeopard11` (`..._Whole`), navy only | the hauler every non-warship class falls to; it carries the pack's cargo modules, as many as its load |
+
+Without the USC import the same classes fall back to the Star Sparrow kit's recipe per class (`StarSparrowKit`, an
+assembly of that pack's parts), and without that to the procedural hulls; that order is unchanged.
 
 ### Sectional damage (US-T91)
 
