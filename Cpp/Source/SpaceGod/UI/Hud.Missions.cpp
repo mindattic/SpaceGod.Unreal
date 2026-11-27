@@ -44,6 +44,7 @@ namespace SpaceGod::UI
 				" + ", career->CraftKills, " craft   Capitals ", career->CapitalsCrippled, "   Missions ", career->MissionsWon, "/",
 				career->MissionsWon + career->MissionsFailed), small);
 		GUI::Label(Rect(r.x + 12, r.y + 48, w - 24, 18), medals.empty() ? cs::String("Medals: none yet") : cs::Cat("Medals: ", medals), small);
+		if (debriefReturn && GUI::Button(Rect(r.x + w - 172, r.y + 6, 160, 20), "Back to command", button)) app->ShowMissions = false; // US-T906
 
 		float y = r.y + 70;
 		if (rows == 0)

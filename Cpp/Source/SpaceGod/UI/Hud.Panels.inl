@@ -97,6 +97,8 @@ private:
 
 	/// <summary>The mission whose briefing is shown (0: the newest debriefing).</summary>
 	int missionShown = 0;
+	/// <summary>US-T906: the debriefing on the board came in at the controls: closing the board returns to command.</summary>
+	bool debriefReturn = false;
 	cs::Ref<GUIStyle> missionText;
 	Vector2 missionScroll;
 

@@ -20,6 +20,7 @@
 #include "Camera/StarTravel.h"
 #include "Combat/Battle.h"
 #include "Combat/PilotCareer.h" // US-T812
+#include "Coop/CoopPeer.h"
 #include "Systems/CruiseDrive.h"
 
 #include "World.h"
@@ -241,13 +242,29 @@ namespace SpaceGod::UI
 		AddPanel(floating(DrawerBountiesId, "BOUNTIES", "BOUNTY", 120, Vector2(768, 300)), [this] { DrawBounties(); }, &app->ShowBounties);
 		AddPanel(floating(DrawerContractsId, "CONTRACTS", "JOBS", 120, Vector2(868, 300)), [this] { DrawContracts(); }, &app->ShowContracts);
 		{
-			// US-T812: a new debriefing opens the board.
+			// US-T812: a new debriefing opens the board. US-T906: one read in the seat (solo or the co-op host) sends the
+			// player back to command through the ghost when it closes, the board reopened on the next offer's briefing.
 			auto s = floating(DrawerMissionsId, "MISSIONS", "MISSIONS", 120, Vector2(768, 420));
 			s.available = [this, screenFree]
 			{
-				if (!screenFree()) return false;
 				auto career = Core::PilotCareer::Find(app->World());
-				if (career != nullptr && career->DebriefPending) app->ShowMissions = true;
+				if (debriefReturn && !app->ShowMissions)
+				{
+					debriefReturn = false;
+					if (app->AtControls())
+					{
+						app->ReturnToCommand();
+						missionShown = career != nullptr && career->Missions.Count() > 0 ? career->Missions[0]->Id : 0;
+						app->ShowMissions = true;
+					}
+				}
+				if (!screenFree()) return false;
+				if (career != nullptr && career->DebriefPending)
+				{
+					app->ShowMissions = true;
+					auto peer = Coop::CoopPeer::Current();
+					if (app->AtControls() && (peer == nullptr || peer->IsHost())) debriefReturn = true;
+				}
 				return true;
 			};
 			AddPanel(s, [this] { DrawMissions(); }, &app->ShowMissions);
