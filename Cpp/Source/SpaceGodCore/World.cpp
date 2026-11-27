@@ -203,7 +203,7 @@ namespace SpaceGod::Core
 	{
 		if (War == nullptr) return;
 		Adventures->Update(jd, EventSources::Of(shared_from_this(), jd), playerHelioKm, PilotedShip);
-		PilotCareer::Update(shared_from_this(), jd); // US-T812: the mission board, only with a player present
+		PilotCareer::Update(shared_from_this(), jd, playerHelioKm); // US-T812: the mission board, only with a player present
 	}
 
 	DVec3 World::WreckHelio(cs::Ref<Wreck> w, double jd)

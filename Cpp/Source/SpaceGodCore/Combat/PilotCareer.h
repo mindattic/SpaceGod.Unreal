@@ -16,6 +16,7 @@
 // every replay and lockstep peer offers the same. The AI-only bench never runs it, so War::Career stays null there.
 
 #include "Cs/Cs.h"
+#include "DVec3.h"
 #include "Persistence/Serializable.h"
 
 namespace SpaceGod::Core
@@ -149,6 +150,14 @@ namespace SpaceGod::Core
 		int NextId = 1;
 		double NextScanJd = 0;
 
+		/// <summary>The opening skirmish still to come (US-T919): set when the career is made with a player present, so a
+		/// Quick Start reaches a fight; an older save never sets it.</summary>
+		bool OpeningPending = false;
+		double OpeningDueJd = 0;
+
+		/// <summary>How long after the career is made the opening skirmish is seeded, seconds.</summary>
+		double OpeningWithinSeconds = 120;
+
 		static constexpr int MaxOpen = 4;
 		static constexpr int HistoryCap = 30;
 		static constexpr int RankCount = 8;
@@ -187,8 +196,9 @@ namespace SpaceGod::Core
 		/// Refreshes the board at <paramref name="jd"/> (every <see cref="ScanIntervalDays"/>): settles taken-up missions whose
 		/// situation ended without a fight to judge them, drops offers that lapsed, and offers new ones from the war's fights and
 		/// the director's opportunities. Called by <see cref="World.UpdateAdventures"/> only, so only with a player present.
+		/// The first time, it also books the opening skirmish (<see cref="OpeningWithinSeconds"/>) near <paramref name="playerHelioKm"/>.
 		/// </summary>
-		static void Update(const cs::Ref<World>& world, double jd);
+		static void Update(const cs::Ref<World>& world, double jd, DVec3 playerHelioKm);
 
 		/// <summary>Takes up mission <paramref name="m"/> (any other taken up goes back on the board). False if it is not open.</summary>
 		bool Accept(const cs::Ref<Mission>& m);
@@ -201,6 +211,7 @@ namespace SpaceGod::Core
 
 	private:
 		void Offer(const cs::Ref<World>& world, double jd);
+		bool SeedOpening(const cs::Ref<World>& world, double jd, DVec3 playerHelioKm);
 		bool Known(const cs::String& key) const;
 		cs::Ref<Mission> Add(MissionKind kind, const cs::String& key, double jd, double expiresJd);
 		void Settle(const cs::Ref<World>& world, const cs::Ref<Mission>& m, bool success, const cs::String& why, double jd, cs::String notes = cs::String());

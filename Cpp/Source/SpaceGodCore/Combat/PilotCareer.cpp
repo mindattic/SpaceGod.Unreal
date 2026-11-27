@@ -2,13 +2,16 @@
 
 #include "Combat/PilotCareer.h"
 
+#include "BodyCatalog.h"
 #include "Combat/Battle.h"
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/TacticalWriteBack.h"
 #include "Combat/War.h"
+#include "Ephemeris.h"
 #include "Events/EventDirector.h"
 #include "Events/Opportunity.h"
+#include "Fleet.h"
 #include "Law/Law.h"
 #include "Persistence/ObjectGraph.h"
 #include "Ships.h"
@@ -158,12 +161,22 @@ namespace SpaceGod::Core
 		return m;
 	}
 
-	void PilotCareer::Update(const cs::Ref<World>& world, double jd)
+	void PilotCareer::Update(const cs::Ref<World>& world, double jd, DVec3 playerHelioKm)
 	{
 		if (world == nullptr || world->War == nullptr) return;
-		auto existing = Find(world);
-		if (existing != nullptr && jd < existing->NextScanJd) return;
-		auto c = Of(world);
+		auto c = Find(world);
+		if (c == nullptr)
+		{
+			c = Of(world);
+			c->OpeningPending = true;
+			c->OpeningDueJd = jd + c->OpeningWithinSeconds / Astro::SecondsPerDay;
+		}
+		if (c->OpeningPending && jd >= c->OpeningDueJd)
+		{
+			c->OpeningPending = false;
+			if (c->SeedOpening(world, jd, playerHelioKm)) c->NextScanJd = jd;
+		}
+		if (jd < c->NextScanJd) return;
 		c->NextScanJd = jd + ScanIntervalDays;
 
 		// The taken-up mission's ship drawn into a fight: that fight is the one to fly.
@@ -193,6 +206,40 @@ namespace SpaceGod::Core
 				c->Missions.RemoveAt(i);
 		}
 		c->Offer(world, jd);
+	}
+
+	bool PilotCareer::SeedOpening(const cs::Ref<World>& world, double jd, DVec3 playerHelioKm)
+	{
+		// Only when the pilot has nothing to fly yet: no fight under way, no mission on the board.
+		for (const auto& b : world->War->Battles)
+			if (!b->Over) return false;
+		for (const auto& m : Missions)
+			if (m->State == MissionState::Offered) return false;
+		auto pirates = world->Pirates;
+		if (pirates == nullptr || world->Sol == nullptr || world->Fleet == nullptr) return false;
+		// The world (not a star) nearest the pilot.
+		int body = -1;
+		double bestKm = cs::Double::MaxValue;
+		for (const auto& b : world->Catalog()->Bodies())
+		{
+			if (!b->IsVisible() || b->IsStar()) continue;
+			double d = (world->Ephemeris->HelioAt(b->Index, jd) - playerHelioKm).Length();
+			if (d < bestKm)
+			{
+				bestKm = d;
+				body = b->Index;
+			}
+		}
+		if (body < 0) return false;
+
+		// Raiders between the world and the pilot, a Sol frigate between them and the pilot, all facing off.
+		DVec3 at = playerHelioKm - world->Ephemeris->HelioAt(body, jd);
+		DVec3 out = at.LengthSquared() > 0 ? at.Normalized() : DVec3(1, 0, 0);
+		const auto& names = world->RaiderNames.Count() > 0 ? world->RaiderNames : cs::List<cs::String>{ "Gallows Bird", "Red Meridian" };
+		for (int i = 0; i < 2; i++)
+			world->Fleet->SpawnAt(names[i % names.Count()], ShipClass::Destroyer, pirates, body, at - out * (300.0 + 200.0 * i), out, jd);
+		world->Fleet->SpawnAt("SFS Vigilant", ShipClass::Frigate, world->Sol, body, at - out * 50.0, out * -1.0, jd);
+		return world->War->TryStartBattle(body, pirates, jd) != nullptr;
 	}
 
 	void PilotCareer::Offer(const cs::Ref<World>& world, double jd)
@@ -425,5 +472,6 @@ namespace SpaceGod::Core
 	SG_SERIALIZE(PilotCareer, "SpaceGod.Core.PilotCareer",
 		SG_F(Callsign), SG_F(Rank), SG_F(Merit), SG_F(Sorties), SG_F(Victories), SG_F(Defeats), SG_F(Kills), SG_F(CraftKills),
 		SG_F(CapitalsCrippled), SG_F(CarriersSaved), SG_F(CraftLost), SG_F(MissionsWon), SG_F(MissionsFailed), SG_F(Medals),
-		SG_F(Missions), SG_F(History), SG_F(NextId), SG_F(NextScanJd))
+		SG_F(Missions), SG_F(History), SG_F(NextId), SG_F(NextScanJd),
+		SG_OPT(OpeningPending), SG_OPT(OpeningDueJd)) // US-T919: the opening skirmish, absent from older saves
 }
