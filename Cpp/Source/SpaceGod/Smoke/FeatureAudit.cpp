@@ -983,6 +983,8 @@ namespace SpaceGod::Smoke::FeatureAudit
 			}
 			auto ship = StageAtHelm("Audit Explorer", ShipClass::Explorer, body, at, fwd);
 			if (!ship) { Result("transit.ftl-engage", false, cs::Cat("P on the staged explorer: piloting ", B(app->IsPiloting()))); return; }
+			int fought = 0;
+			for (int i = 0; i < 6000 && ship->Battle != nullptr && app->IsPiloting(); i++, fought++) frames(1);
 			for (int i = 0; i < 12; i++)
 			{
 				Tap(Key::PageDown);
@@ -995,10 +997,15 @@ namespace SpaceGod::Smoke::FeatureAudit
 			Tap(Key::End);
 			cs::String engaged = Toast();
 			int f = 0;
-			for (; f < 12000 && !app->InFtlCruise() && app->IsPiloting(); f++) frames(1);
+			int reEngaged = 0;
+			for (; f < 12000 && !app->InFtlCruise() && app->IsPiloting(); f++)
+			{
+				frames(1);
+				if (!app->FtlAutopilot->Active() && !app->InFtlCruise() && ship->Battle == nullptr && reEngaged < 5 && f % 60 == 59) { Tap(Key::End); reEngaged++; }
+			}
 			bool cruising = app->InFtlCruise();
 			Result("transit.ftl-engage", cruising && bound != nullptr,
-				cs::Cat("PgDn: '", plotted, "'; End: '", engaged, "'; ", f, " frames on: crossing ", B(cruising), "; toast '", Toast(), "'"));
+				cs::Cat("PgDn: '", plotted, "'; End: '", engaged, "'; ", f, " frames on (waited out a fight ", fought, ", re-engaged ", reEngaged, "x): crossing ", B(cruising), ", autopilot ", B(app->FtlAutopilot->Active()), ", in battle ", B(ship->Battle != nullptr), "; toast '", Toast(), "'"));
 			if (!cruising) { ToCommand(); return; }
 
 			int c = 0;
