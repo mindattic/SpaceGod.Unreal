@@ -34,6 +34,7 @@
 #include "HAL/FileManager.h"
 #include "HAL/IConsoleManager.h"
 #include "Misc/CommandLine.h"
+#include "Misc/DelayedAutoRegister.h"
 #include "Misc/Parse.h"
 #include "Misc/Paths.h"
 #include "UnrealClient.h"
@@ -496,6 +497,13 @@ namespace SpaceGod::Rendering
 			double Since = -1;
 
 			CommandLineLineup()
+			{
+				// Not in the constructor itself: this is a static, and the command line is not set yet during static
+				// initialization (FCommandLine::Get() there is a fatal error in Shipping, US-T917).
+				static FDelayedAutoRegisterHelper Register(EDelayedRegisterRunPhase::EndOfEngineInit, [this] { Arm(); });
+			}
+
+			void Arm()
 			{
 				if (!FParse::Value(FCommandLine::Get(), TEXT("SpaceGodShipLineup="), Dir)) return;
 				Handle = FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([this](float)
