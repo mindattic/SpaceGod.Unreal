@@ -163,6 +163,11 @@ private:
 	/// One quiet caption for the whole trip, over the view itself: no panel or progress bar to read as a loading screen.
 	void DrawBanner(const cs::String& banner);
 
+	/// US-T903: MISSION COMPLETE / MISSION FAILED over the view for a few seconds after the newest mission settles.
+	void DrawMissionResult();
+	int missionResultSeen = 0;
+	float missionResultUntil = 0;
+
 	void DrawWorldOverlay();
 
 	/// US-T210: set while world-space labels (bodies, ships, stars, gates) draw: DrawLabel then skips a label whose rect

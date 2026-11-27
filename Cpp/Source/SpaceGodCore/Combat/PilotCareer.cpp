@@ -195,6 +195,8 @@ namespace SpaceGod::Core
 			{
 				// Settled by the fight's booking (OnFlown) when flown; a fight over without one was never flown.
 				if (fightOver) c->Settle(world, m, false, "The fight ended without you in it.", jd);
+				else if (m->Battle == nullptr && m->Ship != nullptr && m->Ship->Destroyed)
+					c->Settle(world, m, false, "The ship was lost before a fight was joined.", jd);
 				else if (m->Battle == nullptr && opportunityOver)
 				{
 					bool done = m->Opportunity->State == OpportunityState::Completed;

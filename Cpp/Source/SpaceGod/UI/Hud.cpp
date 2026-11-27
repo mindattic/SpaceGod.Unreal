@@ -37,6 +37,7 @@
 #include "Combat/CombatState.h"
 #include "Combat/Diplomacy.h"
 #include "Combat/Dogfighting.h"
+#include "Combat/PilotCareer.h" // US-T903
 #include "Combat/ElectronicWarfare.h" // US-T404
 #include "Embodiment/CraftPower.h"
 #include "Embodiment/SelfDestruct.h"
@@ -262,6 +263,7 @@ namespace SpaceGod::UI
 			DrawWorldOverlay();
 			DrawBioMassWarning(); // US-T125, under the news (US-T154)
 			DrawSquadBanner(); // US-T215: stacked under it, not over it
+			DrawMissionResult(); // US-T903
 			// A plotted course over the gates: the way and the next leg (U.SPC-T516).
 			auto courseLine = app->CourseLine();
 			if (!courseLine.empty()) DrawBanner(courseLine);
@@ -706,6 +708,22 @@ namespace SpaceGod::UI
 	{
 		auto line = app->SquadLine();
 		if (!line.empty()) DrawBanner(line);
+	}
+
+	void Hud::DrawMissionResult()
+	{
+		auto career = Core::PilotCareer::Find(app->World());
+		if (career == nullptr || career->History.Count() == 0) return;
+		auto m = career->History[career->History.Count() - 1];
+		if (m->Id != missionResultSeen)
+		{
+			missionResultSeen = m->Id;
+			missionResultUntil = Time::unscaledTime + 8.0f;
+			return;
+		}
+		if (Time::unscaledTime >= missionResultUntil) return;
+		bool won = m->State == Core::MissionState::Succeeded;
+		DrawBanner(cs::Cat(won ? "MISSION COMPLETE" : "MISSION FAILED", "   ·   ", m->Title));
 	}
 
 	void Hud::DrawBanner(const cs::String& banner)
