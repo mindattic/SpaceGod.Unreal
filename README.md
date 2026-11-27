@@ -17,16 +17,16 @@ Studio's C++ tools.
 
 | Script | What it does |
 |---|---|
-| `run.bat` | The Desktop shortcut's target. Asks **1) Deploy** (`run.ps1`) or **2) Deploy & Run** (`run.ps1 -Launch`); both repackage only when something changed. Arguments skip the menu (`run.bat -Force` deploys, rebuilding anyway, and plays). |
-| `deploy.bat` | Asks **1) Deploy & Run** (runs `run.ps1 -Launch -Force`) or **2) Run** (starts the published copy; deploys first if there is none). |
-| `run.ps1` | Non-interactive: `git pull`, package Shipping (`tools/package.ps1`), publish to `C:\Apps\SpaceGod\`, refresh the Desktop shortcut `SpaceGod`. `-Launch` starts the game; `-Force` packages even when nothing changed; `-NoPull` skips the pull. |
+| `run.bat` | The Desktop shortcut's target: opens `run.ps1`'s menu. Arguments pass through to `run.ps1`. |
+| `deploy.bat` | Asks **1) Deploy & Run** (`run.ps1 -Redeploy -RunRelease`) or **2) Run** (`run.ps1 -RunRelease`; deploys first if there is none). `deploy.bat --deploy` only deploys. |
+| `run.ps1` | The MindAttic run menu (deploy-lib `Invoke-AppRun`): **1) Redeploy** packages DebugGame and Shipping (`tools/package.ps1`) into `R:\MindAttic\Apps\SpaceGod.Unreal\Debug` and `\Release` and refreshes the Desktop shortcut `SpaceGod`; **2) Run Debug**; **3) Run Release**. `-Redeploy`, `-RunDebug`, `-RunRelease` skip the menu; `-DryRun` shows the steps. |
 
 Every game these scripts start records: they pass `-capture video hq` (see Recording below).
 
 ```powershell
-./run.ps1 -Launch          # deploy and play
-./run.bat                  # what the Desktop shortcut runs: the 1) Deploy / 2) Deploy & Run menu
-./deploy.bat               # the menu
+./run.ps1 -Redeploy -RunRelease   # deploy and play
+./run.bat                         # what the Desktop shortcut runs: the 1) Redeploy / 2) Run Debug / 3) Run Release menu
+./deploy.bat                      # the 1) Deploy & Run / 2) Run menu
 ```
 
 ## Requirements

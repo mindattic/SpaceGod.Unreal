@@ -12,6 +12,7 @@ archived candidate repos kept only as historical reference. The simulation core 
 `Cpp/Source/SpaceGodCore/` is a faithful port of the original Unity game's `Assets/UnitySpace/Core/`, and
 `Cpp/Source/SpaceGod/` of its `Runtime/` (docs/MIGRATION.md). Keep it self-contained: nothing may
 read a sibling repo at build or run time. `tools/bench.ps1` must keep matching `Bench/expected-digests.json`.
-Deploy with `run.ps1` (non-interactive) or `deploy.bat` (the Desktop shortcut's menu).
+Deploy with `run.ps1 -Redeploy` (DebugGame and Shipping to `R:\MindAttic\Apps\SpaceGod.Unreal\{Debug,Release}`);
+with no switches it is the run menu, which `run.bat` (the Desktop shortcut) and `deploy.bat` open.
 Unreal Engine is not installed on every workstation; when it is missing, say so instead of claiming
 a build passed.
