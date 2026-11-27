@@ -185,6 +185,8 @@ namespace SpaceGod::Smoke::FeatureAudit
 
 		// ---------------------------------------------------------------- swim (US-T221: US-T184, swim never hooks on a planet)
 
+		cs::String roleScale = "gameplay";
+
 		int BodyIndex(const char* name);
 
 		struct SwimRun
@@ -1195,7 +1197,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 		/// light and heavy fighter's alone, never a capital's or a hauler's.
 		void HullRole(const char* role, ShipClass cls, FlightFamily family, bool canDrift, int earth)
 		{
-			cs::String id = cs::Cat("roles.", role);
+			cs::String id = cs::Cat("roles.", roleScale, ".", role);
 			auto ship = StageAtHelm(cs::Cat("Audit Role ", role), cls, app->Catalog()->Root()->Index, DVec3(0, 0, Astro::AuKm), DVec3::UnitY);
 			if (!ship) { Result(cs::Cat(id, ".helm"), false, cs::Cat("P on the staged ", ToString(cls), ": piloting ", B(app->IsPiloting()))); return; }
 			Settle();
@@ -1216,7 +1218,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 		/// A seat (gun, station, launched craft, EVA worker): F / 3 / Home leave the seat's own camera alone.
 		void SeatRole(const char* role, Key k, std::initializer_list<Key> mods, int earth)
 		{
-			cs::String id = cs::Cat("roles.", role);
+			cs::String id = cs::Cat("roles.", roleScale, ".", role);
 			ToCommand();
 			if (!SelectAShip()) { Log(cs::Cat("AUDIT ", id, ".focus-never-grabs INFO: no ship to select")); return; }
 			Tap(k, mods);
@@ -1238,19 +1240,18 @@ namespace SpaceGod::Smoke::FeatureAudit
 			cs::String toast = Toast();
 			Tap(Key::J, { Key::LeftShift });
 			Tap(Key::T, { Key::LeftShift });
-			Result("roles.free.flight-keys-idle", !app->AtControls() && Toast() == toast, cs::Cat("Shift+J, Shift+T in command: toast '", Toast(), "'"));
+			Result(cs::Cat("roles.", roleScale, ".free.flight-keys-idle"), !app->AtControls() && Toast() == toast, cs::Cat("Shift+J, Shift+T in command: toast '", Toast(), "'"));
 			Tap(Key::F);
 			Settle();
-			Result("roles.free.focus-grabs", app->SpaceCamera->Mode != CameraMode::Free && app->SpaceCamera->FocusTarget == Target::OfBody(earth),
+			Result(cs::Cat("roles.", roleScale, ".free.focus-grabs"), app->SpaceCamera->Mode != CameraMode::Free && app->SpaceCamera->FocusTarget == Target::OfBody(earth),
 				cs::Cat("F with Earth selected: camera ", Cameras::ToString(app->SpaceCamera->Mode), " on ", Describe(app->SpaceCamera->FocusTarget)));
 			app->SpaceCamera->ExitFocus();
 			CloseEverything();
 		}
 
-		void RoleProbes()
+		void RoleProbesAtScale(int earth)
 		{
 			CloseEverything();
-			int earth = BodyIndex("Earth");
 			HullRole("fighter", ShipClass::Fighter, FlightFamily::LightFighter, true, earth);
 			HullRole("heavy", ShipClass::Gunship, FlightFamily::HeavyFighter, true, earth);
 			HullRole("capital", ShipClass::Battleship, FlightFamily::Capital, false, earth);
@@ -1260,6 +1261,20 @@ namespace SpaceGod::Smoke::FeatureAudit
 			SeatRole("worker", Key::P, { Key::LeftShift }, earth);
 			SeatRole("launched-craft", Key::Slash, { Key::LeftShift }, earth);
 			FreeRole(earth);
+		}
+
+		void RoleProbes()
+		{
+			int earth = BodyIndex("Earth");
+			double goal0 = app->ScaleGoal;
+			for (double goal : { 1.0, 0.0 })
+			{
+				if (app->ScaleGoal != goal) Tap(Key::G);
+				for (int i = 0; i < 900 && cs::Math::Abs(app->Scale()->Blend() - app->ScaleGoal) > 1e-9; i++) frames(1);
+				roleScale = goal > 0.5 ? "gameplay" : "realistic";
+				RoleProbesAtScale(earth);
+			}
+			if (app->ScaleGoal != goal0) Tap(Key::G);
 		}
 
 		void Probe(const char* group, void (*body)())

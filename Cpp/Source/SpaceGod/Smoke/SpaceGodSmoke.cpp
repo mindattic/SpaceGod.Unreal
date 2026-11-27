@@ -232,7 +232,7 @@ namespace SpaceGod::Smoke
 			Click("Back", "main menu");
 			Click("Extras", "main menu > extras");
 			Click("Back", "main menu");
-			Click("New Game", "new game", /*travels*/ true);
+			Click("Quick Start", "new game", /*travels*/ true);
 		}
 
 		void GameTour(UnitySpaceApp& app)
