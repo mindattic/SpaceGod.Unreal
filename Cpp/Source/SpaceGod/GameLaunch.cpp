@@ -45,7 +45,7 @@ namespace SpaceGod
 
 	void GameLaunch::MenuNewGame()
 	{
-		tutorial = 1; // US-T254: offered if this profile never was
+		tutorial = 3; // US-T254: offered if this profile never was; US-T901: and the first-session prompts
 		hasSetup = false; // US-T247: Quick Start, as it always started
 		Start(cs::String());
 	}

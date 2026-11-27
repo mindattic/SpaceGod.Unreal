@@ -73,6 +73,15 @@ private:
 	std::set<cs::String> tutorialHintsSeen;
 	bool tutorialHintsLoaded = false;
 
+	/// <summary>US-T901: the first-session prompts, a profile's first Quick Start (once per profile, after the welcome card):
+	/// find a fight, Fly this, let go, switch scale, each with the player's bound keys, each moving on when the player does
+	/// it. Shown in the hint's card; Next or Shift+Enter skips one, Hide these or Shift+Esc ends them. The one up (-1 none)
+	/// and the scale when the scale prompt came up.</summary>
+	void UpdateFirstPrompts();
+	void NextFirstPrompt();
+	int firstPrompt = -1;
+	double firstPromptScale = 1;
+
 	bool tutorialStylesReady = false;
 	cs::Ref<Texture2D> tutorialPanelTexture, tutorialButtonTexture, tutorialButtonOnTexture, tutorialBarTexture;
 	cs::Ref<GUIStyle> tutorialPanel, tutorialTitle, tutorialHeading, tutorialText, tutorialSmall, tutorialSmallRight, tutorialKeys, tutorialButton;

@@ -218,6 +218,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Quicksave / quickload / slots | F5 / F8 / F6 | anywhere | pause menu > Save / Load |
 | Rewind (again within a few seconds: further back) | Shift+F8 (US-T99) | anywhere | sg.Rewind |
 | Hold to rewind: real time, the last seconds play backward (easing up to 3x, up to 10 s, never past the last rewind); let go to play on from there; then a 10 s rest | Shift+R held (US-T409, US-T410; the frame is the rewind's, so R's drift does nothing meanwhile) | flying a hull or watching a fight, single-player | - |
+| First-session prompts (a profile's first Quick Start, once: find a fight via MISSIONS or the watch-battle key, Fly this, the pilot key to let go, the scale key; each shows the player's bound keys or pad glyphs and moves on when done; never in a scripted, capture or bench run; off with Settings > Gameplay > Tutorial hints): next / hide them | Shift+Enter / Shift+Esc (US-T901) | while a prompt is up | the card's Next / Hide these buttons |
 | Pause menu | Esc (last in the Esc chain) | anywhere | Resume, Help, Save / Load, Settings > Display, Main Menu, Quit |
 | Pause menu: pick / press a button | Up / Down or W / S, then Enter or Space; Left / Right on the leave question, Stay first (US-T311) | pause menu | - |
 | Mechlab: pick a hardpoint or socket, pick what to fit, fit it | Up / Down, Left / Right, Enter (US-T331) | Mechlab view of the outfitting panel (F2) | the mouse |

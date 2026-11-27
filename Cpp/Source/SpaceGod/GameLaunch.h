@@ -45,7 +45,7 @@ namespace SpaceGod
 		static void Tutorial();
 
 		/// US-T254: what this game was asked to do about the tutorial, once: 0 nothing, 1 offer it on a profile's first
-		/// New Game, 2 start it.
+		/// New Game, 2 start it, 3 Quick Start: offer it, then the first-session prompts (US-T901).
 		static int TakeTutorial();
 
 		static void Load(const cs::String& slot);

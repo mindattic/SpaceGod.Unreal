@@ -12,6 +12,7 @@
 #include "Tutorial.h"
 #include "Camera/SpaceCamera.h"
 #include "Input/InputDevice.h"
+#include "Input/KeyBindings.h"
 #include "Persistence/Profiles.h"
 #include "Settings/GameSetting.h"
 #include "Tour/ShowcaseTour.h"
@@ -45,6 +46,39 @@ namespace SpaceGod
 
 		constexpr float HintSeconds = 16, DoneSeconds = 20, DoneFlashSeconds = 1.4f;
 		constexpr int StartDelayFrames = 12; // a new game's scene lays itself out first
+
+		/// US-T901: the profile's flag that its first-session prompts came up (once, finished or not).
+		constexpr const char* FirstPromptsKey = "firstSessionPrompts";
+
+		struct FirstPromptText
+		{
+			const char* Title;
+			cs::String Keys, Text;
+		};
+
+		/// US-T901: the first-session prompts, worded with the keys as the player has them bound (the pad's, after the pad).
+		constexpr int FirstPromptCount = 4;
+		FirstPromptText FirstPrompt(int index)
+		{
+			using Input::KeyAction;
+			using Input::KeyBindings;
+			switch (index)
+			{
+				case 0:
+					return { "Find a fight", KeyBindings::Keys(KeyAction::WatchBattle),
+						cs::Cat("A skirmish is brewing nearby: the MISSIONS tab will offer it soon. Or press ", KeyBindings::Keys(KeyAction::WatchBattle),
+							" to watch a battle and click a ship in it.") };
+				case 1:
+					return { "Fly this", KeyBindings::Keys(KeyAction::Pilot),
+						cs::Cat("With a ship picked, press Fly this on its panel (or ", KeyBindings::Keys(KeyAction::Pilot), ") to take its helm.") };
+				case 2:
+					return { "Let go", KeyBindings::Keys(KeyAction::Pilot),
+						cs::Cat(KeyBindings::Keys(KeyAction::Pilot), " lets go of the controls and puts you back over the galaxy, whenever you like.") };
+				default:
+					return { "Switch scale", KeyBindings::Keys(KeyAction::ToggleScale),
+						cs::Cat(KeyBindings::Keys(KeyAction::ToggleScale), " switches between GAMEPLAY and REALISTIC scale: true distances, true speeds.") };
+			}
+		}
 
 		void Outline(Rect r, float thickness)
 		{
@@ -106,6 +140,7 @@ namespace SpaceGod
 		tutorialOffer = false;
 		tutorialDoneAge = -1;
 		tutorialHint = -1;
+		firstPrompt = -1; // US-T901: the tutorial teaches all of it
 		tutorialLastSelected = Selected;
 		tutorialMissileHeld = Input.LookHeld;
 		tutorial->Start(TutorialSignalsNow(0));
@@ -120,7 +155,7 @@ namespace SpaceGod
 	void UnitySpaceApp::TutorialKeys()
 	{
 		bool running = tutorial != nullptr && tutorial->Running();
-		if (!running && !tutorialOffer && tutorialDoneAge < 0 && tutorialHint < 0) return;
+		if (!running && !tutorialOffer && tutorialDoneAge < 0 && tutorialHint < 0 && firstPrompt < 0) return;
 		const Input::InputDevice& kb = Input::InputDevice::current();
 		bool shift = kb[Input::Key::LeftShift].isPressed || kb[Input::Key::RightShift].isPressed;
 		if (!shift) return;
@@ -142,6 +177,11 @@ namespace SpaceGod
 			if (tutorial->Finished()) tutorialDoneAge = 0;
 		}
 		else if (tutorialDoneAge >= 0) tutorialDoneAge = -1;
+		else if (firstPrompt >= 0)
+		{
+			if (next) NextFirstPrompt();
+			else firstPrompt = -1;
+		}
 		else DismissTutorialHint();
 	}
 
@@ -157,7 +197,7 @@ namespace SpaceGod
 		if (tutorialDueFrames >= 0 && --tutorialDueFrames < 0)
 		{
 			if (tutorialAsk == 2) StartTutorial();
-			else if (tutorialAsk == 1 && !ScriptedTutorialRun() && !Tour::ShowcaseTour::Running())
+			else if ((tutorialAsk == 1 || tutorialAsk == 3) && !ScriptedTutorialRun() && !Tour::ShowcaseTour::Running())
 			{
 				try
 				{
@@ -166,6 +206,12 @@ namespace SpaceGod
 					{
 						tutorialOffer = true;
 						GameSettings::SetFlag(profile, TutorialHints::OfferedKey, true); // offered once, taken or not
+					}
+					// US-T901: a profile's first Quick Start: the first-session prompts, after the welcome card.
+					if (tutorialAsk == 3 && profile != nullptr && TutorialHintsSetting()->Value && !GameSettings::Flag(profile, FirstPromptsKey, false))
+					{
+						firstPrompt = 0;
+						GameSettings::SetFlag(profile, FirstPromptsKey, true); // shown once, finished or not
 					}
 				}
 				catch (const std::exception& e)
@@ -184,7 +230,28 @@ namespace SpaceGod
 			tutorialDoneAge += dt;
 			if (tutorialDoneAge > DoneSeconds) tutorialDoneAge = -1;
 		}
+		else if (firstPrompt >= 0) { if (!tutorialOffer) UpdateFirstPrompts(); }
 		else if (!tutorialOffer) UpdateTutorialHints(dt);
+	}
+
+	void UnitySpaceApp::UpdateFirstPrompts()
+	{
+		bool at = AtControls();
+		bool done = false;
+		switch (firstPrompt)
+		{
+			case 0: done = at || ShowMissions || (Selected.IsShip() && Selected.Ship != nullptr && Selected.Ship->Battle != nullptr); break;
+			case 1: done = at; break;
+			case 2: done = !at; break;
+			default: done = ScaleGoal != firstPromptScale; break;
+		}
+		if (done) NextFirstPrompt();
+	}
+
+	void UnitySpaceApp::NextFirstPrompt()
+	{
+		if (++firstPrompt >= FirstPromptCount) firstPrompt = -1;
+		firstPromptScale = ScaleGoal;
 	}
 
 	void UnitySpaceApp::UpdateTutorialHints(float dt)
@@ -240,7 +307,7 @@ namespace SpaceGod
 	bool UnitySpaceApp::TutorialCardShown() const
 	{
 		bool running = tutorial != nullptr && tutorial->Running();
-		return (running || tutorialDoneAge >= 0 || tutorialHint >= 0) && !tutorialOffer && !ScreenCleared && !Tour::ShowcaseTour::Running();
+		return (running || tutorialDoneAge >= 0 || tutorialHint >= 0 || firstPrompt >= 0) && !tutorialOffer && !ScreenCleared && !Tour::ShowcaseTour::Running();
 	}
 
 	void UnitySpaceApp::DrawTutorialCard()
@@ -253,7 +320,7 @@ namespace SpaceGod
 	void UnitySpaceApp::DrawTutorial()
 	{
 		bool running = tutorial != nullptr && tutorial->Running();
-		if (!running && !tutorialOffer && tutorialDoneAge < 0 && tutorialHint < 0) return;
+		if (!running && !tutorialOffer && tutorialDoneAge < 0 && tutorialHint < 0 && firstPrompt < 0) return;
 		if (ScreenCleared || Tour::ShowcaseTour::Running()) return;
 		if (!tutorialStylesReady)
 		{
@@ -376,6 +443,23 @@ namespace SpaceGod
 				"The manual (F1) has every chapter and every key. A short hint will come up the first time you meet a battle, a hyperlane, a jump gate, a void stop or a fight aboard (Settings > Gameplay turns them off).",
 				tutorialText);
 			if (GUI::Button(Rect(r.x + 16, r.y + h - 34, 96, 24), "Close", tutorialButton)) tutorialDoneAge = -1;
+			return;
+		}
+
+		if (firstPrompt >= 0)
+		{
+			// US-T901: a first-session prompt, up until the player does it or moves on.
+			auto prompt = FirstPrompt(firstPrompt);
+			auto pr = hud->Place(w, h);
+			UI::UiMotion::Scope motion(cs::Cat("tutorial.first.", firstPrompt).c_str());
+			GUI::Label(Rect(pr.x + 16, pr.y + 10, w - 32, 16), cs::Cat("FIRST FLIGHT", sep, firstPrompt + 1, " OF ", FirstPromptCount), tutorialHeading);
+			GUI::Label(Rect(pr.x + 16, pr.y + 28, w - 32, 22), prompt.Title, tutorialTitle);
+			GUI::Label(Rect(pr.x + w * 0.4f, pr.y + 26, w * 0.6f - 16, 24), prompt.Keys, tutorialKeys);
+			GUI::Label(Rect(pr.x + 16, pr.y + 54, w - 32, 54), prompt.Text, tutorialText);
+			float by = pr.y + h - 34;
+			if (GUI::Button(Rect(pr.x + 16, by, 96, 24), "Next", tutorialButton)) NextFirstPrompt();
+			if (GUI::Button(Rect(pr.x + 118, by, 112, 24), "Hide these", tutorialButton)) firstPrompt = -1;
+			GUI::Label(Rect(pr.x + 236, by, w - 252, 24), cs::Cat("Shift+Enter next", sep, "Shift+Esc hides them"), tutorialSmallRight);
 			return;
 		}
 
