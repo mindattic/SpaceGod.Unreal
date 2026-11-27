@@ -46,9 +46,12 @@ namespace SpaceGod::Rendering
 		static bool Station(const cs::Ref<Transform>& parent, const cs::String& model, float size, const cs::Ref<Core::Faction>& faction,
 			cs::List<cs::Ref<Renderer>>& into, Condition condition = Condition::Working, bool axisZ = false, int seed = 0);
 
-		/// <summary>The station an orbital structure is drawn as, or empty for one the pack does not draw (shipyards keep
-		/// their slip, the ISS and Tiangong their real shapes).</summary>
+		/// <summary>The station an orbital structure is drawn as, or empty for one the pack does not draw (a shipyard keeps
+		/// its slip, the ISS and Tiangong their real shapes).</summary>
 		static cs::String ForStructure(Core::StructureKind kind, Core::IndustryKind industry, const cs::String& name);
+
+		/// <summary>The station a defence platform in a battle is drawn as (US-T915), whole.</summary>
+		static cs::String ForPlatform();
 
 		/// <summary>The station a free-flying station body (BodyKind::Station) is drawn as, by its name.</summary>
 		static cs::String ForStationBody(const cs::String& name);

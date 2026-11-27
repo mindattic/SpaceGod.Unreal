@@ -287,8 +287,14 @@ namespace SpaceGod::Rendering
 			case StructureKind::Depot: return "Storage18";
 			case StructureKind::Habitat: return "Cylinderical12";
 			case StructureKind::Gateway: return "Cylinderical18";
+			case StructureKind::Shipyard: return "Combined16";
 			default: return cs::String();
 		}
+	}
+
+	cs::String SscKit::ForPlatform()
+	{
+		return "Combined10";
 	}
 
 	// US-T149 (user: "use the prebuilt ships and space stations first before you invent your own"): every station role

@@ -761,10 +761,11 @@ namespace
 		{
 			std::map<std::string, std::set<std::string>> roles;
 			for (IndustryKind k : AllIndustries) roles[SscKit::ForStructure(StructureKind::Factory, k, "")].insert(cs::Cat("Factory (", ToString(k), ")"));
-			for (StructureKind k : { StructureKind::Depot, StructureKind::Habitat, StructureKind::Gateway })
+			for (StructureKind k : { StructureKind::Shipyard, StructureKind::Depot, StructureKind::Habitat, StructureKind::Gateway })
 				roles[SscKit::ForStructure(k, IndustryKind::Mine, "")].insert(ToString(k));
 			for (const char* name : StationBodies) roles[SscKit::ForStationBody(name)].insert(cs::Cat("Station body (", name, ")"));
 			roles["Combined20"].insert("Void Station");
+			roles[SscKit::ForPlatform()].insert("Defence platform");
 			roles["Combined28"].insert("Megastructure");
 			for (const char* wreck : { "Combined16", "Combined24", "Combined10" }) roles[wreck].insert("Derelict");
 			for (const auto& model : SscKit::ModelNames())

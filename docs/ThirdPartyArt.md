@@ -234,6 +234,27 @@ a new asset.
   Grey) with a light wash of its owner's colour. Without the pack, headless, or with `-NoSSC`, every station is
   procedural as before. The lineup adds `ssc-stations` and `ssc-archetypes` sheets.
 
+### Loop stations (US-T915)
+
+Every station a mission or battle in the loop shows is one of the pack's complete prebuilt stations, as it ships;
+selection is by kind (or by name for free-flying bodies), deterministic, and render-only (the bench digests do not move).
+Without the pack, headless or with `-NoSSC` the procedural mesh is the fallback. `/Game/ThirdParty/SSC` is in
+`DirectoriesToAlwaysCook` (`Cpp/Config/DefaultGame.ini`, about 243 MB), as USC and Star Sparrow are, so packages carry them.
+
+| Station kind | SSC asset (`/Game/ThirdParty/SSC/Meshes/SM_SSC_<Model>_<Atlas>_Whole`) | Why |
+| --- | --- | --- |
+| Factory (by industry) | `Storage01`, `Storage04`, `Storage11`, `Combined21` | industrial blocks suit works |
+| Depot | `Storage18` | the tank farm |
+| Habitat | `Cylinderical12` (ring on +Z) | the wheel |
+| Gateway | `Cylinderical18` (ring on +Z) | the gyroscope ring |
+| Shipyard | `Combined16` (US-T915, was the procedural frame; the build slip and ribs stay) | a big complex with hangars to build in |
+| Defence platform in a battle | `Combined10` (US-T915, was the procedural gun-core ring; `UnitySpaceApp::UpdatePlatforms`) | a compact armed complex, scaled to the platform's true length |
+| Free-flying station | `Combined30`, `Combined08`, `Combined01` by name | |
+| Void Station / megastructure | `Combined20` / `Combined28` | the grandest |
+| Derelict | `Combined16`, `Combined24`, `Combined10`, darkened | shares two with the shipyard and platform, told apart by the darkening and the torn module |
+
+The ISS and Tiangong (`CrewedStation`) keep their real shapes: they are real stations, not SSC's.
+
 ## The kit part catalogue (US-T763)
 
 `Data/ModularParts.json` indexes every modular part of the three kits: the parts of each `*Modules.fbx` (USC's 18 sets,

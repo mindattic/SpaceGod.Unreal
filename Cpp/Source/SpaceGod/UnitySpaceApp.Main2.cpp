@@ -77,6 +77,7 @@
 #include "Rendering/Pipeline/RenderBackend.h"
 #include "Rendering/ShipMeshFactory.h"
 #include "Rendering/ShipModels.h"
+#include "Rendering/SscKit.h" // US-T915
 #include "UI/Icons.h"
 #include "Views/AsteroidBelt.h"
 #include "Views/BattleFx.h"
@@ -1938,10 +1939,15 @@ namespace SpaceGod
 				{
 					go = UnityCompat::NewGameObject(u->Name());
 					go->transform->SetParent(systemRoot, false);
-					UnityCompat::AddComponent<UnityCompat::MeshFilter>(go)->sharedMesh = Rendering::ShipMeshFactory::GetPlatform(u->Faction);
-					auto mr = UnityCompat::AddComponent<UnityCompat::MeshRenderer>(go);
-					mr->SetSharedMaterial(Rendering::ShipModels::ProceduralMaterial());
-					mr->shadowCastingMode = UnityCompat::ShadowCastingMode::Off;
+					// US-T915: a Space Station Creator complete station, whole; the procedural platform without the pack.
+					cs::List<cs::Ref<Renderer>> parts;
+					if (!Rendering::SscKit::Station(go->transform, Rendering::SscKit::ForPlatform(), 1.0f, u->Faction, parts))
+					{
+						UnityCompat::AddComponent<UnityCompat::MeshFilter>(go)->sharedMesh = Rendering::ShipMeshFactory::GetPlatform(u->Faction);
+						auto mr = UnityCompat::AddComponent<UnityCompat::MeshRenderer>(go);
+						mr->SetSharedMaterial(Rendering::ShipModels::ProceduralMaterial());
+						mr->shadowCastingMode = UnityCompat::ShadowCastingMode::Off;
+					}
 					platformViews[u->Combat] = go;
 				}
 				auto rel = Relative(BattleScene(b, u->Pos));
