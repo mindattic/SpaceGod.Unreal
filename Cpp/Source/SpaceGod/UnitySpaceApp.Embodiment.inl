@@ -302,6 +302,7 @@ private:
 	/// radii; the slam and the view's kick as the catapult fires.</summary>
 	static constexpr double TubeCanopyForward = 0.55, TubeCanopyRise = 0.22;
 	static constexpr double TubeWatchAhead = 14, TubeWatchSide = 5, TubeWatchRise = 2.5;
+	static constexpr double TubeWatchExitShare = 0.5;
 	static constexpr double CatapultSlam = 1.4;
 	static constexpr float CatapultFovKickDeg = 10.0f;
 

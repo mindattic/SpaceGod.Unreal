@@ -905,7 +905,10 @@ namespace SpaceGod
 		// Cinematic: off to the side of the tube's mouth and ahead of it, sized by the craft as drawn, so it is thrown past.
 		double kmScale = BattleKmScale();
 		double radiusKm = kmScale > 0 ? radius / kmScale : 0;
-		return BattleScene(f->Battle, v->Deck->Bow() + (axis * TubeWatchAhead + right * TubeWatchSide + up * TubeWatchRise) * radiusKm);
+		// The sim hands the craft to the chase ExitKm past the mouth, a fixed length: at gameplay scale 14 radii is beyond that, so
+		// the eye stays within it and the craft is still thrown past before the glide begins.
+		double ahead = cs::Math::Min(TubeWatchAhead * radiusKm, FlightDecks::ExitKm * TubeWatchExitShare);
+		return BattleScene(f->Battle, v->Deck->Bow() + axis * ahead + (right * TubeWatchSide + up * TubeWatchRise) * radiusKm);
 	}
 
 	void UnitySpaceApp::StepSeatFeel(const cs::Ref<IEmbodiable>& held, const EmbodimentInput& input, float dt)
