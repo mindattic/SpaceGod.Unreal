@@ -1123,7 +1123,7 @@ namespace SpaceGod::UI
 		if (speed > 1e-6)
 		{
 			auto dir = vel / speed;
-			driftDeg = cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, DVec3::Dot(dir, app->PilotForward())))) * 180 / cs::Math::PI;
+			driftDeg = cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, DVec3::Dot(dir, app->PilotForward())))) * 180 / (cs::Math::Tau * 0.5);
 			Vector2 pro;
 			if (DirectionToGui(dir, pro))
 			{
@@ -1599,14 +1599,14 @@ namespace SpaceGod::UI
 
 		// The hull the volley will go at: the locked one near the line, else the hostile nearest it.
 		cs::Ref<BattleUnit> target = nullptr;
-		double best = cs::Math::Cos(Battle::VolleyConeDeg * cs::Math::PI / 180);
+		double best = cs::Math::Cos(Battle::VolleyConeDeg * (cs::Math::Tau * 0.5) / 180);
 		for (const auto& o : battle->Units)
 		{
 			if (!battle->Hostile(me, o)) continue;
 			auto to = o->Pos - me->Pos;
 			if (to.LengthSquared() < 1e-12) continue;
 			double cos = DVec3::Dot(look, to.Normalized());
-			if (o == me->PlayerLockTarget && cos > cs::Math::Cos(Battle::VolleyConeDeg * cs::Math::PI / 180)) { target = o; break; }
+			if (o == me->PlayerLockTarget && cos > cs::Math::Cos(Battle::VolleyConeDeg * (cs::Math::Tau * 0.5) / 180)) { target = o; break; }
 			if (cos > best) { best = cos; target = o; }
 		}
 
@@ -1690,12 +1690,12 @@ namespace SpaceGod::UI
 		// The hull turned a degrees to starboard: the foe's bearing swings the other way in the hull's own frame.
 		auto turned = [&](double deg)
 		{
-			double a = deg * cs::Math::PI / 180, c = cs::Math::Cos(a), s = cs::Math::Sin(a);
+			double a = deg * (cs::Math::Tau * 0.5) / 180, c = cs::Math::Cos(a), s = cs::Math::Sin(a);
 			return DVec3(local.X * c - local.Z * s, local.Y, local.X * s + local.Z * c);
 		};
 		double harmStbd = ArmourAngling::Harm(spec, turned(ArmourAngling::SlantDeg));
 		double harmPort = ArmourAngling::Harm(spec, turned(-ArmourAngling::SlantDeg));
-		double offBow = cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, local.Z))) * 180 / cs::Math::PI;
+		double offBow = cs::Math::Acos(cs::Math::Max(-1.0, cs::Math::Min(1.0, local.Z))) * 180 / (cs::Math::Tau * 0.5);
 		cs::String lies = offBow <= 30 ? cs::String("bow-on") : offBow >= 150 ? cs::String("stern-on")
 			: offBow >= 60 && offBow <= 120 ? cs::String("beam-on") : cs::String("quartering");
 		cs::String foeName = foe->Ship != nullptr ? foe->Ship->Name : foe->Name();
@@ -1818,7 +1818,7 @@ namespace SpaceGod::UI
 	cs::Ref<BattleUnit> Hud::NearestHostileToAim(const cs::Ref<Battle>& battle, const cs::Ref<BattleUnit>& me)
 	{
 		cs::Ref<BattleUnit> best = nullptr;
-		double bestCos = cs::Math::Cos(20 * cs::Math::PI / 180);
+		double bestCos = cs::Math::Cos(20 * (cs::Math::Tau * 0.5) / 180);
 		auto aim = app->PilotAimDirection();
 		for (const auto& o : battle->Units)
 		{
