@@ -535,7 +535,7 @@ namespace SpaceGod::UnityCompat
 		static cs::Ref<TextAsset> LoadText(const cs::String& path);
 		static cs::Ref<GameObject> LoadModel(const cs::String& path);
 		/// Null when there is no such file (Unity's LoadAsync gives null for a missing path's type, too).
-		static cs::Ref<ResourceRequest> LoadAsync(const cs::String& path, ResourceType type);
+		static cs::Ref<ResourceRequest> LoadAsync(const cs::String& path, ResourceType type, int priority = 0);
 		static void UnloadAsset(const ResourceAsset& asset);
 		static void UnloadAsset(const cs::Ref<Texture2D>& texture);
 		/// Finishes the loads whose work is done (raising completed); UnityScene calls it once a frame.

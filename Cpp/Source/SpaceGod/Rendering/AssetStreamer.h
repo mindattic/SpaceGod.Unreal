@@ -67,9 +67,9 @@ namespace SpaceGod::Rendering
 		/// on the frame it arrives (with null if there is no such asset). A view torn down meanwhile must check it is
 		/// still alive in its callback.
 		/// </summary>
-		template <class T> static void Request(const cs::String& path, const cs::Action<cs::Ref<T>>& ready)
+		template <class T> static void Request(const cs::String& path, const cs::Action<cs::Ref<T>>& ready, int priority = 0)
 		{
-			auto e = Get(path, false);
+			auto e = Get(path, false, priority);
 			if (e->Done)
 			{
 				if (ready) ready(As<T>(e->Asset));
@@ -120,8 +120,8 @@ namespace SpaceGod::Rendering
 
 		/// <summary>The entry for <paramref name="path"/>, its load started unless <see cref="Admit"/> holds it back
 		/// (<paramref name="force"/>: started regardless).</summary>
-		static cs::Ref<Entry> Get(const cs::String& path, bool force);
-		static void Start(const cs::String& path, const cs::Ref<Entry>& e);
+		static cs::Ref<Entry> Get(const cs::String& path, bool force, int priority = 0);
+		static void Start(const cs::String& path, const cs::Ref<Entry>& e, int priority = 0);
 		static void Complete(const cs::String& path, const cs::Ref<Entry>& e);
 		static cs::Dictionary<cs::String, cs::Ref<Entry>>& Entries();
 		static cs::HashSet<cs::String>& Pinned();

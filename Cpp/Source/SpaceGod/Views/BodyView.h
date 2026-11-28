@@ -130,6 +130,10 @@ namespace SpaceGod::Views
 		float flare = 0;
 		float nextFlareAt = 0;
 
+		// US-T930: asks for the colour map; run on the first Apply with a priority by apparent size, so the body nearest
+		// the camera gets its map first instead of in catalogue order.
+		std::function<void(int)> startMap;
+
 		// Gas giant weather (GasGiant.shader).
 		const Core::GasGiantWeather::Profile* windProfile = nullptr;
 		cs::List<float> drift = cs::List<float>(std::vector<float>(37));

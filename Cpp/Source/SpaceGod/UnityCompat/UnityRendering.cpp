@@ -901,7 +901,7 @@ namespace SpaceGod::UnityCompat
 		}
 	}
 
-	cs::Ref<ResourceRequest> Resources::LoadAsync(const cs::String& path, ResourceType type)
+	cs::Ref<ResourceRequest> Resources::LoadAsync(const cs::String& path, ResourceType type, int priority)
 	{
 		auto load = std::make_shared<PendingLoad>();
 		load->Request = cs::New<ResourceRequest>();
@@ -913,7 +913,7 @@ namespace SpaceGod::UnityCompat
 			{
 				FSoftObjectPath asset(ToF(ObjectPath(path)));
 				if (!FPackageName::DoesPackageExist(asset.GetLongPackageName())) return nullptr;
-				Streamable().RequestAsyncLoad(asset, FStreamableDelegate::CreateLambda([load] { load->Done = true; }));
+				Streamable().RequestAsyncLoad(asset, FStreamableDelegate::CreateLambda([load] { load->Done = true; }), priority);
 				break;
 			}
 			case ResourceType::GameObject:

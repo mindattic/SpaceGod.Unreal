@@ -177,7 +177,8 @@ namespace SpaceGod::Views
 			material->SetColor("_Color", tint);
 			bool clouds = body->SurfaceHaze >= 0.99f;
 			// A visible-light cloud deck (Venus) is nearly featureless: keep its contrast faint.
-			material->SetFloat("_NoiseStrength", clouds ? 0.05f : body->Kind == BodyKind::Planet ? 0.12f : 0.32f);
+			// US-T930: a body with no map keeps this look for good, so its noise is livelier (the old 0.12 read as flat asphalt).
+			material->SetFloat("_NoiseStrength", clouds ? 0.05f : body->Kind == BodyKind::Planet ? (mapped ? 0.12f : 0.3f) : 0.32f);
 			material->SetFloat("_NoiseScale", clouds ? 1.6f : body->Kind == BodyKind::Planet ? 2.2f : 3.5f);
 			if (windProfile) material->SetTexture("_MainTex", AssetStreamer::Swatch(tint));
 			if (mapped)
@@ -186,7 +187,9 @@ namespace SpaceGod::Views
 				bool tintTexture = body->TintTexture;
 				float poleMargin = body->TexturePoleMargin;
 				cs::String texName = body->Texture, bodyName = body->Name;
-				AssetStreamer::Request<Texture2D>(AssetStreamer::TexturePath(body->Texture), [m, tintTexture, poleMargin, tint, texName, bodyName](cs::Ref<Texture2D> texture)
+				startMap = [m, tintTexture, poleMargin, tint, texName, bodyName](int priority)
+				{
+				AssetStreamer::Request<Texture2D>(AssetStreamer::TexturePath(texName), [m, tintTexture, poleMargin, tint, texName, bodyName](cs::Ref<Texture2D> texture)
 				{
 					auto mat = m.lock();
 					if (!Alive(mat) || !texture)
@@ -199,7 +202,8 @@ namespace SpaceGod::Views
 					mat->SetFloat("_UseTexture", 1);
 					mat->SetFloat("_PoleMargin", poleMargin);
 					mat->SetColor("_Color", tintTexture ? tint : Color::white());
-				});
+				}, priority);
+				};
 			}
 			if (!body->NormalMap.empty())
 			{
@@ -260,6 +264,15 @@ namespace SpaceGod::Views
 		bool ember = Body->IsStar() && !Body->Singularity && Body->Gm < 1e-6;
 		if (ember) radius *= EmberScale;
 		t->localScale = Vector3::one() * radius;
+		if (startMap)
+		{
+			// US-T930: the first frame it is placed, ask for its map, nearer (larger on screen) first. One call, bounded.
+			float apparent = radius / Mathf::Max(relative.magnitude(), 1e-6f);
+			int priority = 1 + static_cast<int>(Mathf::Clamp(apparent * 1000.0f, 0.0f, 99.0f));
+			auto go = std::move(startMap);
+			startMap = nullptr;
+			go(priority);
+		}
 		if (manalith)
 		{
 			// US-T458: the Manalith tumbles on its own clock; its meridian faces Wendmere, which is where its shards fall.

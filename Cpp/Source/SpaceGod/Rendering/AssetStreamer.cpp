@@ -51,7 +51,7 @@ namespace SpaceGod::Rendering
 		return cs::Strings::StartsWith(path, "Ships/") ? UnityCompat::ResourceType::GameObject : UnityCompat::ResourceType::Texture2D;
 	}
 
-	cs::Ref<AssetStreamer::Entry> AssetStreamer::Get(const cs::String& path, bool force)
+	cs::Ref<AssetStreamer::Entry> AssetStreamer::Get(const cs::String& path, bool force, int priority)
 	{
 		cs::Ref<Entry> e;
 		if (!Entries().TryGetValue(path, e))
@@ -62,14 +62,14 @@ namespace SpaceGod::Rendering
 		if (e->Started) return e;
 		// US-T133: held back until the streaming warms it (the view draws its stand-in meanwhile).
 		if (!force && Admit && !Pinned().Contains(path) && !Admit(path)) return e;
-		Start(path, e);
+		Start(path, e, priority);
 		return e;
 	}
 
-	void AssetStreamer::Start(const cs::String& path, const cs::Ref<Entry>& e)
+	void AssetStreamer::Start(const cs::String& path, const cs::Ref<Entry>& e, int priority)
 	{
 		e->Started = true;
-		auto request = Resources::LoadAsync(path, TypeAt(path));
+		auto request = Resources::LoadAsync(path, TypeAt(path), priority);
 		if (!request)
 		{
 			// No such asset. A view that waited on a path held back hears there is none, as it would have on asking.
