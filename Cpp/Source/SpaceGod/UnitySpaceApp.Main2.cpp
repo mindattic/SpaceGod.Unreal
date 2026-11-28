@@ -377,8 +377,17 @@ namespace SpaceGod
 			if (locked != nullptr && Input.Fire && !pilotCruise().Active() && !ClickPanelOpen())
 			{
 				bool enemy = World()->Diplomacy()->Hostile(ship->Faction, locked->Faction);
-				if (World()->War->TryStartPlayerAttack(ship, locked, pilotFrameBody, pilotOffsetKm(), pilotForward(), Clock->Jd) != nullptr)
+				if (auto fight = World()->War->TryStartPlayerAttack(ship, locked, pilotFrameBody, pilotOffsetKm(), pilotForward(), Clock->Jd))
 				{
+					// A fight beside a lane is anchored off the system's root (US-T957): the helm moves to that frame where it
+					// is, so the pose it writes into the fight every frame (pilotOffsetKm - Anchor) stays put.
+					if (fight->Body != pilotFrameBody)
+					{
+						auto helio = Ephemeris()->Helio(pilotFrameBody) + pilotOffsetKm();
+						pilotFrameBody = fight->Body;
+						SetpilotOffsetKm(helio - Ephemeris()->Helio(pilotFrameBody));
+						if (helmFlight != nullptr) helmFlight->FrameBody = pilotFrameBody;
+					}
 					ShowToast(enemy ? cs::Cat("Weapons free on the ", locked->Name)
 						: cs::Cat("Weapons free on the ", locked->Name, ": an attack on a lawful ship is a crime if anyone sees it"));
 					return;

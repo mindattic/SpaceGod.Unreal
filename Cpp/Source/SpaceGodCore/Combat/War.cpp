@@ -1016,6 +1016,9 @@ namespace SpaceGod::Core
 			auto fight = TryStartPlayerBattle(ship, body, offsetFromBodyKm, forward, jd);
 			if (fight != nullptr || ship->Battle != nullptr) return fight;
 		}
+		// US-T957: at the helm, a target holding no orbit here (lying in wait off a lane, or under way) is fought where it is.
+		if (ship == world->PilotedShip && target->Battle == nullptr && !Core::Fleet::IsAt(target->Controller(), body))
+			return EngageUnderWay(ship, target, body, offsetFromBodyKm, forward, jd);
 		auto neighbourhood = ScaleModel::NeighbourhoodKm((*Catalog())[body]);
 		if (offsetFromBodyKm.Length() > neighbourhood) return nullptr;
 		auto existing = BattleAt(body);
@@ -1055,6 +1058,53 @@ namespace SpaceGod::Core
 		Battles.Add(b);
 		world->Log(jd, cs::Cat(b->Name, ": the ", ship->Name, " opens fire on the ", target->Faction->Name, " ", cs::Strings::ToLowerInvariant(target->Spec->DisplayName), " ", target->Name), WorldEventKind::Battle, Shown(b));
 		BumpDanger(body, 1);
+		Started(b);
+		return b;
+	}
+
+	cs::Ref<Battle> War::EngageUnderWay(const cs::Ref<Ship>& ship, const cs::Ref<Ship>& target, int body, DVec3 offsetFromBodyKm, DVec3 forward, double jd)
+	{
+		auto leader = target->Controller();
+		if (leader->Destroyed || leader->Derelict || leader->Battle != nullptr || leader == world->PilotedShip || leader->Planetside()) return nullptr;
+		bool offLane = (leader->Phase == ShipPhase::Lurk || leader->Phase == ShipPhase::Adrift) && leader->LaneLeg.Lane != nullptr;
+		// A ship riding a lane is in it, out of reach of guns; one parked or queued elsewhere is fought at its own body.
+		if (!offLane && leader->Phase != ShipPhase::Transit) return nullptr;
+		auto here = world->Ephemeris->Helio(body) + offsetFromBodyKm;
+		if ((Fleet()->StateOf(leader, jd).HelioKm - here).Length() > Outfitting::ScanRangeKm(ship)) return nullptr;
+		int root = Catalog()->Root()->Index;
+		cs::Ref<Battle> b;
+		DVec3 at;
+		if (offLane)
+		{
+			// Beside the lane, as an interdiction's fight (Interdict), but where the pilot is: the site's side is the
+			// pilot's offset from the target's lane point, so the battle's anchor and its lane site agree.
+			auto lane = leader->LaneLeg.Lane;
+			at = here - world->Ephemeris->Helio(root);
+			b = cs::New<Battle>(TakeBattleId(), root, cs::Cat("Fight on the ", lane->Name, " lane"), at, jd, rng.Next());
+			auto site = cs::New<LaneSite>();
+			site->Hop = leader->LaneLeg; site->FromOffset = leader->LaneFromOffset; site->ToOffset = leader->LaneToOffset; site->Progress = leader->LaneHold;
+			site->Side = here - Fleet()->LanePoint(leader, jd, leader->LaneHold);
+			b->Site = site;
+			Hook(b);
+			auto approach = DVec3::Cross(DVec3::UnitZ, site->Side);
+			b->ApproachAxis = approach.LengthSquared() > 0 ? approach.Normalized() : DVec3::UnitX;
+		}
+		else
+		{
+			// Under way: fought off the pilot's frame body where the pilot is, unless a fight is already on there.
+			if (offsetFromBodyKm.Length() > ScaleModel::NeighbourhoodKm((*Catalog())[body])) return nullptr;
+			auto existing = BattleAt(body);
+			if (existing != nullptr && (body != root || (existing->Anchor - offsetFromBodyKm).Length() <= GateFightRangeKm)) return nullptr;
+			at = offsetFromBodyKm;
+			b = NewBattle(body, jd, cs::List<cs::Ref<Ship>>(), cs::Nullable<DVec3>(at));
+		}
+		auto unit = b->AddShip(ship, 0, at - b->Anchor, forward);
+		unit->SetPlayerControlled(true);
+		Join(b, leader, 1, false);
+		Battles.Add(b);
+		int shown = offLane ? leader->LaneLeg.Lane->A : Shown(b);
+		world->Log(jd, cs::Cat(b->Name, ": the ", ship->Name, " opens fire on the ", target->Faction->Name, " ", cs::Strings::ToLowerInvariant(target->Spec->DisplayName), " ", target->Name), WorldEventKind::Battle, shown);
+		if (!offLane) BumpDanger(body, 1);
 		Started(b);
 		return b;
 	}

@@ -450,7 +450,8 @@ namespace SpaceGod::Core
 		/// one side and the target's group, its faction's other ships here and its platforms over this world on the
 		/// other. If a fight is already on here with the target in it, the player joins against it. Attacking a lawful
 		/// ship is a crime, judged when the fight ends (see <see cref="Law.OnBattleEnded"/>). The target must hold orbit at
-		/// this body (parked or queued at its ring) and the player be in its neighbourhood. Null if not.
+		/// this body (parked or queued at its ring) and the player be in its neighbourhood, unless the pilot attacks a ship
+		/// off any orbit (see <see cref="EngageUnderWay"/>). Null if not.
 		/// </summary>
 		cs::Ref<Battle> TryStartPlayerAttack(const cs::Ref<Ship>& ship, const cs::Ref<Ship>& target, int body, DVec3 offsetFromBodyKm, DVec3 forward, double jd);
 
@@ -562,6 +563,11 @@ namespace SpaceGod::Core
 		cs::Nullable<DVec3> SpotOf(const cs::Ref<Faction>& f, int body, double jd);
 
 		cs::Ref<Battle> NewBattle(int body, double jd, const cs::List<cs::Ref<Ship>>& present, cs::Nullable<DVec3> at = cs::Nullable<DVec3>());
+
+		/// <summary>US-T957: the pilot's attack on a target holding no orbit, fought where the pilot is: a raider lying in wait
+		/// beside a lane (or one thrown out of it) in a lane-site fight, a ship under way in a fight off the pilot's frame body.
+		/// Only within the pilot's scanner reach of it. Null if not.</summary>
+		cs::Ref<Battle> EngageUnderWay(const cs::Ref<Ship>& ship, const cs::Ref<Ship>& target, int body, DVec3 offsetFromBodyKm, DVec3 forward, double jd);
 
 		// battleCount keys for concealed skirmishes and fights at gates (body indices are never negative).
 		static constexpr int ConcealedBelt = -1; static constexpr int ConcealedDark = -2; static constexpr int GateKey = -10;
