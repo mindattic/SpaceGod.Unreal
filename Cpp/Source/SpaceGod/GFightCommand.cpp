@@ -133,6 +133,7 @@ namespace
 			auto me = app.PilotUnit();
 			if (me == nullptr || me->PlayerLockTarget != nullptr) return true;
 			if (auto f = cs::As<SpaceGod::Core::FighterSeat>(app.HeldSeat())) f->CycleLock(f->Unit->Forward);
+			else app.ProbeLockHelmAttacker(); // US-T932: the demo's hull is flown from the helm, not a fighter seat
 			return false;
 		} });
 		run->steps.push_back({ TEXT("lock held"), [](SpaceGod::UnitySpaceApp&, double t) { return t >= 2.0; } });

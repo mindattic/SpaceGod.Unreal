@@ -128,6 +128,9 @@ private:
 	bool helmTriggerWas = false;
 
 public:
+	/// <summary>US-T932: the probe's way to the helm lock (<see cref="LockHelmAttacker"/>), which is private.</summary>
+	void ProbeLockHelmAttacker() { LockHelmAttacker(); }
+
 	/// <summary>Where the player is looking (ecliptic, unit): around a capital ship at its helm, else down the crosshair.</summary>
 	Core::DVec3 PilotLookDirection();
 
