@@ -33,7 +33,12 @@ param(
   [string]$ExecCmds = '',
   [int]$ResX = 1600,
   [int]$ResY = 900,
-  [switch]$CaptureStats
+  [switch]$CaptureStats,
+  # US-T944: -Offscreen only. The game steps exactly 1/60 s per rendered frame (-capture-fixed=60, CaptureFixedStep.cpp)
+  # and never runs faster than real time, so the frame feed takes every frame; -Capture defaults to lossless 'video'
+  # instead of 'video hq'. The game runs as slow as it renders: end the run with the scenario (e.g. "sg.Tour auto quit"),
+  # not -Seconds, which counts real seconds. docs/CAPTURE.md "The 1920x1080 tour video".
+  [switch]$FixedStep
 )
 
 <#
@@ -57,6 +62,7 @@ quits; the log is Cpp/Saved/Logs/<project>.log.
   ./tools/play.ps1 -Mode audit              # headless: the smoke, then a probe per binding, PASS/FAIL each (US-T48)
   ./tools/play.ps1 -Mode dogfight -Offscreen -Seconds 30          # no window: a 30 s video of the dogfight demo (US-T163)
   ./tools/play.ps1 -Offscreen -ExecCmds "sg.Tour auto quit"       # no window: the showcase tour, recorded
+  ./tools/play.ps1 -Offscreen -FixedStep -ResX 1920 -ResY 1080 -ExecCmds "sg.Tour auto quit" # lossless 1080p60 tour (US-T944)
   ./tools/play.ps1 -Offscreen                                     # no window: an ordinary --headless session (the shared
                                                                    # Start-Headless.ps1), ready for a test/CI harness (US-T234)
 #>
@@ -86,6 +92,10 @@ if ($Offscreen) {
   $launcher = Join-Path $repo '..\Unreal.Shared\tools\Start-Headless.ps1'
   if (-not (Test-Path -LiteralPath $launcher)) { throw "-Offscreen needs Unreal.Shared cloned next to this repo ($launcher)." }
   $gameArgs = @("-ResX=$ResX", "-ResY=$ResY", '-log')
+  if ($FixedStep) {
+    if (-not $PSBoundParameters.ContainsKey('Capture')) { $Capture = 'video' }
+    $gameArgs += '-capture-fixed=60'
+  }
   # -Capture '' -CaptureStats: the same run with no capture at all, for the frame rate to compare against.
   if ($Capture) { $gameArgs += @('-capture') + @($Capture -split '\s+' | Where-Object { $_ }) }
   if ($Mode -eq 'dogfight') { $gameArgs += $(if ($Heavy) { '-dogfight-heavy' } else { '-dogfight' }) }

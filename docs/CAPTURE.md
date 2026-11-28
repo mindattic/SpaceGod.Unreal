@@ -34,6 +34,17 @@ Anything after `-capture` that is not a capture word is left for the game, as Mi
 Run it on a quiet machine: lossless `-capture video` at 1080p falls over a minute behind and the capture valve stops the
 tape, and so does free RAM under 2 GB (parallel Unreal builds); the valve's reason is in the session's `.log`.
 
+**Fixed-step capture (US-T944).** `-capture-fixed` or `-capture-fixed=<fps>` (60 when no rate is given; this copy only,
+`CaptureFixedStep.cpp`) puts the game on a fixed time step: every rendered frame advances exactly 1/fps of game time
+(FApp's fixed delta, which the sim, the Unity clock and the tour read), and a frame done sooner than 1/fps of real time
+waits the rest. A slow frame is slow motion in real time, never a jump in the game. `tools/play.ps1 -Offscreen -FixedStep
+-ResX 1920 -ResY 1080 -ExecCmds 'sg.Tour auto quit'` films the tour this way, lossless `video` unless `-Capture` says
+otherwise; end such a run with its scenario, since `-Seconds` counts real seconds. The rest is MindAttic.Media.Capture's
+(M.CAPT-T242): until its frame feed reads back every frame, waits for the host to take each one and records the ring as
+a fixed-timestep tape (frame-index stamps at fps/1, a blocking sink, no encoder-lag stop; the RAM valve stays), the host
+still paces the tape by the wall clock, so a game running slower than real time is filmed with held frames and a slow
+lossless encoder can still trip the lag valve.
+
 ## 2. Output
 
 - Root: `R:\MindAttic\Media\Capture\{RepoName}\`. If `R:` is missing: `%USERPROFILE%\Videos\MindAttic\Capture\{RepoName}\`.
