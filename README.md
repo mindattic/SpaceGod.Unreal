@@ -124,6 +124,10 @@ Radio messages travel at light speed from where they were sent, and the lines he
 voice) on a background thread. [docs/COMMS_RADIO.md](docs/COMMS_RADIO.md) covers the TTS limits, the propagation design
 and its costs, the 0.25 ms frame budget, the radio settings and the `sg.Radio` / `stat SpaceGodRadio` commands.
 
+## Light Society
+
+The galaxy's people hold opinions on five topics, move the worlds by them and show on the galaxy map's OPINION tab: [docs/LightSociety.md](docs/LightSociety.md).
+
 ## Controls
 
 Unity.SpaceGod's own bindings, unchanged (in game, H / F1 shows them all).
