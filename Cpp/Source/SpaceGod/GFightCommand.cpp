@@ -9,6 +9,7 @@
 
 #include "Camera/SpaceCamera.h"
 #include "Combat/Battle.h"
+#include "Combat/CombatState.h"
 #include "Combat/Gunnery.h"
 #include "Embodiment/FighterSeat.h"
 #include "Target.h"
@@ -91,13 +92,16 @@ namespace
 			double r = app.TargetRadius(cam->FocusTarget);
 			ratio = r > 0 ? (cam->ScenePosition - app.TargetScene(cam->FocusTarget)).Length() / r : -2;
 		}
-		FString lock = TEXT("none"), pip = TEXT("none");
+		FString lock = TEXT("none"), pip = TEXT("none"), gun = TEXT("none");
 		if (me != nullptr && me->PlayerLockTarget != nullptr)
 		{
 			auto on = me->PlayerLockTarget;
 			lock = FString::Printf(TEXT("%s(%.2f)"), UTF8_TO_TCHAR(on->Name().c_str()), me->LockProgress);
 			bool grouped = false;
 			double speed = SpaceGod::Core::Battle::PlayerGunSpeedKmS(me, grouped);
+			int mounts = 0, down = 0;
+			if (me->Combat != nullptr) for (const auto& o : me->Combat->Subsystems) { mounts++; if (o->Destroyed()) down++; }
+			gun = FString::Printf(TEXT("%.2f km/s %d mounts %d down"), speed, mounts, down);
 			if (speed > 0 && ship != nullptr && ship->Battle != nullptr)
 			{
 				auto lead = SpaceGod::Core::Gunnery::LeadPoint(me->Pos, me->Vel, on->Pos, on->Vel, speed);
@@ -107,10 +111,10 @@ namespace
 				pip = FString::Printf(TEXT("%s(%.0f,%.0f)"), onScreen ? TEXT("on") : TEXT("off"), gui.x, gui.y);
 			}
 		}
-		return FString::Printf(TEXT("%s goal %.0f piloting %d held %d ship %s battle %d lock %s pip %s chase %.2f"),
+		return FString::Printf(TEXT("%s goal %.0f piloting %d held %d ship %s battle %d lock %s pip %s gun %s chase %.2f"),
 			*phase, app.ScaleGoal, app.IsPiloting() ? 1 : 0, app.HeldSeat() != nullptr ? 1 : 0,
 			ship != nullptr ? UTF8_TO_TCHAR(ship->Name.c_str()) : TEXT("none"), ship != nullptr && ship->Battle != nullptr ? 1 : 0,
-			*lock, *pip, ratio);
+			*lock, *pip, *gun, ratio);
 	}
 
 	void Start(const TArray<FString>& args)
