@@ -52,6 +52,7 @@ namespace SpaceGod::Core
 			"WorldConquered", "WorldLiberated", "WorldCeded", "WorldSeceded", "WorldFallen", "WorldDevastated", "WarDeclared", "PeaceMade",
 			"PactSigned", "PactBroken", "PirateHold", "HavenStormed", "PirateRaid", "BattleFought", "FactionFallen", "MineAccident",
 			"Blight", "Rationing", "Blockade", "Embargo",
+			"OpinionShift", "Panic", "TrustCrisis", "Revival",
 		};
 		static_assert(sizeof(SocialKindNames) / sizeof(SocialKindNames[0]) == static_cast<std::size_t>(SocialKind::Count_), "a SocialKind without a name");
 	}

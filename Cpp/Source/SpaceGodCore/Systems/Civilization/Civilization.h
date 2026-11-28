@@ -83,6 +83,8 @@ namespace SpaceGod::Core
 		// Witness (US-T292): the wider simulation, as the people see it.
 		WorldConquered, WorldLiberated, WorldCeded, WorldSeceded, WorldFallen, WorldDevastated, WarDeclared, PeaceMade, PactSigned,
 		PactBroken, PirateHold, HavenStormed, PirateRaid, BattleFought, FactionFallen, MineAccident, Blight, Rationing, Blockade, Embargo,
+		// Populace (US-T976): the people's opinions crossing a line.
+		OpinionShift, Panic, TrustCrisis, Revival,
 		Count_
 	};
 	SPACEGODCORE_API const char* ToString(SocialKind v);

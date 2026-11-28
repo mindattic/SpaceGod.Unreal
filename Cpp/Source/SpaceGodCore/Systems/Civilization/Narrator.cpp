@@ -262,6 +262,10 @@ namespace SpaceGod::Core
 			case SocialKind::Rationing: return L({ "{faction} puts its people on rations.", "Ration books are issued on {world}." });
 			case SocialKind::Blockade: return L({ "{rival} blockades {world}.", "No ship gets through to {world}: {rival}'s blockade holds." });
 			case SocialKind::Embargo: return L({ "{faction} closes its ports to {rival}.", "Embargo: {rival}'s ships are turned away by {faction}." });
+			case SocialKind::OpinionShift: return L({ "Opinion on {world} swings on {faction}.", "{world} changes its mind about {faction}." });
+			case SocialKind::Panic: return L({ "Panic on {world}: its people fear the raiders.", "{world} is gripped by fear of pirates." });
+			case SocialKind::TrustCrisis: return L({ "Traders on {world} no longer trust one another.", "A crisis of trust grips {world}'s markets." });
+			case SocialKind::Revival: return L({ "A revival sweeps {world}: the faithful fill the halls.", "{world} turns back to the SpaceGod." });
 			default: return L({ "Something happened on {world}." });
 		}
 	}

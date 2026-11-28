@@ -95,7 +95,7 @@ namespace SpaceGod::Core
 		return galaxy.Polities != nullptr && galaxy.Polities->Command != nullptr ? galaxy.Polities->Command->Player : nullptr;
 	}
 
-	bool Witness::IsWitnessed(SocialKind k) { return k >= SocialKind::WorldConquered && k < SocialKind::Count_; }
+	bool Witness::IsWitnessed(SocialKind k) { return k >= SocialKind::WorldConquered && k <= SocialKind::Embargo; }
 
 	void Witness::Tell(Civilization& civ, Galaxy& galaxy, const cs::Ref<SocialEvent>& e)
 	{
