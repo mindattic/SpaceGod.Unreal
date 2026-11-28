@@ -6,6 +6,7 @@
 //   sg.LightSociety distill                      distil the surrogate afresh in the next batch
 //   sg.LightSociety scenario diffusion|continuous|trust|dictator|repeated|ultimatum [n] [days] [seed]
 //                                                a sandbox run of a paper scenario off the game thread, its curves printed
+//   sg.LightSociety live [days]                  an ordinary game warped until the society has read that many days (40), checked
 //   sg.LightSociety selftest [seed]              sandbox determinism (same seed, 1 vs N threads) and the teacher-vs-surrogate gap
 //   sg.LightSociety sway <topic> <world> <push>  the civ hand (sg.Civ sway): through CivHandAsk, so it travels in co-op
 // A trailing "quit" exits once the command is done (a sandbox run: once it finishes), e.g. sg.LightSociety selftest quit.
@@ -16,6 +17,8 @@
 #include "Coop/CoopPeer.h"
 #include "SpaceGodLog.h"
 #include "UnitySpaceAppActor.h"
+#include "GameLaunch.h"
+#include "SimClock.h"
 
 #include "Economy/Settlement.h"
 #include "Settings/GameSetting.h"
@@ -360,6 +363,65 @@ namespace
 			"scenario diffusion|continuous|trust|dictator|repeated|ultimatum [n] [days] [seed] | selftest [seed] | sway <topic> <world> <push>] [quit]");
 	}
 
+	/// <summary>sg.LightSociety live [days]: the society in an ordinary game. Starts a new game when none runs, warps a week
+	/// a second, waits until the populace has read at least that many days (default 40, past the distillation switch),
+	/// then prints the summary and topics and a PASS/FAIL line per check. Gives up after ten real minutes.</summary>
+	void LiveCheck(int days, bool quit)
+	{
+		struct State { double started = FPlatformTime::Seconds(); bool askedNewGame = false, warped = false; };
+		auto st = std::make_shared<State>();
+		Say(cs::Cat("sg.LightSociety live: waiting for the society to read day ", days));
+		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([st, days, quit](float) {
+			double now = FPlatformTime::Seconds();
+			auto finish = [quit](bool ok, const cs::String& line) {
+				if (ok) Say(cs::Cat("sg.LightSociety live: ", line));
+				else Warn(cs::Cat("sg.LightSociety live: ", line));
+				if (quit) FPlatformMisc::RequestExit(false);
+				return false;
+			};
+			if (now - st->started > 600.0) return finish(false, "FAIL timed out after 600 s");
+			auto* app = LightSocietyApp();
+			if (app == nullptr || app->Galaxy == nullptr || app->Clock == nullptr)
+			{
+				if (!st->askedNewGame && now - st->started > 2.0)
+				{
+					st->askedNewGame = true;
+					Say("sg.LightSociety live: no game running; starting a new one");
+					SpaceGod::GameLaunch::NewGame();
+				}
+				return true;
+			}
+			if (!st->warped)
+			{
+				const auto& levels = Core::SimClock::Levels();
+				for (int i = 0; i < levels.Count(); i++)
+					if (levels[i].Label == "1 week/s") app->Clock->SetWarp(i);
+				app->Clock->SetPaused(false);
+				st->warped = true;
+				Say(cs::Cat("sg.LightSociety live: warp ", app->Clock->Warp().Label));
+			}
+			auto civ = Core::Civilization::Find(*app->Galaxy);
+			Populace* pop = civ != nullptr ? civ->Populace.get() : nullptr;
+			if (pop == nullptr) return true;
+			auto status = pop->Status();
+			if (!status.Built || status.Day < days) return true;
+			Summary(*pop);
+			Topics(*pop);
+			int failed = 0;
+			auto expect = [&failed](bool pass, const cs::String& what) {
+				if (!pass) failed++;
+				if (pass) Say(cs::Cat("sg.LightSociety live: PASS ", what));
+				else Warn(cs::Cat("sg.LightSociety live: FAIL ", what));
+			};
+			expect(status.Agents > 0, cs::Cat(status.Agents, " agents"));
+			expect(pop->Groups.Count() > 0, cs::Cat(pop->Groups.Count(), " worlds"));
+			expect(pop->ReadoutHash() != 0, cs::Cat("readout hash ", Hex(pop->ReadoutHash())));
+			expect(status.Distilled, "a surrogate is distilled");
+			expect(status.Switched || status.Route != Populace::Routing::Scheduled, "the schedule switched to the surrogate");
+			return finish(failed == 0, failed == 0 ? cs::String("PASS (5 checks, 0 failed)") : cs::Cat("FAIL (5 checks, ", failed, " failed)"));
+		}));
+	}
+
 	void LightSociety(const TArray<FString>& raw)
 	{
 		TArray<FString> args;
@@ -386,6 +448,11 @@ namespace
 			uint64_t seed = static_cast<uint64_t>(FMath::Max(0, num(1, 981)));
 			Say("sg.LightSociety selftest: running off the game thread");
 			Launch([seed] { return SelfTest(seed); }, quit);
+			return;
+		}
+		if (verb == TEXT("live"))
+		{
+			LiveCheck(FMath::Max(1, num(1, 40)), quit);
 			return;
 		}
 		Live(args, verb);
