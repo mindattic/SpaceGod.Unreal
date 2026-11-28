@@ -9,8 +9,12 @@
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h"
+#include "Combat/LaneInterdictors.h" // US-T961
 #include "Combat/SquadOrders.h" // US-T140
+#include "Combat/War.h" // US-T961
 #include "Embodiment/ShipHelm.h"
+#include "Fleet.h"
+#include "Hyperlanes.h"
 #include "Settings/GameSetting.h"
 #include "Ships.h"
 #include "World.h"
@@ -95,6 +99,53 @@ namespace SpaceGod::Core
 				if (s->Ammo > 0 && s->Cooldown <= 0) loaded = true;
 			}
 			return any;
+		}
+
+		/// <summary>US-T961: whether <paramref name="ship"/>, flown out of a lane part-way (dropped out, or thrown out and fought
+		/// clear), lies beside it near enough to get back in (<see cref="Fleet.RejoinKm"/>): the lane it left, where
+		/// (<see cref="Ship.LaneHold"/>) and how far off its line the helm has it (<see cref="Ship.LaneHoldSide"/>, kept by the
+		/// runtime while it flies there, none once it can no longer get back in).</summary>
+		bool BesideHeldLane(const cs::Ref<Ship>& ship)
+		{
+			double side = ship->LaneHoldSide.Length();
+			return ship->LaneLeg.Lane != nullptr && ship->Phase == ShipPhase::Parked && ship->Battle == nullptr && ship->LaneHold > 0 &&
+				ship->LaneHold < 1 && side > 0 && side <= Fleet::RejoinKm;
+		}
+
+		/// <summary>The hull carrying the working field projector <paramref name="ship"/> would pulse with: its own, else its band's.</summary>
+		cs::Ref<Ship> PulseEmitter(const cs::Ref<World>& world, const cs::Ref<Ship>& ship)
+		{
+			auto emitter = LaneInterdictors::EmitterOf(ship, world->Fleet->Ships());
+			if (emitter == nullptr && ship->IsEscort()) emitter = LaneInterdictors::EmitterOf(ship->Controller(), world->Fleet->Ships());
+			return emitter;
+		}
+
+		/// <summary>The projector's charge still to come, as the bar and the toast say it ("3.5 hours", "40 minutes").</summary>
+		cs::String ChargeLeft(double days)
+		{
+			double hours = days * 24;
+			return hours >= 1 ? cs::Cat(cs::Fmt(hours, "0.#"), " hours") : cs::Cat(static_cast<int>(cs::Math::Max(1.0, cs::Math::Ceiling(hours * 60))), " minutes");
+		}
+
+		/// <summary>US-T961: the helm's field pulse beside its lane (<see cref="War.PlayerPulse"/>), said as the toast.</summary>
+		cs::String FieldPulseOrder(const cs::Ref<Ship>& ship, const cs::Ref<World>& world)
+		{
+			if (world == nullptr || world->War == nullptr) return "";
+			if (!BesideHeldLane(ship)) return "No lane beside the helm to pulse: drop out of a lane (Ctrl on the ride) and lie off it";
+			auto lane = ship->LaneLeg.Lane;
+			switch (world->War->PlayerPulse(ship, ship->LaneLeg, ship->LaneHold, ship->LaneHoldSide, world->Jd))
+			{
+				case War::PulseResult::Ok:
+					return cs::Cat("FIELD PULSE: the ", lane->Name, " lane's field collapses, and its riders are thrown out into the fight");
+				case War::PulseResult::NoProjector:
+					return "No field projector aboard or in the band: a yard fits one into a destroyer or bigger";
+				case War::PulseResult::Recharging:
+					return cs::Cat("The field projector is still charging: ", ChargeLeft(world->War->PulseReadyJd(ship) - world->Jd), " to go");
+				case War::PulseResult::NoVictims:
+					return cs::Cat("Nobody riding the ", lane->Name, " lane near enough to pull out: the projector holds its charge");
+				default:
+					return "The projector can't pulse here now";
+			}
 		}
 	}
 
@@ -332,6 +383,18 @@ namespace SpaceGod::Core
 			e.State = state;
 			bar.Add(e);
 		}
+		// US-T961: lying off the lane it left, a hull whose band carries a field projector can pulse it (last, so the slots
+		// above keep their keys).
+		if (!fight && world != nullptr && world->War != nullptr && BesideHeldLane(ship) && PulseEmitter(world, ship) != nullptr)
+		{
+			double left = world->War->PulseReadyJd(ship) - world->Jd;
+			HelmAbilityEntry e;
+			e.Ability = HelmAbility::FieldPulse;
+			e.Label = "Field pulse";
+			e.Ready = left <= 0;
+			e.State = e.Ready ? cs::Cat("beside the ", ship->LaneLeg.Lane->Name, " lane") : cs::Cat("charging, ", ChargeLeft(left));
+			bar.Add(e);
+		}
 		return bar;
 	}
 
@@ -387,6 +450,7 @@ namespace SpaceGod::Core
 			if (world == nullptr) return "";
 			return SquadOrders::StandDown(world, ship, world->Jd).Toast;
 		}
+		if (a == HelmAbility::FieldPulse) return FieldPulseOrder(ship, world); // US-T961: out of a fight, beside a lane
 		auto c = ship->Combat;
 		if (c == nullptr) return "";
 		auto u = UnitOf(ship);

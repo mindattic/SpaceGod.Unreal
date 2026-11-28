@@ -46,6 +46,7 @@ frame: the craft's at the controls, the command view's otherwise.
 | Cruise drive (Shift+J), tactical cruise (J) | no | yes, out of a fight | yes | yes | yes (long haul) | no | no | no | no |
 | Drive regime (`DriveRegime`: Normal, CruiseSpool, Cruise, Lane, Ftl) | n/a | all five | all five | all five | all five | n/a | Normal | n/a | n/a |
 | Hyper-lane flight (caae6e2, tunnels 33f7c52) | no | ride, steer A D Q E, surge / drop out Shift / Ctrl | yes | yes | yes | no | no | no | no |
+| Field pulse beside a lane (US-T961, helm bar) | no | with its band's projector | with its band's projector | with its own or its band's projector | with a projector fitted (9,000 t and up) | no | no | no | no |
 | Lane wiring (US-T196) | pending | pending | pending | pending | pending | n/a | n/a | n/a | n/a |
 | Hyperspace toll (ed7979f) | n/a | paid on entry | paid | paid | paid (cargo-weighted) | n/a | n/a | n/a | n/a |
 | FTL (Enter, PgDn, End) | no | yes, past the rim | yes | yes | yes | no | no | no | no |

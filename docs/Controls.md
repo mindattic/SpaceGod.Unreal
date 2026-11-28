@@ -126,6 +126,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Lane: steer in the tube | A D Q E | riding a lane | - |
 | Interdiction: surge / drop out | Shift / Ctrl | riding a lane | - |
 | Back into the lane | Y | helm | - |
+| Field pulse: throw a lane's riders out into a fight (US-T961) | its Shift+number on the helm bar (shown while lying off the lane you dropped out of, within 100,000 km, with a field projector in the hull or its band; toasts the recharge left) | helm, out of a fight | - |
 | Eject in a pressure suit | Shift+Y | launched craft's cockpit | - |
 | FTL spool | Enter, numpad Enter | helm, beyond the rim | - |
 | Plot a course / clear | PgDn, PgUp / Del | helm, command | galaxy map |

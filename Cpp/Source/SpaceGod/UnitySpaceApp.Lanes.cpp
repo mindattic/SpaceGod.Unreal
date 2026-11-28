@@ -137,6 +137,11 @@ namespace SpaceGod
 
 	void UnitySpaceApp::UpdateLaneRejoin(const cs::Ref<Core::Ship>& ship)
 	{
+		// US-T961: how far off the line of the lane it left the helm has the hull, for the field pulse on its bar (HelmAbilities,
+		// War::PlayerPulse); none once it can no longer get back in.
+		if (ship->Phase == Core::ShipPhase::Parked)
+			ship->LaneHoldSide = laneRejoinable && ship->LaneLeg.Lane != nullptr
+				? Ephemeris()->Helio(pilotFrameBody) + pilotOffsetKm() - Fleet()->RejoinPoint(ship, Clock->Jd) : DVec3::Zero;
 		if (!Input.ActivateGate || !CanRejoinLane()) return;
 		if (!Fleet()->RejoinLane(ship, Ephemeris()->Helio(pilotFrameBody) + pilotOffsetKm(), Clock->Jd)) return;
 		laneRejoinable = false;

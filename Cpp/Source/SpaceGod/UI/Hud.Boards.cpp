@@ -1749,6 +1749,9 @@ namespace SpaceGod::UI
 				case HelmAbility::BoardIt: // US-T401: stunned hulls open too (Battle::OpenPrize)
 					return { "Your boarders go for the locked hull once it is disabled, stunned long enough or has struck open to boarding: carriers send shuttle teams, marine hulls close to board.",
 						"Boarders of your side within command reach.", "Until the prize is taken or no longer open to boarding." };
+				case HelmAbility::FieldPulse: // US-T961
+					return { "Collapses the field of the lane you lie beside: every ship riding past there that you would take is thrown out, stunned and shieldless, into a fight with you.",
+						"Your hull's field projector, or your band's.", "One pulse, then the projector recharges (war.interdictorRechargeDays)." };
 				default:
 					return {};
 			}
