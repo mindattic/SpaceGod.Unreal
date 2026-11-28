@@ -236,6 +236,24 @@ namespace SpaceGod::Core
 	{
 		auto lanes = Fleet()->Lanes;
 		if (lanes == nullptr) return;
+		auto seen = LaneRiders(jd);
+		for (const auto& lurker : Fleet()->Ships())
+		{
+			if (!Lurking(lurker)) continue;
+			double ready = 0;
+			if (pulseReady.TryGetValue(lurker, ready) && jd < ready) continue;
+			auto lane = lurker->LaneLeg.Lane;
+			double station = lurker->LaneLeg.From == lane->A ? lurker->LaneHold : 1 - lurker->LaneHold;
+			double window = PulseRadiusKm / cs::Math::Max(lurker->LaneLengthKm, 1.0);
+			auto victims = Caught(lurker, lane, station, window, seen);
+			if (victims.Count() > 0 && WorthPulsing(lurker, victims)) Interdict(lurker, station, victims, jd);
+		}
+		laneSeen.Clear();
+		for (auto [k, v] : seen) laneSeen[k] = v;
+	}
+
+	cs::Dictionary<cs::Ref<Ship>, War::LanePass> War::LaneRiders(double jd)
+	{
 		auto seen = cs::Dictionary<cs::Ref<Ship>, LanePass>();
 		for (const auto& v : Fleet()->Ships())
 		{
@@ -245,29 +263,57 @@ namespace SpaceGod::Core
 			double p = Core::Fleet::LaneProgress(v, jd);
 			seen[v] = LanePass{ v->LaneLeg.Lane, v->LaneLeg.From == v->LaneLeg.Lane->A ? p : 1 - p };
 		}
-		for (const auto& lurker : Fleet()->Ships())
+		return seen;
+	}
+
+	cs::List<cs::Ref<Ship>> War::Caught(const cs::Ref<Ship>& lurker, const cs::Ref<Lane>& lane, double station, double window,
+		const cs::Dictionary<cs::Ref<Ship>, LanePass>& seen)
+	{
+		auto victims = cs::List<cs::Ref<Ship>>();
+		for (auto [v, pass] : seen)
 		{
-			if (!Lurking(lurker)) continue;
-			double ready = 0;
-			if (pulseReady.TryGetValue(lurker, ready) && jd < ready) continue;
-			auto lane = lurker->LaneLeg.Lane;
-			double station = lurker->LaneLeg.From == lane->A ? lurker->LaneHold : 1 - lurker->LaneHold;
-			double window = PulseRadiusKm / cs::Math::Max(lurker->LaneLengthKm, 1.0);
-			auto victims = cs::List<cs::Ref<Ship>>();
-			for (auto [v, pass] : seen)
-			{
-				// Already caught by another lurker's pulse this pass: it is fighting there.
-				if (v->LaneLeg.Lane != lane || !Targets(lurker, v) || v->Derelict || v->Battle != nullptr) continue;
-				double now = pass.at;
-				// Last seen on another lane (it rode one out and another in since the last look): no pass of this one yet.
-				LanePass b;
-				double before = laneSeen.TryGetValue(v, b) && b.lane == lane ? b.at : now;
-				if ((before - station) * (now - station) <= 0 || cs::Math::Abs(now - station) < window) victims.Add(v);
-			}
-			if (victims.Count() > 0 && WorthPulsing(lurker, victims)) Interdict(lurker, station, victims, jd);
+			// Already caught by another lurker's pulse this pass: it is fighting there.
+			if (v->LaneLeg.Lane != lane || !Targets(lurker, v) || v->Derelict || v->Battle != nullptr) continue;
+			double now = pass.at;
+			// Last seen on another lane (it rode one out and another in since the last look): no pass of this one yet.
+			LanePass b;
+			double before = laneSeen.TryGetValue(v, b) && b.lane == lane ? b.at : now;
+			if ((before - station) * (now - station) <= 0 || cs::Math::Abs(now - station) < window) victims.Add(v);
 		}
-		laneSeen.Clear();
-		for (auto [k, v] : seen) laneSeen[k] = v;
+		return victims;
+	}
+
+	War::PulseResult War::PlayerPulse(const cs::Ref<Ship>& ship, const LaneHop& hop, double progress, DVec3 side, double jd)
+	{
+		auto lanes = Fleet()->Lanes;
+		if (lanes == nullptr || hop.Lane == nullptr || ship == nullptr || ship->Destroyed || ship->Battle != nullptr || ship->Planetside())
+			return PulseResult::Unable;
+		auto emitter = LaneInterdictors::EmitterOf(ship, Fleet()->Ships());
+		if (!emitter && ship->IsEscort()) emitter = LaneInterdictors::EmitterOf(ship->Controller(), Fleet()->Ships());
+		if (!emitter) return PulseResult::NoProjector;
+		double ready = 0;
+		if (pulseReady.TryGetValue(ship, ready) && jd < ready) return PulseResult::Recharging;
+		auto lane = hop.Lane;
+		double station = hop.From == lane->A ? progress : 1 - progress;
+		double window = PulseRadiusKm / cs::Math::Max(lanes->LaneLengthKm(lane, jd), 1.0);
+		auto victims = Caught(ship, lane, station, window, LaneRiders(jd));
+		victims.Remove(ship);
+		if (victims.Count() == 0) return PulseResult::NoVictims;
+		// The fight is placed on the first victim's own ride of the lane, where the helm lies beside it.
+		auto first = victims[0];
+		auto site = cs::New<LaneSite>();
+		site->Hop = first->LaneLeg; site->FromOffset = first->LaneFromOffset; site->ToOffset = first->LaneToOffset;
+		site->Progress = first->LaneLeg.From == lane->A ? station : 1 - station;
+		site->Side = side;
+		auto helio = Fleet()->LanePoint(first, jd, site->Progress) + side;
+		Pulse(ship, emitter, site, helio, station, victims, true, jd);
+		return PulseResult::Ok;
+	}
+
+	double War::PulseReadyJd(const cs::Ref<Ship>& ship) const
+	{
+		double ready = 0;
+		return pulseReady.TryGetValue(ship, ready) ? ready : 0;
 	}
 
 	bool War::WorthPulsing(const cs::Ref<Ship>& lurker, const cs::List<cs::Ref<Ship>>& victims)
@@ -318,10 +364,19 @@ namespace SpaceGod::Core
 
 	void War::Interdict(const cs::Ref<Ship>& lurker, double station, cs::List<cs::Ref<Ship>>& victims, double jd)
 	{
-		auto lane = lurker->LaneLeg.Lane;
-		bool picket = !lurker->Faction->IsPirate;
 		auto emitter = LaneInterdictors::EmitterOf(lurker, Fleet()->Ships());
 		if (!emitter) emitter = lurker;
+		auto site = cs::New<LaneSite>();
+		site->Hop = lurker->LaneLeg; site->FromOffset = lurker->LaneFromOffset; site->ToOffset = lurker->LaneToOffset; site->Progress = lurker->LaneHold; site->Side = lurker->LaneHoldSide;
+		auto helio = Fleet()->LanePoint(lurker, jd, lurker->LaneHold) + lurker->LaneHoldSide;
+		Pulse(lurker, emitter, site, helio, station, victims, false, jd);
+	}
+
+	void War::Pulse(const cs::Ref<Ship>& lurker, const cs::Ref<Ship>& emitter, const cs::Ref<LaneSite>& site, DVec3 helio, double station,
+		cs::List<cs::Ref<Ship>>& victims, bool player, double jd)
+	{
+		auto lane = site->Hop.Lane;
+		bool picket = !player && !lurker->Faction->IsPirate;
 		pulseReady[lurker] = jd + LaneInterdictors::RechargeDays()->Value;
 		// A pilot surging through may be past before the shell closes: the pulse goes off, and misses.
 		auto pilot = world->PilotedShip;
@@ -335,23 +390,26 @@ namespace SpaceGod::Core
 		for (const auto& v : victims)
 		{
 			double at = v->LaneLeg.From == lane->A ? station : 1 - station;
-			auto side = lurker->LaneHoldSide * (0.8 + rng.NextDouble() * 0.4);
+			auto side = site->Side * (0.8 + rng.NextDouble() * 0.4);
 			Fleet()->PullOut(v, jd, at, side);
 		}
-		auto helio = Fleet()->LanePoint(lurker, jd, lurker->LaneHold) + lurker->LaneHoldSide;
 		auto b = cs::New<Battle>(TakeBattleId(), 0, cs::Cat((picket ? "Interdiction on the " : "Ambush on the "), lane->Name, " lane"), helio, jd, rng.Next());
 		// A navy's picket stops raiders and enemies on the lane in the law's name, as a patrol interdicting a
 		// wanted ship does (U.SPC-T479).
 		b->EnforcingSide = picket ? 0 : -1;
-		{
-			auto site = cs::New<LaneSite>();
-			site->Hop = lurker->LaneLeg; site->FromOffset = lurker->LaneFromOffset; site->ToOffset = lurker->LaneToOffset; site->Progress = lurker->LaneHold; site->Side = lurker->LaneHoldSide;
-			b->Site = site;
-		}
+		b->Site = site;
 		Hook(b);
-		auto approach = DVec3::Cross(DVec3::UnitZ, lurker->LaneHoldSide);
+		auto approach = DVec3::Cross(DVec3::UnitZ, site->Side);
 		b->ApproachAxis = approach.LengthSquared() > 0 ? approach.Normalized() : DVec3::UnitX;
-		Join(b, lurker, 0, false);
+		if (player)
+		{
+			// The helm's hull is flown in the fight where it lies, at the lane site's side, its band about it.
+			auto unit = b->AddShip(lurker, 0, DVec3::Zero, site->Side.LengthSquared() > 0 ? -site->Side.Normalized() : b->ApproachAxis);
+			unit->SetPlayerControlled(true);
+			for (const auto& e : Fleet()->Ships())
+				if (e->Leader == lurker && !e->Destroyed && e->Battle == nullptr) Join(b, e, 0, false);
+		}
+		else Join(b, lurker, 0, false);
 		for (const auto& v : victims) Join(b, v, 1, false);
 		// The pilot's hull, caught riding at the helm, is flown in the fight that follows: placed with the others the
 		// pulse caught, but its pose is the helm's from here (U.SPC-T42).
@@ -372,7 +430,7 @@ namespace SpaceGod::Core
 		// at the lurk's stand-off from the lane line) was braced for the pulse: drives and shields ride it out.
 		auto warned = cs::HashSet<cs::Ref<Ship>>();
 		for (const auto& v : victims)
-			if (Forewarned(v, lurker, jd)) warned.Add(v->Controller());
+			if (Braced(v, lurker, site->Side.Length())) warned.Add(v->Controller());
 		for (const auto& u : b->Units)
 		{
 			if (u->Side != 1) continue;
@@ -385,7 +443,7 @@ namespace SpaceGod::Core
 		}
 		for (const auto& v : warned)
 			world->Log(jd, cs::Cat("The ", v->Name, " spotted the raiders lying dark off the ", lane->Name, " lane and was braced for the pulse"), WorldEventKind::Battle, lane->A);
-		if (pilot != nullptr && pilot->Battle == b)
+		if (!player && pilot != nullptr && pilot->Battle == b)
 		{
 			auto pu = b->UnitOf(pilot);
 			cs::String closing = picket ? cs::Cat(lurker->Faction->Name, " warships closing") : cs::String("Raiders closing");
@@ -396,7 +454,16 @@ namespace SpaceGod::Core
 		if (source != nullptr) b->Emit(FxKind::Pulse, source->Pos, source->Pos, 30, 0, source, -1);
 		Battles.Add(b);
 		cs::String pulled = cs::Cat(victims.Count(), " ship", (victims.Count() == 1 ? "" : "s"), " pulled out");
-		if (picket)
+		if (player)
+		{
+			double laneDanger = 0;
+			lanes0()->Danger.TryGetValue(lane, laneDanger);
+			lanes0()->SetDanger(lane, laneDanger + 3);
+			world->Log(jd, cs::Cat("The ", lurker->Name, " pulses the ", lane->Name, " lane: ", pulled), WorldEventKind::Battle, lane->A);
+			BumpDanger(lane->A, 1);
+			BumpDanger(lane->B, 1);
+		}
+		else if (picket)
 			// The law's own picket: a fight on the lane, but no raiders' ambush to steer the traffic round.
 			world->Log(jd, cs::Cat("The ", lurker->Faction->Name, " lane picket ", lurker->Name, " interdicts the ", lane->Name, " lane: ", pulled), WorldEventKind::Battle, lane->A);
 		else
@@ -413,9 +480,15 @@ namespace SpaceGod::Core
 
 	bool War::Forewarned(const cs::Ref<Ship>& victim, const cs::Ref<Ship>& lurker, double /*jd*/)
 	{
+		if (lurker == nullptr) return false;
+		return Braced(victim, lurker, lurker->LaneHoldSide.Length());
+	}
+
+	bool War::Braced(const cs::Ref<Ship>& victim, const cs::Ref<Ship>& lurker, double passKm)
+	{
 		auto sensors = world->Sensors;
 		if (sensors == nullptr || victim == nullptr || lurker == nullptr) return false;
-		double pass = cs::Math::Max(lurker->LaneHoldSide.Length(), 1.0);
+		double pass = cs::Math::Max(passKm, 1.0);
 		return Sensors::Resolve(sensors->GroupSuite(victim), Signatures::Of(lurker, false, cs::Nullable<bool>(false)), pass, Signatures::Transponder(lurker)) >= ContactLevel::Class;
 	}
 

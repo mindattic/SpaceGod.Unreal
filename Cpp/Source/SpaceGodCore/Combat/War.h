@@ -14,6 +14,8 @@ namespace SpaceGod::Core
 	class Battle;
 	class BattleUnit;
 	class Lane;
+	class LaneSite;
+	struct LaneHop;
 	class JumpGate;
 	class Pursuer;
 	class Crews;
@@ -310,8 +312,48 @@ namespace SpaceGod::Core
 		/// </summary>
 		bool Targets(const cs::Ref<Ship>& lurker, const cs::Ref<Ship>& rider);
 
+		/// <summary>What came of a pulse fired from the helm (<see cref="PlayerPulse"/>), for the runtime to toast.</summary>
+		enum class PulseResult : int
+		{
+			Ok,
+			/// <summary>Neither the hull nor its band carries a working field projector.</summary>
+			NoProjector,
+			/// <summary>The projector has not charged again since its last pulse (<see cref="PulseReadyJd"/>).</summary>
+			Recharging,
+			/// <summary>Nobody it would pull out is riding the lane near enough.</summary>
+			NoVictims,
+			/// <summary>The hull cannot pulse now (lost, in a fight, or no lanes here).</summary>
+			Unable,
+		};
+
+		/// <summary>
+		/// US-T960: the helm fires its band's field projector beside <paramref name="hop"/> at <paramref name="progress"/> (along the
+		/// hop) and <paramref name="side"/> (km off the lane line): every rider it targets (<see cref="Targets"/>) passing within
+		/// <see cref="PulseRadiusKm"/> is thrown out, stunned and shieldless, into a fight beside the lane with
+		/// <paramref name="ship"/> flown in it, as a lurker's ambush is. It recharges as a lurker's projector does.
+		/// </summary>
+		PulseResult PlayerPulse(const cs::Ref<Ship>& ship, const LaneHop& hop, double progress, DVec3 side, double jd);
+
+		/// <summary>When <paramref name="ship"/>'s projector is charged again (a date), or 0 if it has never pulsed.</summary>
+		double PulseReadyJd(const cs::Ref<Ship>& ship) const;
+
 	private:
 		void Interdict(const cs::Ref<Ship>& lurker, double station, cs::List<cs::Ref<Ship>>& victims, double jd);
+
+		/// <summary>Every ship riding a lane now, and where along it (from the lane's A end).</summary>
+		cs::Dictionary<cs::Ref<Ship>, LanePass> LaneRiders(double jd);
+
+		/// <summary>The riders of <paramref name="seen"/> <paramref name="lurker"/>'s pulse at <paramref name="station"/> on
+		/// <paramref name="lane"/> catches: those within <paramref name="window"/> of it, or past it since the last look.</summary>
+		cs::List<cs::Ref<Ship>> Caught(const cs::Ref<Ship>& lurker, const cs::Ref<Lane>& lane, double station, double window,
+			const cs::Dictionary<cs::Ref<Ship>, LanePass>& seen);
+
+		/// <summary>The pulse itself, a lurker's or the helm's (<paramref name="player"/>): the victims thrown out at
+		/// <paramref name="site"/> and the fight beside the lane begun.</summary>
+		void Pulse(const cs::Ref<Ship>& lurker, const cs::Ref<Ship>& emitter, const cs::Ref<LaneSite>& site, DVec3 helio, double station,
+			cs::List<cs::Ref<Ship>>& victims, bool player, double jd);
+
+		bool Braced(const cs::Ref<Ship>& victim, const cs::Ref<Ship>& lurker, double passKm);
 
 	public:
 		/// <summary>

@@ -79,6 +79,10 @@ namespace SpaceGod::Core
 		/// <summary>US-T366: call the side's boarders within reach onto the locked hull once it is open to boarding
 		/// (<see cref="Battle.OrderBoardCall"/>), on the bar in a fight while the hull locked is such a prize, after the demand.</summary>
 		BoardIt = 23,
+
+		/// <summary>US-T960: fire the band's field projector beside the lane the helm lies off, throwing the riders passing
+		/// there out into a fight (<see cref="War.PlayerPulse"/>); "Field pulse" on the bar, out of a fight.</summary>
+		FieldPulse = 24,
 	};
 
 	/// <summary>One entry of a helm's ability bar: what it does, and how it stands now (craft aboard, reloading, ready).</summary>
