@@ -411,6 +411,13 @@ namespace SpaceGod::Core
 
 		void Loot(const cs::Ref<Ship>& ship, const cs::Ref<Faction>& clan, const cs::Ref<Battle>& b);
 
+		/// <summary>
+		/// US-T962: when the piloted ship fought on <paramref name="captor"/>'s side of <paramref name="b"/>, the cargo
+		/// <paramref name="ship"/> gives up goes into the pilot's <see cref="Ship.Plunder"/> (to sell at a black market) and
+		/// the pilot is told. Returns false, touching nothing, when the player had no part in it.
+		/// </summary>
+		bool TakeIntoPilotHold(const cs::Ref<Ship>& ship, const cs::Ref<Faction>& captor, const cs::Ref<Battle>& b);
+
 	public:
 		/// <summary>
 		/// A hull broken up in a collision outside any battle (U.SPC-T60): it is lost like a scuttled ship,

@@ -6,6 +6,7 @@
 namespace SpaceGod::Core
 {
 	class Settlement;
+	class Ship;
 	enum class Good : int;
 
 	/// <summary>
@@ -62,6 +63,16 @@ namespace SpaceGod::Core
 		/// station's black store) and the price is paid out of its owner's treasury. Returns the credits paid.
 		/// </summary>
 		static double Sell(const cs::Ref<Settlement>& s, Good g, double tonnes);
+
+		/// <summary>What it would pay for everything in <paramref name="ship"/>'s <see cref="Ship.Plunder"/>, credits.</summary>
+		static double PlunderOffer(const cs::Ref<Settlement>& s, const cs::Ref<Ship>& ship);
+
+		/// <summary>
+		/// US-T962: the helm unloads its <see cref="Ship.Plunder"/> here, sold good by good as <see cref="Sell"/> does, and
+		/// the price goes to the ship's <see cref="Ship.Credits"/> and its faction's treasury. Returns the credits paid,
+		/// with the tonnes sold in <paramref name="tonnes"/>.
+		/// </summary>
+		static double SellPlunder(const cs::Ref<Settlement>& s, const cs::Ref<Ship>& ship, double& tonnes);
 
 		/// <summary>A lawless station's middlemen pass part of their store into the station's open stores (they paid for it).</summary>
 		static void Launder(const cs::Ref<Settlement>& s, double dt);

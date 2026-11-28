@@ -602,7 +602,7 @@ namespace SpaceGod::Core
 			if (ship->HasCargo)
 			{
 				if (captor != nullptr && captor->IsPirate) Loot(ship, captor, b);
-				else
+				else if (!TakeIntoPilotHold(ship, captor, b))
 				{
 					if (captor != nullptr) captor->Treasury += ship->CargoTonnes * GoodInfo::Of(ship->CargoGood)->BasePrice * 0.8;
 					Economy()->Release(ship);
@@ -804,8 +804,30 @@ namespace SpaceGod::Core
 		return nullptr;
 	}
 
+	bool War::TakeIntoPilotHold(const cs::Ref<Ship>& ship, const cs::Ref<Faction>& captor, const cs::Ref<Battle>& b)
+	{
+		auto pilot = world->PilotedShip;
+		if (pilot == nullptr || captor == nullptr || b == nullptr || !ship->HasCargo || ship->CargoTonnes <= 0) return false;
+		auto pu = b->UnitOf(pilot);
+		if (pu == nullptr || pu->Dead || pu->Captured || pilot->Destroyed || pu->Ship == ship) return false;
+		if (pilot->Faction != captor && b->SideLeaders[pu->Side] != captor) return false;
+		auto good = ship->CargoGood;
+		double tonnes = ship->CargoTonnes;
+		if (pilot->Plunder.Count() == 0) pilot->Plunder = cs::NewArray<double>(GoodInfo::Count);
+		pilot->Plunder[static_cast<int>(good)] += tonnes;
+		if (captor->IsPirate) Economy()->LoseCargo(ship, tonnes, "robbed", captor);
+		else Economy()->Release(ship);
+		ship->HasCargo = false;
+		ship->CargoDestination = nullptr;
+		ship->Cargo = cs::String();
+		pilotNotices.Add(cs::Cat("The ", ship->Name, "'s cargo is yours: ", cs::Fmt(tonnes, "N0"), " t of ", GoodInfo::Of(good)->Name,
+			" in your hold as plunder, to sell at a haven or a lawless station"));
+		return true;
+	}
+
 	void War::Loot(const cs::Ref<Ship>& ship, const cs::Ref<Faction>& clan, const cs::Ref<Battle>& b)
 	{
+		if (TakeIntoPilotHold(ship, clan, b)) return;
 		double value = ship->CargoTonnes * GoodInfo::Of(ship->CargoGood)->BasePrice;
 		DeliverLoot(clan, ship->CargoGood, ship->CargoTonnes, b);
 		clan->Treasury += value * 0.3;

@@ -49,6 +49,33 @@ namespace SpaceGod::Core
 		return value;
 	}
 
+	double BlackMarket::PlunderOffer(const cs::Ref<Settlement>& s, const cs::Ref<Ship>& ship)
+	{
+		if (!Takes(s) || ship == nullptr) return 0;
+		double value = 0;
+		for (int i = 0; i < ship->Plunder.Count() && i < GoodInfo::Count; i++)
+			if (ship->Plunder[i] > 0) value += SaleValue(s, static_cast<Good>(i), ship->Plunder[i]);
+		return value;
+	}
+
+	double BlackMarket::SellPlunder(const cs::Ref<Settlement>& s, const cs::Ref<Ship>& ship, double& tonnes)
+	{
+		tonnes = 0;
+		if (!Takes(s) || ship == nullptr || ship->Plunder.Count() == 0) return 0;
+		double value = 0;
+		for (int i = 0; i < ship->Plunder.Count() && i < GoodInfo::Count; i++)
+		{
+			double t = ship->Plunder[i];
+			if (t <= 0) continue;
+			value += Sell(s, static_cast<Good>(i), t);
+			tonnes += t;
+		}
+		ship->Plunder = cs::List<double>();
+		ship->Credits += value;
+		if (ship->Faction != nullptr) ship->Faction->Treasury += value;
+		return value;
+	}
+
 	void BlackMarket::Launder(const cs::Ref<Settlement>& s, double dt)
 	{
 		double k = 1 - cs::Math::Exp(-LaunderPerDay * dt);

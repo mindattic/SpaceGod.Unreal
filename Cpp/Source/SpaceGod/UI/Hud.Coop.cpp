@@ -145,6 +145,12 @@ namespace SpaceGod::UI
 			if (market != nullptr && world->PilotedShip != nullptr) ClickSellSurvey(market);
 			return true;
 		}
+		if (verb == "plunder") // US-T962: the pilot's plunder sold to the port's black market
+		{
+			auto market = Port(a.at(0));
+			if (market != nullptr && world->PilotedShip != nullptr) ClickSellPlunder(market);
+			return true;
+		}
 		if (verb == "observe")
 		{
 			auto market = Port(a.at(0));

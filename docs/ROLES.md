@@ -96,6 +96,13 @@ frame: the craft's at the controls, the command view's otherwise.
    commander is wanted is left to that bounty (`Outlaws::ClaimInBattle`); a pirate hull, a pilot wanted there, or a
    fight with no lawful jurisdiction is paid nothing. Only the piloted hull is paid, so the bench digests never see it.
 
+10. **Robbed cargo is yours** (US-T962, `War::TakeIntoPilotHold`). When a hull surrenders its cargo, or is looted as a
+   prize, and the piloted hull fought on the captor's side (its faction, or the side that faction leads), the whole load
+   goes into the pilot's `Ship::Plunder` instead of the clan's haven and treasury (or the lawful captor's prize money),
+   with a toast. At a haven or a lawless station (`BlackMarket::Takes`) the market drawer shows the plunder aboard and
+   "Sell plunder": every good sold as the clans' smugglers sell (`BlackMarket::SellPlunder`, `BlackMarket::Sell`'s
+   prices), paid into `Ship::Credits` and the hull's faction treasury. Only the piloted hull takes this path, so the bench
+   digests never see it.
 ## Audit
 
 `roles.*` probes (opt-in with `-SpaceGodAuditFacade`, after `input.*`):

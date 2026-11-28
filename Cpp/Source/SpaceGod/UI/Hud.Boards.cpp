@@ -30,6 +30,7 @@
 #include "Combat/Salvage.h"
 #include "Combat/War.h"
 #include "Combat/Wreck.h"
+#include "Economy/BlackMarket.h" // US-T962: plunder sold to fences
 #include "Economy/CargoHold.h"
 #include "Economy/Contracts.h"
 #include "Economy/Economy.h"
@@ -567,13 +568,16 @@ namespace SpaceGod::UI
 		auto surveyHull = app->World()->PilotedShip;
 		int surveyHeld = exploration != nullptr ? exploration->HeldBy(surveyHull).Count() : 0;
 		float surveyRow = surveyHeld > 0 ? 20.0f : 0.0f;
+		// US-T962: plunder taken in the pilot's fights, sold to a haven's fences or a lawless station's black market.
+		double plunderHeld = canTrade && surveyHull != nullptr ? surveyHull->PlunderTonnes() : 0;
+		float plunderRow = plunderHeld > 0 ? 20.0f : 0.0f;
 
 		constexpr float rowH = 17;
 		// US-T263: the board's price history (a 90-day sparkline and the 30- and 90-day low-high / average) for a port.
 		float histW = market != nullptr ? 360.0f : 0.0f;
 		float w = (canTrade ? 600.0f : 430.0f) + histW;
 		// US-T208: 78 = the 50 above the column header, its row, and 11 of padding under the last good (it was 62: Munitions sat on the border).
-		float h = marketOpen ? 78 + GoodInfo::Count * rowH + (canTrade ? 20 : 0) + extra + lawRow + surveyRow : 34;
+		float h = marketOpen ? 78 + GoodInfo::Count * rowH + (canTrade ? 20 : 0) + extra + lawRow + surveyRow + plunderRow : 34;
 		auto r = Place(w, h); // US-T440: the market's drawer, at the top of the right edge (in the opportunities' place)
 		cs::String heading = market != nullptr ? cs::Cat("MARKET  ·  ", market->Name) : cs::String("MARKET  ·  system average");
 		if (GUI::Button(Rect(r.x + 8, r.y + 6, w - 16, 22), UiStyle::Fold(marketOpen, heading), title)) marketOpen = !marketOpen;
@@ -629,6 +633,15 @@ namespace SpaceGod::UI
 			if (reports > 0 && GUI::Button(Rect(r.xMax() - 222, y - 2, 210, 20), cs::Cat("Sell ", reports, " to cartographer  ", Credits(offer)), button))
 				ClickSellSurvey(market);
 			y += surveyRow;
+		}
+		if (plunderRow > 0)
+		{
+			bool fence = BlackMarket::Takes(market);
+			GUI::contentColor = UiStyle::Warning;
+			GUI::Label(Rect(r.x + 12, y, w - 240, 18), cs::Cat("Plunder aboard: ", Tonnes(plunderHeld), fence ? cs::String() : cs::String("   (no black market here)")), small);
+			if (fence && GUI::Button(Rect(r.xMax() - 222, y - 2, 210, 20), cs::Cat("Sell plunder  ", Credits(BlackMarket::PlunderOffer(market, surveyHull))), button))
+				ClickSellPlunder(market);
+			y += plunderRow;
 		}
 		GUI::contentColor = Dim;
 		GUI::Label(Rect(r.x + 12, y, 150, rowH), "Good", small);
@@ -789,6 +802,18 @@ namespace SpaceGod::UI
 			? cs::Cat("Sold ", reports, " survey report", reports == 1 ? "" : "s", " to ", market->Name, "'s cartographers for ", Credits(paid),
 				": ", market->Owner->Name, "'s maps gain ", reports == 1 ? "it" : "them")
 			: cs::String("The cartographers here have nothing to buy"));
+	}
+
+	void Hud::ClickSellPlunder(const cs::Ref<Settlement>& market)
+	{
+		if (CoopSends("plunder", K(market))) return; // an entry in co-op, as every trade at the board is
+		auto ship = app->World()->PilotedShip;
+		if (ship == nullptr || market == nullptr || !app->CanTradeNow(market)) return;
+		double tonnes = 0;
+		double paid = BlackMarket::SellPlunder(market, ship, tonnes);
+		app->ShowToast(tonnes > 0
+			? cs::Cat("Sold ", Tonnes(tonnes), " of plunder to ", market->Name, "'s fences for ", Credits(paid))
+			: cs::String("No one here buys stolen goods"));
 	}
 
 	// ---------------------------------------------------------------- outfitting (U.SPC-T65)

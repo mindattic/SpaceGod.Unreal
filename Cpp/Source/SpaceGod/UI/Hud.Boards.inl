@@ -55,6 +55,7 @@ private:
 
 	/// <summary>US-T260: sells the piloted hull's survey data to the port's cartographer (see <see cref="Core::Exploration"/>).</summary>
 	void ClickSellSurvey(const cs::Ref<Core::Settlement>& market);
+	void ClickSellPlunder(const cs::Ref<Core::Settlement>& market); // US-T962
 
 	// ---------------------------------------------------------------- outfitting (U.SPC-T65)
 
