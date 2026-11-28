@@ -362,6 +362,22 @@ namespace SpaceGod::Core
 		return cell != nullptr && cell->count > 0 ? cell->supporter : 0;
 	}
 
+	bool Populace::Read(const cs::Ref<Settlement>& s, Topic topic, Reading& out) const
+	{
+		out = Reading();
+		if (state.impl == nullptr) return false;
+		int g = GroupOf(s);
+		if (g < 0) return false;
+		const LS::TopicReadout* cell = state.impl->readout.Find(static_cast<LS::GroupId>(g), static_cast<uint32_t>(topic));
+		if (cell == nullptr || cell->count == 0) return false;
+		out.Mean = cell->mean;
+		out.Supporter = cell->supporter;
+		out.Neutral = cell->neutral;
+		out.Skeptic = cell->skeptic;
+		out.ChangeRate = cell->changeRate;
+		return true;
+	}
+
 	void Populace::Hear(int group, Topic topic, float push, float magnitude, double jd)
 	{
 		if (state.impl == nullptr || group < 0 || group >= Groups.Count() || cs::Double::IsNaN(OriginJd)) return;

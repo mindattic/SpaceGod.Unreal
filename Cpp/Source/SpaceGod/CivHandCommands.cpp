@@ -74,7 +74,8 @@ namespace SpaceGod
 		const std::vector<const char*>& Views()
 		{
 			static const std::vector<const char*> views = { "feuds", "regimes", "trials", "admirals", "crime", "money", "chronicle",
-				"exiles" }; // US-T406: the peoples the wars drove out, and their grudges
+				"exiles", // US-T406: the peoples the wars drove out, and their grudges
+				"opinion" }; // US-T978: each world's populace's stance on every topic
 			return views;
 		}
 
@@ -157,6 +158,26 @@ namespace SpaceGod
 			{
 				for (const auto& e : civ.Culture->Chronicle) add(e->ToString());
 				add(cs::Cat("The league is in season ", civ.Culture->Season, ", round ", civ.Culture->Round));
+				return true;
+			}
+			// US-T978: the populace's mean stance on each topic, world by world in the society's own order; read only.
+			if (view == "opinion")
+			{
+				if (civ.Populace == nullptr) return true;
+				for (const auto& s : civ.Populace->Groups)
+				{
+					if (s == nullptr) continue;
+					cs::String text = cs::Cat(s->Name, ":");
+					bool read = false;
+					for (int t = 0; t < static_cast<int>(Core::Topic::Count_); t++)
+					{
+						Core::Populace::Reading r;
+						if (!civ.Populace->Read(s, static_cast<Core::Topic>(t), r)) continue;
+						text = cs::Cat(text, read ? "," : "", " ", Core::ToString(static_cast<Core::Topic>(t)), " ", r.Mean >= 0 ? "+" : "", cs::Fmt(r.Mean, "0.00"));
+						read = true;
+					}
+					if (read) add(text, CivPick::World(s->Name));
+				}
 				return true;
 			}
 			// US-T406: the refugee tribes the wars left (LastingConsequences, US-T105), each in a line; read only.

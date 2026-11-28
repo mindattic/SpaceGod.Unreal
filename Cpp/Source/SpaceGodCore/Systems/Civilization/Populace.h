@@ -90,6 +90,14 @@ namespace SpaceGod::Core
 		double Mood(const cs::Ref<Settlement>& s, Topic topic) const;
 		/// <summary>The galaxy's populace's <see cref="Mood"/>, or neutral when the galaxy has none (the Bench).</summary>
 		static double MoodOf(const Galaxy& galaxy, const cs::Ref<Settlement>& s, Topic topic);
+		/// <summary>US-T978: a world's opinion on a topic as last read: its mean stance, the shares of supporters, neutrals
+		/// and sceptics, and the share whose side changed since the reading before.</summary>
+		struct Reading
+		{
+			double Mean = 0, Supporter = 0, Neutral = 0, Skeptic = 0, ChangeRate = 0;
+		};
+		/// <summary>US-T978: the world's <see cref="Reading"/> on a topic; false before the society has read it.</summary>
+		bool Read(const cs::Ref<Settlement>& s, Topic topic, Reading& out) const;
 
 		/// <summary>US-T975: turns what happened up to <paramref name="jd"/> into events for the next batch.</summary>
 		void Perceive(Civilization& civ, Galaxy& galaxy, double jd);

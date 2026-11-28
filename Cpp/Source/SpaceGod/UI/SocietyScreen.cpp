@@ -15,6 +15,7 @@
 #include "Systems/Civilization/Kinship.h"
 #include "Systems/Civilization/Narrator.h"
 #include "Systems/Civilization/Politics.h"
+#include "Systems/Civilization/Populace.h" // US-T978
 #include "Systems/Civilization/Strife.h"
 #include "Systems/Civilization/Underworld.h" // US-T386
 #include "Systems/Galaxy.h"
@@ -49,7 +50,22 @@ namespace SpaceGod::UI
 			if (v == "money") return "Money";
 			if (v == "chronicle") return "Chronicle";
 			if (v == "exiles") return "Exiles & grudges"; // US-T406
+			if (v == "opinion") return "Opinion"; // US-T978
 			return "View";
+		}
+
+		/// US-T978: a populace topic as the OPINION section names it.
+		const char* SocietyTopicName(Core::Topic t)
+		{
+			switch (t)
+			{
+			case Core::Topic::PolitySupport: return "Support for the flag";
+			case Core::Topic::PirateFear: return "Fear of pirates";
+			case Core::Topic::GodFaith: return "Faith in the SpaceGod";
+			case Core::Topic::TradeTrust: return "Trust in trade";
+			case Core::Topic::WarHawk: return "Appetite for war";
+			default: return "Opinion";
+			}
 		}
 
 		/// The module groups of the feed, by the first kind of each (Civilization.h's SocialKind, in its order). A kind past
@@ -1648,6 +1664,7 @@ namespace SpaceGod::UI
 				: page == YourHand ? "Your hand has not touched the galaxy's people yet. Pick a house, a person, an organisation or a world and use the SpaceGod's hand on it: what it brings about, and what comes of that, is kept here."
 				: page == Month ? "Nothing has happened among the galaxy's people in the last 30 days."
 				: page >= FirstView && cs::String(CivHands::Views()[page - FirstView]) == "exiles" ? "No people have been driven from their homes yet: a war that takes a settlement sends its people out." // US-T406
+				: page >= FirstView && cs::String(CivHands::Views()[page - FirstView]) == "opinion" ? "No society yet: the worlds' opinions are first read a day after their people wake." // US-T978
 				: "Nobody here yet: that part of the civilization wakes as the days pass.", text);
 			return;
 		}
@@ -2067,6 +2084,20 @@ namespace SpaceGod::UI
 			if (c->Quarantined(jd)) lines.Add(cs::Cat("QUARANTINED until ", SocietyDate(c->QuarantineUntil)));
 			if (!c->Landmark.empty()) lines.Add(cs::Cat("Landmark: ", c->Landmark));
 			if (!c->Monument.empty()) lines.Add(cs::Cat("Monument: ", c->Monument));
+			// US-T978: OPINION, the populace's stance on each topic as last read, and how fast it is moving.
+			lines.Add("OPINION");
+			{
+				bool read = false;
+				for (int t = 0; t < static_cast<int>(Core::Topic::Count_); t++)
+				{
+					Core::Populace::Reading r;
+					if (civ.Populace == nullptr || !civ.Populace->Read(s, static_cast<Core::Topic>(t), r)) continue;
+					read = true;
+					lines.Add(cs::Cat(SocietyTopicName(static_cast<Core::Topic>(t)), " ", SocietySigned(r.Mean), "  \xC2\xB7  for ", SocietyPct(r.Supporter),
+						", neutral ", SocietyPct(r.Neutral), ", against ", SocietyPct(r.Skeptic), "  \xC2\xB7  changing sides ", SocietyPct(r.ChangeRate)));
+				}
+				if (!read) lines.Add("no society yet");
+			}
 			if (s->Owner != nullptr) links.emplace_back(s->Owner->Name, CivPick::Faction(s->Owner->Name));
 			if (c->Faith != nullptr) links.emplace_back(Narrator::OrgName(*c->Faith), CivPick::Org(c->Faith->Id));
 			// US-T330: who matters here: the governor, the houses by wealth, the best known who live here and the firms that trade here.
