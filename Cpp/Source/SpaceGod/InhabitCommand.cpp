@@ -490,6 +490,39 @@ namespace
 					juris = j;
 					break;
 				}
+			// None found quickly: one is staged, a pirate hull lying in wait beside a lane under a lawful jurisdiction, as step 5
+			// puts its raider beside a rider's lane, so the step never rests on where the world's pirates happen to be.
+			if (mark == nullptr && t > 8.0)
+			{
+				for (const auto& host : app.Fleet()->Ships())
+				{
+					if (!Alive(host) || host->Phase != ShipPhase::Lane || host->LaneLeg.Lane == nullptr || host->Battle != nullptr) continue;
+					auto j = world->Law->JurisdictionOf(host->LaneLeg);
+					if (j != world->Sol) continue; // the patrol's own law, whose pay the step looks for
+					double p = Fleet::LaneProgress(host, jd);
+					if (p < 0.1 || p > 0.9) continue;
+					int root = app.Catalog()->Root()->Index;
+					auto side = DVec3::Cross(app.Fleet()->LanePoint(host, jd, cs::Math::Min(p + 0.01, 1.0)) - app.Fleet()->LanePoint(host, jd, p), DVec3::UnitZ);
+					auto off = (side.LengthSquared() > 0 ? side.Normalized() : DVec3::UnitX) * 3000.0;
+					auto at = app.Fleet()->LanePoint(host, jd, p) + off - app.Ephemeris()->Helio(root);
+					auto pirate = app.Fleet()->SpawnAt("Inhabit Mark", ShipClass::Destroyer, world->Pirates, root, at, off.Normalized() * -1.0, jd);
+					if (pirate == nullptr) throw std::runtime_error("the staged pirate would not spawn");
+					pirate->LaneLeg = host->LaneLeg;
+					pirate->LaneFromOffset = host->LaneFromOffset;
+					pirate->LaneToOffset = host->LaneToOffset;
+					pirate->LaneStar = host->LaneStar;
+					pirate->LaneShape = host->LaneShape;
+					pirate->LaneLengthKm = host->LaneLengthKm;
+					pirate->LaneHold = p;
+					pirate->LaneHoldSide = off;
+					pirate->PhaseStartJd = jd;
+					pirate->PhaseEndJd = jd + 5.0;
+					pirate->Phase = ShipPhase::Lurk;
+					mark = pirate;
+					juris = j;
+					break;
+				}
+			}
 			if (mark == nullptr) return false;
 			bool lurking = mark->Ambushing();
 			// The fight beside a lane is anchored off the system's root: the patrol is put in that frame, so its helm and the fight agree.
@@ -519,6 +552,12 @@ namespace
 			auto rec = world->Law->RecordOf(patrol);
 			scene->credits = patrol->Credits;
 			scene->standing = rec != nullptr ? rec->StandingWith(scene->juris) : 0;
+			// A pirate hull the authority is paid to be rid of, not one with a bounty on its captain (that is paid by the bounty instead,
+			// and the staged hull lies where a rider sees the fight): whatever bounty the fight's end posts on it is lifted at once.
+			world->Law->Committed += [mark](cs::Ref<Crime> c)
+			{
+				if (c != nullptr && c->Offender != nullptr && c->Offender->Captain == mark) { c->Offender->Bounty.Clear(); c->Offender->BountyUntil.Clear(); }
+			};
 			auto fight = world->War->TryStartPlayerAttack(patrol, mark, frame, here - app.Ephemeris()->Helio(frame), forward, jd);
 			if (fight == nullptr || fight->UnitOf(mark) == nullptr) throw std::runtime_error("the attack on the pirate was refused");
 			scene->fight = fight;
@@ -548,7 +587,8 @@ namespace
 					scene->lurking ? TEXT("lying in wait") : TEXT("under way"), *Str(scene->juris->Name), paid, standing));
 				return true;
 			}
-			if (t < 3.0) return false;
+			// The law settles it when the fight ends, which the hold-to-rewind window can hold back (US-T419).
+			if (t < 14.0) return false;
 			// A wanted captain is paid for by the bounty on them, not by the authority's pirate pay.
 			if (paid > 0)
 			{
@@ -557,7 +597,7 @@ namespace
 				return true;
 			}
 			throw std::runtime_error(TCHAR_TO_UTF8(*FString::Printf(TEXT("the fight is over but %s paid nothing (standing %+.1f)"), *Str(scene->juris->Name), standing)));
-		}, 10.0);
+		}, 25.0);
 		shot(TEXT("patrol"));
 
 		// ---- 4: a station inhabited out of a fight, through the selection's station fallback (US-T953)
