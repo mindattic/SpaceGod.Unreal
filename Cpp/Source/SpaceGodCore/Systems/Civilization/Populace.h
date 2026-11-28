@@ -134,6 +134,56 @@ namespace SpaceGod::Core
 		/// <summary>US-T977: the galaxy's populace's <see cref="ReadoutHash"/>, or 0 when the galaxy has none (the Bench).</summary>
 		static uint64_t ReadoutHashOf(const Galaxy& galaxy);
 
+		// ---------------------------------------------------------------- US-T981: sg.LightSociety
+		/// <summary>US-T981: who decides the society's changes: the schedule (the teacher, its distilled surrogate from
+		/// <see cref="DistillDays"/> on), always the teacher, always the surrogate, or the surrogate for a share of them. Until
+		/// a surrogate is distilled the teacher answers whatever the routing.</summary>
+		enum class Routing : int
+		{
+			Scheduled,
+			Teacher,
+			Surrogate,
+			Mix,
+		};
+		/// <summary>US-T981: the society as sg.LightSociety shows it. The distillation's figures are read only between batches
+		/// (Stepping is true while one runs), and only for a surrogate distilled since the game was loaded (Samples 0 else).</summary>
+		struct LightStatus
+		{
+			bool Built = false, Stepping = false, Distilled = false, Switched = false;
+			Routing Route = Routing::Scheduled;
+			float Weight = 0;
+			int Agents = 0, Day = -1, Threads = 0;
+			float MacroF1 = 0, ChangeRateGap = 0;
+			int Samples = 0;
+			uint64_t CacheHits = 0, CacheMisses = 0;
+		};
+		/// <summary>US-T981: the society's <see cref="LightStatus"/>; Built is false when there is none.</summary>
+		LightStatus Status() const;
+		/// <summary>US-T981: routes the society's changes so from the next batch on (weight: the surrogate's share, for Mix);
+		/// false when there is no society.</summary>
+		bool Steer(Routing routing, float weight);
+		/// <summary>US-T981: distils the surrogate afresh from the society as it stands, in the next batch (the teacher decides
+		/// until the schedule switches it back in); false when there is no society.</summary>
+		bool Redistill();
+		/// <summary>US-T981: a sandbox run of one of the Light Society's paper scenarios, on a society apart from the game's.</summary>
+		struct SandboxRun
+		{
+			bool Ok = false;
+			/// <summary>Why it did not run, when it did not.</summary>
+			cs::String Error;
+			/// <summary>Its curves: a header line, then a line per row shown.</summary>
+			cs::List<cs::String> Lines = cs::List<cs::String>();
+			/// <summary>FNV-1a of its whole output written as a Codec blob: the same for the same arguments on any thread count.</summary>
+			uint64_t Hash = 0;
+		};
+		/// <summary>US-T981: runs scenario "diffusion", "continuous", "trust", "dictator", "repeated" or "ultimatum" (the last
+		/// four show the games scenario's rows of that game) with n agents (pairs for a game; 0 the scenario's default), days
+		/// rounds (0 the default) and the seed, its chunks on a pool of that many threads. It blocks: run it off the game thread.</summary>
+		static SandboxRun Sandbox(const cs::String& scenario, int n, int days, uint64_t seed, int threads);
+		/// <summary>US-T981: distils the teacher's persuasion from synthetic profiles drawn from the seed and measures the
+		/// surrogate against it; false when it would not train. It blocks: run it off the game thread.</summary>
+		static bool SandboxDistill(uint64_t seed, float& macroF1, float& changeRateGap, int& samples);
+
 	private:
 		LightState state;
 

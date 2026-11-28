@@ -60,6 +60,27 @@ namespace SpaceGod::Core
 		std::vector<LS::AgentId> leave;
 		std::vector<LS::Profile> joins;
 		std::vector<LS::Edge> links;
+		// US-T981: sg.LightSociety's routing, applied between batches by Pump: the router under a policy of its choosing,
+		// a redistillation it asked for, and the figures of the last distillation.
+		struct Steering final : LS::IPolicy
+		{
+			explicit Steering(LS::Router& r) : router(r) {}
+			LS::Router& router;
+			LS::Policy policy = LS::Policy::AllTeacher;
+			float weight = 0;
+			void Decide(const LS::PolicyBatch& batch, LS::PolicyOut& out) override
+			{
+				LS::Config config = batch.config;
+				config.policy = policy;
+				config.surrogateWeight = weight;
+				router.Decide(LS::PolicyBatch{batch.store, config, batch.topics, batch.kind, batch.events, batch.perceptions, batch.round}, out);
+			}
+		};
+		Steering steering{router};
+		Populace::Routing routing = Populace::Routing::Scheduled;
+		float weight = 0.5f;
+		bool redistill = false;
+		LS::DistillMetrics metrics;
 		/// <summary>Last, so it is destroyed (its job cancelled and its thread joined) before what the job touches.</summary>
 		LS::JobRunner runner;
 
@@ -212,7 +233,27 @@ namespace SpaceGod::Core
 			distill.seed = config.seed;
 			LS::DistillResult result = LS::Distill(light.teacher, samples, distill);
 			if (result.ok) light.surrogate = std::move(result.backend);
+			if (result.ok) light.metrics = result.metrics; // US-T981
 			light.distilled = true;
+		}
+
+		/// <summary>US-T981: sg.LightSociety's routing and redistillation, between batches (the router never changes under one).</summary>
+		void ApplyRouting(LightState::Impl& light)
+		{
+			using R = Populace::Routing;
+			if (light.redistill)
+			{
+				// Distilled again in the next batch; the schedule switches it back in on the batch after.
+				light.redistill = false;
+				light.distilled = false;
+				light.switched = false;
+			}
+			const bool want = light.routing == R::Scheduled ? light.switched : light.routing != R::Teacher && light.distilled;
+			const bool has = light.router.Backends().Find(LS::BackendKind::Surrogate, LS::Op::Shift) != nullptr;
+			if (want != has) light.router.Register(LS::BackendKind::Surrogate, LS::Op::Shift, want ? &light.surrogate : nullptr);
+			light.steering.policy = light.routing == R::Teacher ? LS::Policy::AllTeacher : light.routing == R::Mix ? LS::Policy::Weighted : LS::Policy::AllSurrogate;
+			light.steering.weight = light.weight;
+			light.engine.SetPolicy(light.routing == R::Scheduled ? static_cast<LS::IPolicy*>(&light.router) : &light.steering);
 		}
 
 		/// <summary>Seats the census's joiners, retires its leavers and wires the new ties (run on the worker).</summary>
@@ -324,6 +365,7 @@ namespace SpaceGod::Core
 		Perceive(civ, galaxy, jd);
 		Trade(civ, galaxy, jd); // US-T985
 		Census(civ, galaxy, jd);
+		ApplyRouting(light); // US-T981
 		long long last = std::min<long long>(due, static_cast<long long>(now) + MaxStrideDays);
 		if (!light.switched && static_cast<long long>(now) < switchDay) last = std::min(last, switchDay);
 		// A save without a surrogate distils in this batch, one day long so the switch after it lands on a fixed day.
@@ -446,6 +488,53 @@ namespace SpaceGod::Core
 		for (int i = 0; i < Groups.Count(); i++)
 			if (Groups[i] == s) return i;
 		return -1;
+	}
+
+	// ---------------------------------------------------------------- US-T981: sg.LightSociety
+
+	Populace::LightStatus Populace::Status() const
+	{
+		LightStatus out;
+		if (state.impl == nullptr) return out;
+		const LightState::Impl& light = *state.impl;
+		out.Built = true;
+		out.Route = light.routing;
+		out.Weight = light.weight;
+		out.Switched = light.switched;
+		out.Threads = static_cast<int>(light.pool.Threads());
+		out.CacheHits = light.router.CacheHits();
+		out.CacheMisses = light.router.CacheMisses();
+		if (!light.readout.cells.empty())
+		{
+			out.Day = static_cast<int>(light.readout.day);
+			for (size_t g = 0; g < light.readout.groups.size(); g++)
+				out.Agents += static_cast<int>(light.readout.cells[g * light.readout.topics].count);
+		}
+		// The worker writes these while a batch runs.
+		out.Stepping = light.runner.Busy();
+		if (!out.Stepping)
+		{
+			out.Distilled = light.distilled;
+			out.MacroF1 = light.metrics.macroF1;
+			out.ChangeRateGap = light.metrics.changeRateGap;
+			out.Samples = static_cast<int>(light.metrics.samples);
+		}
+		return out;
+	}
+
+	bool Populace::Steer(Routing routing, float weight)
+	{
+		if (state.impl == nullptr) return false;
+		state.impl->routing = routing;
+		state.impl->weight = cs::Math::Clamp(weight, 0.0f, 1.0f);
+		return true;
+	}
+
+	bool Populace::Redistill()
+	{
+		if (state.impl == nullptr) return false;
+		state.impl->redistill = true;
+		return true;
 	}
 
 	// ---------------------------------------------------------------- f_I: the people as agents
