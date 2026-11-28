@@ -148,6 +148,15 @@ namespace SpaceGod
 		return value;
 	}
 
+	const cs::Ref<ToggleSetting>& PlayerOptions::FreePossession()
+	{
+		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.freePossession", Gameplay, "Free possession", true,
+			"P takes any hull, a battleship or one already in a fight, whatever your Influence (off: the in-battle and Influence limits apply; "
+			"single player only, a co-op session keeps the limits).",
+			"possess embody inhabit any ship limits influence battle sandbox free");
+		return value;
+	}
+
 	const cs::Ref<ToggleSetting>& PlayerOptions::PauseOnFocusLoss()
 	{
 		static const cs::Ref<ToggleSetting> value = cs::New<ToggleSetting>("gameplay.pauseOnFocusLoss", Gameplay, "Pause when the window loses focus", false,
@@ -220,7 +229,7 @@ namespace SpaceGod
 
 	void PlayerOptions::Declare()
 	{
-		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); CinematicLaunch(); SeatTransition(); PauseOnFocusLoss(); Clock(); Dates();
+		AutosaveInterval(); AutosaveSlots(); AutosaveOnDock(); AutosaveBeforeJump(); DistanceUnits(); Notices(); ConfirmQuit(); LayoutWithSituation(); CameraShake(); CameraFeel(); CinematicLaunch(); SeatTransition(); FreePossession(); PauseOnFocusLoss(); Clock(); Dates();
 		UiScale(); TextSize(); HudOpacity(); StancePalette(); ReduceFlashes();
 	}
 
@@ -294,6 +303,8 @@ namespace SpaceGod
 	bool PlayerOptions::CinematicLaunchCamera() { return !ScriptedRun() && CinematicLaunch()->Value; }
 
 	float PlayerOptions::SeatTransitionSeconds() { return ScriptedRun() ? 0.0f : cs::Math::Max(0.0f, static_cast<float>(SeatTransition()->Value)); }
+
+	bool PlayerOptions::PossessesFreely() { return !ScriptedRun() && FreePossession()->Value; }
 
 	bool PlayerOptions::PausesOnFocusLoss() { return !ScriptedRun() && PauseOnFocusLoss()->Value; }
 

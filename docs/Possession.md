@@ -129,6 +129,19 @@ speed again (`ApplyLoaded`), since the transition is not carried over.
 Per frame it is a handful of arithmetic: no allocation, no search. There is no post-process volume change: the
 standstill's look is the HUD wash.
 
+## Free possession (US-T952)
+
+**Settings > Gameplay > Free possession** (`gameplay.freePossession`, kept in the profile, on by default) lets P take
+any hull, a battleship or one already in a fight, at Influence 1. While it is on, `UpdateInfluence` sets
+`SpaceGodInfluence::Waived` each frame, as the smoke and audit harnesses do, so `Embodiables::MayEmbody` allows the take
+before its in-battle and Influence rules; the Influence meter reads FREE POSSESSION. Turned off, the waiver it gave is
+taken back and the old refusals return (the dev menu's Embody limits toggle still works then). `Waived` is never saved,
+so nothing reaches a save or the simulation's digest.
+
+It is single player only. A co-op seat take is weighed by `SeatAuthority::Take` on every peer alike, so a waiver held by
+one peer's profile would split the session; in a session (`CoopPeer::Current`) the setting is ignored and the limits
+apply. A scripted run (`PlayerOptions::ScriptedRun`) ignores it too, so its gate is whatever the run sets.
+
 ## Checking it
 
 ```powershell

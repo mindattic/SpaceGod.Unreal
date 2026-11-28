@@ -27,6 +27,8 @@
 #include "UI/Hud.h"
 #include "World.h"
 
+#include "PlayerOptions.h"
+
 #include "Misc/CommandLine.h"
 #include "Misc/Parse.h"
 
@@ -55,6 +57,7 @@ namespace SpaceGod
 		}
 
 		int scenarioCount = 0;
+		bool freePossessionWaived = false; // US-T952: the waiver on the world is Free possession's own
 	}
 
 	// ---------------------------------------------------------------- the frame
@@ -63,6 +66,12 @@ namespace SpaceGod
 	{
 		session->SetGateWorld(World());
 		if (HarnessRun() && World() != nullptr) SpaceGodInfluence::Of(World())->Waived = true;
+		// US-T952: Free possession waives the embody limits as the harness does, single player only: the co-op gate is weighed on
+		// every peer alike, so a session keeps the limits. Turned off (or a session joined), the waiver it gave is taken back.
+		bool free = !HarnessRun() && PlayerOptions::PossessesFreely() && Coop::CoopPeer::Current() == nullptr;
+		if (World() != nullptr && (free || freePossessionWaived))
+			if (auto inf = SpaceGodInfluence::Of(World())) inf->Waived = free;
+		freePossessionWaived = free;
 		// US-T105: the game's wars put objectives to the SpaceGod and leave refugee tribes behind (made once, in a new game
 		// or an older save alike; a Core-only run, the Bench's, never makes them).
 		if (Galaxy != nullptr) LastingConsequences::Of(*Galaxy);
@@ -158,7 +167,7 @@ namespace SpaceGod
 			float w = 268, h = 46;
 			auto r = hud->Place(w, h); // the drawer's frame stands for the badge's own
 			cs::String head = cs::Cat("INFLUENCE  ", level, "  \xC2\xB7  ", cs::Strings::ToUpperInvariant(SpaceGodInfluence::Title(level)),
-				inf != nullptr && inf->Waived ? cs::String("  \xC2\xB7  LIMITS OFF (dev)") : cs::String());
+				inf == nullptr || !inf->Waived ? cs::String() : freePossessionWaived ? cs::String("  \xC2\xB7  FREE POSSESSION") : cs::String("  \xC2\xB7  LIMITS OFF (dev)"));
 			GUI::Label(Rect(r.x + 8, r.y + 3, w - 16, 18), head, influenceTitle);
 			auto bar = Rect(r.x + 8, r.y + 23, w - 16, 5);
 			GUI::DrawTexture(bar, influenceTrack);

@@ -58,6 +58,8 @@ namespace SpaceGod
 		/// US-T855: how long a seat change's ghost transition takes (time slows to a standstill, the view drifts to the new eye
 		/// and time comes back); 0 changes seats at once.
 		static const cs::Ref<Core::RangeSetting>& SeatTransition();
+		/// US-T952: P takes any hull, in battle or not, whatever the Influence (the embody limits waived). On by default.
+		static const cs::Ref<Core::ToggleSetting>& FreePossession();
 		/// US-T555: the pause menu opens when the window loses focus, outside co-op. Off by default.
 		static const cs::Ref<Core::ToggleSetting>& PauseOnFocusLoss();
 		/// US-T617: times of day in 24-hour (as always) or 12-hour form.
@@ -124,6 +126,8 @@ namespace SpaceGod
 		static bool CinematicLaunchCamera();
 		/// US-T855: the seat transition's length in seconds, 0 for instant (always 0 in a scripted run).
 		static float SeatTransitionSeconds();
+		/// US-T952: Free possession is on (never in a scripted run: its gate stays as the run sets it).
+		static bool PossessesFreely();
 		/// Pause when the window loses focus is on (never in a scripted run).
 		static bool PausesOnFocusLoss();
 
