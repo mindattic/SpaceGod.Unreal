@@ -1175,6 +1175,49 @@ namespace SpaceGod::Smoke::FeatureAudit
 			CloseEverything();
 		}
 
+		// ---------------------------------------------------------------- planet map (US-T931, regression for US-T927)
+
+		/// A mapped planet seen close (the cockpit's view of it) must end up on its colour map: once the map has streamed its
+		/// material reports _UseTexture 1 and a _MainTex that is not the flat swatch, never the Planet.ush noise fallback
+		/// (the asphalt look of US-T927). Focuses the first planet with a Texture (Earth first) and waits for the stream.
+		void PlanetMapProbe()
+		{
+			CloseEverything();
+			int body = BodyIndex("Earth");
+			if (body < 0 || (*app->Catalog())[body]->Texture.empty())
+			{
+				body = -1;
+				for (int i = 0; i < app->Catalog()->Count() && body < 0; i++)
+					if ((*app->Catalog())[i]->Kind == BodyKind::Planet && !(*app->Catalog())[i]->Texture.empty()) body = i;
+			}
+			if (body < 0) { Result("planetmap.cockpit", false, "no mapped planet in the catalog"); return; }
+			app->Clock->SetWarp(0);
+			app->SpaceCamera->FocusOn(Target::OfBody(body));
+			Settle();
+			float use = 0;
+			cs::String texName = "none";
+			for (int i = 0; i < 1800; i++)
+			{
+				use = 0;
+				texName = "none";
+				for (auto& r : app->ModelRenderersOf(Target::OfBody(body)))
+				{
+					auto m = r ? r->sharedMaterial() : nullptr;
+					if (!m || !m->HasProperty("_UseTexture")) continue;
+					use = m->GetFloat("_UseTexture");
+					auto t = m->Properties.GetTexture("_MainTex");
+					texName = t ? t->name : "none";
+					break;
+				}
+				if (use > 0.5f && texName != "Swatch" && texName != "none") break;
+				frames(1);
+			}
+			Result("planetmap.cockpit", use > 0.5f && texName != "Swatch" && texName != "none",
+				cs::Cat((*app->Catalog())[body]->Name, " _UseTexture ", use, ", _MainTex ", texName));
+			app->SpaceCamera->ExitFocus();
+			CloseEverything();
+		}
+
 		// ---------------------------------------------------------------- roles (US-T167, docs/ROLES.md)
 
 		int BodyIndex(const char* name)
@@ -1351,6 +1394,7 @@ namespace SpaceGod::Smoke::FeatureAudit
 			Probe("text", [] { TextEditProbes(Result); });
 			Probe("viewer", [] { ModelViewerProbes(Result, frames); });
 			Probe("focus", FocusProbes); // US-T78
+			Probe("planetmap", PlanetMapProbe); // US-T931
 			Probe("input", InputOwnershipProbes); // US-T90
 			Probe("roles", RoleProbes); // US-T167: docs/ROLES.md, per embodied role
 		}
