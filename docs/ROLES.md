@@ -82,6 +82,12 @@ frame: the craft's at the controls, the command view's otherwise.
    engaged broadside is depleted; it does not drift, flip-and-burn or lateral-boost.
 7. **Panels own the keys.** Comms, the dev menu, the drawer and the tour consume their keys (`Input.Handover()`), so Shift+H
    does not also toggle Help.
+8. **Lock and fire starts a fight wherever the target is** (US-T957, `War::TryStartPlayerAttack` / `EngageUnderWay`). A
+   ship parked or queued at the helm's frame body is fought there as before. A raider lying in wait beside a lane, or one
+   thrown out of it, is fought in a lane-site battle off the system's root, anchored where the helm is; a ship under way
+   (a flip-and-burn transit) is fought off the helm's frame body where the helm is. Either needs the target within the
+   hull's scanner reach; a ship riding a lane is out of reach. When the fight's frame is not the helm's, the helm moves to
+   it in place (no jump). Only the piloted hull takes this path, so the headless sim (and the bench digests) never do.
 
 ## Audit
 
