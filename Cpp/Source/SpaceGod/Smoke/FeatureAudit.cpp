@@ -1240,19 +1240,34 @@ namespace SpaceGod::Smoke::FeatureAudit
 		/// tractor, drift) do nothing.
 		void FreeRole(int earth)
 		{
+			Log("AUDIT STEP free.1");
 			ToCommand();
+			Log("AUDIT STEP free.2");
 			if (earth < 0) return;
 			app->SpaceCamera->ExitFocus();
+			Log("AUDIT STEP free.3");
 			app->Select(Target::OfBody(earth));
 			cs::String toast = Toast();
-			Tap(Key::J, { Key::LeftShift });
+			Log("AUDIT STEP free.4");
+			kb->Hold(Key::LeftShift);
+			Log("AUDIT STEP free.4a");
+			kb->Tap(Key::J);
+			Log("AUDIT STEP free.4b");
+			frames(1);
+			Log("AUDIT STEP free.4c");
+			kb->Release(Key::LeftShift);
+			frames(1);
+			Log("AUDIT STEP free.4d");
 			Tap(Key::T, { Key::LeftShift });
 			Result(cs::Cat("roles.", roleScale, ".free.flight-keys-idle"), !app->AtControls() && Toast() == toast, cs::Cat("Shift+J, Shift+T in command: toast '", Toast(), "'"));
+			Log("AUDIT STEP free.5");
 			Tap(Key::F);
+			Log("AUDIT STEP free.6");
 			Settle();
 			Result(cs::Cat("roles.", roleScale, ".free.focus-grabs"), app->SpaceCamera->Mode != CameraMode::Free && app->SpaceCamera->FocusTarget == Target::OfBody(earth),
 				cs::Cat("F with Earth selected: camera ", Cameras::ToString(app->SpaceCamera->Mode), " on ", Describe(app->SpaceCamera->FocusTarget)));
 			app->SpaceCamera->ExitFocus();
+			Log("AUDIT STEP free.7");
 			CloseEverything();
 		}
 
@@ -1264,6 +1279,9 @@ namespace SpaceGod::Smoke::FeatureAudit
 			HullRole("capital", ShipClass::Battleship, FlightFamily::Capital, false, earth);
 			HullRole("carrier", ShipClass::Carrier, FlightFamily::Capital, false, earth);
 			HullRole("hauler", ShipClass::Freighter, FlightFamily::Hauler, false, earth);
+			app->StartDogfightDemo(false);
+			frames(3);
+			ToCommand();
 			SeatRole("turret", Key::Slash, {}, earth);
 			SeatRole("worker", Key::P, { Key::LeftShift }, earth);
 			SeatRole("launched-craft", Key::Slash, { Key::LeftShift }, earth);
