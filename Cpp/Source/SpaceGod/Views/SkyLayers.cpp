@@ -303,6 +303,8 @@ namespace SpaceGod::Views
 			auto r = AddComponent<MeshRenderer>(g.Go);
 			g.Mat = Materials::Create(Materials::Planet(), "Backdrop giant");
 			g.Mat->SetFloat("_UseTexture", 0);
+			// US-T929 probe: backdrop giants are never given a map (nothing sets _UseTexture 1), so they always draw the noise fallback.
+			Debug::Log(cs::Cat("[Unity.SpaceGod] SkyLayers backdrop giant in ", system, ": noise fallback only (_UseTexture 0, no map path)"));
 			g.Mat->SetColor("_Color", Color(w.Light.R, w.Light.G, w.Light.B));
 			g.Mat->SetFloat("_NoiseStrength", w.Banded ? 0.18f : 0.3f);
 			g.Mat->SetFloat("_NoiseScale", w.Banded ? 1.4f : 3.0f);

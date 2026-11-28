@@ -168,6 +168,9 @@ namespace SpaceGod::Views
 			// Its maps load in the background (U.SPC-T414): until they arrive it is drawn in its own colour (a
 			// gas giant, whose shader has no tint, on a swatch of it), the way an unmapped body always is.
 			bool mapped = !body->Texture.empty();
+			// US-T929 probe: which path a body is drawn by. Unmapped (no Texture) stays on the Planet.ush noise fallback
+			// (_UseTexture 0) for good, the flat look; mapped flips to 1 when the colour map arrives (below).
+			Debug::Log(cs::Cat("[Unity.SpaceGod] BodyView ", body->Name, mapped ? cs::String(": mapped, _UseTexture 0 until ") + body->Texture + " loads" : cs::String(": no Texture, noise fallback stays (_UseTexture 0)")));
 			windProfile = body->GasGiant && mapped ? GasGiantWeather::ProfileFor(body->Name) : nullptr;
 			material = Materials::Create(windProfile ? Materials::GasGiant() : Materials::Planet(), body->Name);
 			material->SetFloat("_UseTexture", 0);
@@ -182,10 +185,16 @@ namespace SpaceGod::Views
 				std::weak_ptr<Material> m = material;
 				bool tintTexture = body->TintTexture;
 				float poleMargin = body->TexturePoleMargin;
-				AssetStreamer::Request<Texture2D>(AssetStreamer::TexturePath(body->Texture), [m, tintTexture, poleMargin, tint](cs::Ref<Texture2D> texture)
+				cs::String texName = body->Texture, bodyName = body->Name;
+				AssetStreamer::Request<Texture2D>(AssetStreamer::TexturePath(body->Texture), [m, tintTexture, poleMargin, tint, texName, bodyName](cs::Ref<Texture2D> texture)
 				{
 					auto mat = m.lock();
-					if (!Alive(mat) || !texture) return;
+					if (!Alive(mat) || !texture)
+					{
+						if (Alive(mat)) Debug::LogWarning(cs::Cat("[Unity.SpaceGod] BodyView ", bodyName, ": colour map ", texName, " did not load, noise fallback stays (US-T929)"));
+						return;
+					}
+					Debug::Log(cs::Cat("[Unity.SpaceGod] BodyView ", bodyName, ": colour map ", texName, " loaded, _UseTexture 1"));
 					mat->SetTexture("_MainTex", texture);
 					mat->SetFloat("_UseTexture", 1);
 					mat->SetFloat("_PoleMargin", poleMargin);
