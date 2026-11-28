@@ -92,8 +92,9 @@ namespace SpaceGod::UI
 		/// visited, heard from and the undiscovered frontier just past the charts; Danger the raiders, the Bio Mass, the Void
 		/// Raiders' strikes and the Watcher's signs. Only what the player could know, as old as the news of it; the view
 		/// alone, so nothing is sent in co-op. Remembered in the profile (galaxyMapMode). US-T319: Society shows the
-		/// worlds' mood and where notable social news broke lately, as the Society screen knows them.
-		enum class MapMode : int { Political, Trade, Exploration, Danger, Society };
+		/// worlds' mood and where notable social news broke lately, as the Society screen knows them. US-T979: Opinion
+		/// colours each system by its worlds' mean stance on one topic of the Populace (its tab again: the next topic).
+		enum class MapMode : int { Political, Trade, Exploration, Danger, Society, Opinion };
 
 		MapMode Mode() const { return mode; }
 		void SetMode(MapMode m);
@@ -171,6 +172,8 @@ namespace SpaceGod::UI
 		/// The good the Trade mode prices (a Core::Good), and whether it shows where to sell it rather than buy it.
 		int tradeGood = 0;
 		bool tradeSell = false;
+		/// US-T979: the topic the Opinion mode shows (a Core::Topic).
+		int opinionTopic = 0;
 
 		/// One system as the mode shows it, worked out with the model.
 		struct ModeLook
@@ -190,6 +193,9 @@ namespace SpaceGod::UI
 			int CivWorlds = 0, SocialNews = 0;
 			double Approval = 0, Unrest = 0;
 			bool Quarantine = false;
+			// Opinion (US-T979): its standing worlds' mean stance on the topic shown (-1..1), and how many were counted.
+			int OpinionWorlds = 0;
+			double Opinion = 0;
 		};
 		static constexpr double SocietyNewsDays = 30;
 		std::unordered_map<const Core::StarSystem*, ModeLook> looks;
@@ -227,6 +233,7 @@ namespace SpaceGod::UI
 		static cs::String ModeName(MapMode m);
 		static constexpr const char* ModeSetting = "galaxyMapMode";
 		static constexpr const char* GoodSetting = "galaxyMapGood";
+		static constexpr const char* TopicSetting = "galaxyMapTopic";
 		static constexpr Color VisitedColor = Color(0.4f, 0.95f, 0.55f);
 		static constexpr Color HeardColor = Color(0.45f, 0.7f, 1.0f);
 		static constexpr Color VoidColor = Color(0.75f, 0.5f, 1.0f);
@@ -243,6 +250,14 @@ namespace SpaceGod::UI
 		Color SocietyTint(const ModeLook& look) const;
 		void DrawSocietyLegend(float& y, float x, float w, double jd);
 		void DrawSocietyDetail(float& y, float x, float w, const cs::Ref<Core::MapSystem>& m, double jd);
+		/// US-T979: the Opinion mode's pieces (GalaxyMapScreen.Modes.cpp): against, neutral grey, for.
+		static constexpr Color OpinionAgainstColor = Color(0.35f, 0.55f, 1.0f);
+		static constexpr Color OpinionNeutralColor = Color(0.6f, 0.6f, 0.6f);
+		static constexpr Color OpinionForColor = Color(1.0f, 0.6f, 0.2f);
+		static Color OpinionTint(double stance);
+		void NextTopic(int step);
+		void DrawOpinionLegend(float& y, float x, float w);
+		void DrawOpinionDetail(float& y, float x, float w, const cs::Ref<Core::MapSystem>& m);
 
 	private:
 		static bool CoopSendsText(UnitySpaceApp* app, const cs::String& verb, const cs::String& args);

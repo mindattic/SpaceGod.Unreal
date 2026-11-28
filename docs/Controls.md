@@ -216,6 +216,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Galaxy map: find a system or star | Ctrl+F, then Up / Down / Enter (US-T306) | galaxy map | the field at the map's top left |
 | Galaxy map: pin the system picked (again: unpin) / go to a pin | Ctrl+1..9 / 1..9 (US-T377; not while typing in the find; Ctrl held over the map drops no mine) | galaxy map | the PINS panel at the map's bottom left |
 | Galaxy map: centre on the system you are in | Home (US-T393; not while typing in the find) | galaxy map | the Here button by Reset |
+| Galaxy map: Opinion mode, each system by its worlds' mean stance on a topic (Polity Support, Pirate Fear, God Faith, Trade Trust, War Hawk) | - (US-T979) | galaxy map | the OPINION tab (again: the next topic), or < > in its legend |
 | Take-charge picker / save panel: move through the seats or slots, take the seat or load the slot | Up / Down, Enter (US-T393) | picker (F9) / save panel (F6) | the row clicked |
 | System map: find a world, station, gate, ship or field | Ctrl+F, then Up / Down / Enter (US-T310) | system map | the field at the map's top left |
 | Quicksave / quickload / slots | F5 / F8 / F6 | anywhere | pause menu > Save / Load |

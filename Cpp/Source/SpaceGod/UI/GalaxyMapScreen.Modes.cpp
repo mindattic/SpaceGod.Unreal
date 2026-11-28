@@ -29,6 +29,7 @@
 #include "Systems/VoidWatcher.h"
 #include "Systems/Civilization/Civilization.h"
 #include "Systems/Civilization/Narrator.h"
+#include "Systems/Civilization/Populace.h"
 
 #include <algorithm>
 #include <cmath>
@@ -49,6 +50,27 @@ namespace SpaceGod::UI
 		float Clamp01(double v) { return Mathf::Clamp01(static_cast<float>(v)); }
 
 		cs::String Credits(double v) { return cs::Cat(cs::Fmt(v, "N0"), " cr/t"); }
+
+		/// A mean stance this far from neutral is drawn at its strongest in the Opinion mode.
+		constexpr double OpinionFullScale = 0.6;
+
+		constexpr int TopicCount = static_cast<int>(Topic::Count_);
+
+		/// The Opinion mode's topic as the legend names it, and what its two ends mean.
+		struct TopicWords { const char* Name; const char* For; const char* Against; };
+		TopicWords WordsOf(int topic)
+		{
+			switch (static_cast<Topic>(topic))
+			{
+			case Topic::PirateFear: return { "PIRATE FEAR", "afraid of pirates", "unafraid of pirates" };
+			case Topic::GodFaith: return { "GOD FAITH", "faith in the SpaceGod", "doubt of the SpaceGod" };
+			case Topic::TradeTrust: return { "TRADE TRUST", "trust in trade and traders", "suspicious of traders" };
+			case Topic::WarHawk: return { "WAR HAWK", "for war", "for peace" };
+			default: return { "POLITY SUPPORT", "for the flag that rules them", "against their flag" };
+			}
+		}
+
+		cs::String Stance(double v) { return cs::Cat(v >= 0 ? "+" : "", cs::Fmt(v, "0.00")); }
 	}
 
 	// ---------------------------------------------------------------- the mode
@@ -61,6 +83,7 @@ namespace SpaceGod::UI
 		case MapMode::Exploration: return "EXPLORATION";
 		case MapMode::Danger: return "DANGER";
 		case MapMode::Society: return "SOCIETY";
+		case MapMode::Opinion: return "OPINION";
 		default: return "POLITICAL";
 		}
 	}
@@ -68,8 +91,20 @@ namespace SpaceGod::UI
 	void GalaxyMapScreen::SetMode(MapMode m)
 	{
 		modeLoaded = true;
-		if (mode == m) return;
+		if (mode == m)
+		{
+			if (m == MapMode::Opinion) NextTopic(1); // US-T979: its tab again steps the topic
+			return;
+		}
 		mode = m;
+		builtAt = -10.0f;
+		SaveMode();
+	}
+
+	void GalaxyMapScreen::NextTopic(int step)
+	{
+		opinionTopic = ((opinionTopic + step) % TopicCount + TopicCount) % TopicCount;
+		builtAt = -10.0f;
 		SaveMode();
 	}
 
@@ -81,11 +116,14 @@ namespace SpaceGod::UI
 			auto profile = ActiveProfile::Current();
 			if (profile == nullptr) return;
 			cs::String saved = GameSettings::Setting(profile, ModeSetting);
-			for (int i = 0; i <= static_cast<int>(MapMode::Society); i++)
+			for (int i = 0; i <= static_cast<int>(MapMode::Opinion); i++)
 				if (saved ==cs::Strings::ToLowerInvariant(ModeName(static_cast<MapMode>(i)))) mode = static_cast<MapMode>(i);
 			cs::String good = GameSettings::Setting(profile, GoodSetting);
 			for (int g = 0; g < GoodInfo::Count; g++)
 				if (good == GoodInfo::Of(static_cast<Good>(g))->Name) tradeGood = g;
+			cs::String topic = GameSettings::Setting(profile, TopicSetting);
+			for (int t = 0; t < TopicCount; t++)
+				if (topic == cs::String(ToString(static_cast<Topic>(t)))) opinionTopic = t;
 		}
 		catch (const std::exception& e) { Debug::LogError(cs::Cat("[SpaceGod] Reading the galaxy map's mode failed: ", e.what())); }
 	}
@@ -98,6 +136,7 @@ namespace SpaceGod::UI
 			if (profile == nullptr) return;
 			GameSettings::SetSetting(profile, ModeSetting, cs::Strings::ToLowerInvariant(ModeName(mode)));
 			GameSettings::SetSetting(profile, GoodSetting, GoodInfo::Of(static_cast<Good>(tradeGood))->Name);
+			GameSettings::SetSetting(profile, TopicSetting, cs::String(ToString(static_cast<Topic>(opinionTopic))));
 		}
 		catch (const std::exception& e) { Debug::LogError(cs::Cat("[SpaceGod] Saving the galaxy map's mode failed: ", e.what())); }
 	}
@@ -213,6 +252,21 @@ namespace SpaceGod::UI
 			}
 			for (auto& entry : looks)
 				if (entry.second.CivWorlds > 0) entry.second.Approval /= entry.second.CivWorlds;
+			// Opinion (US-T979): the worlds' mean stance on the topic shown, only while it is (neutral without a Populace).
+			if (mode == MapMode::Opinion)
+			{
+				auto topic = static_cast<Topic>(opinionTopic);
+				for (const auto& c : civ->Worlds)
+				{
+					if (c == nullptr || c->System == nullptr || c->Where == nullptr) continue;
+					auto it = looks.find(c->System.get());
+					if (it == looks.end()) continue;
+					it->second.OpinionWorlds++;
+					it->second.Opinion += Populace::MoodOf(*app->Galaxy, c->Where, topic);
+				}
+				for (auto& entry : looks)
+					if (entry.second.OpinionWorlds > 0) entry.second.Opinion /= entry.second.OpinionWorlds;
+			}
 			for (int i = civ->Events.Count() - 1; i >= 0; i--)
 			{
 				const auto& e = civ->Events[i];
@@ -287,9 +341,19 @@ namespace SpaceGod::UI
 			if (look == nullptr || look->CivWorlds == 0) return Unknown;
 			draw = true;
 			return SocietyTint(*look);
+		case MapMode::Opinion:
+			if (look == nullptr || look->OpinionWorlds == 0) return Unknown;
+			draw = true;
+			return OpinionTint(look->Opinion);
 		default:
 			return Dim;
 		}
+	}
+
+	Color GalaxyMapScreen::OpinionTint(double stance)
+	{
+		float t = static_cast<float>(cs::Math::Max(-1.0, cs::Math::Min(1.0, stance / OpinionFullScale)));
+		return t < 0 ? Color::Lerp(OpinionNeutralColor, OpinionAgainstColor, -t) : Color::Lerp(OpinionNeutralColor, OpinionForColor, t);
 	}
 
 	Color GalaxyMapScreen::SocietyTint(const ModeLook& look) const
@@ -349,6 +413,10 @@ namespace SpaceGod::UI
 			if (look->Quarantine) parts.Add("quarantine");
 			return cs::Strings::Join("  ·  ", parts);
 		}
+		case MapMode::Opinion:
+			if (look == nullptr || look->OpinionWorlds == 0) return "no settled worlds";
+			return cs::Cat(cs::Strings::ToLowerInvariant(cs::String(WordsOf(opinionTopic).Name)), " ", Stance(look->Opinion), "  ·  ",
+				look->OpinionWorlds, look->OpinionWorlds == 1 ? " world" : " worlds");
 		default:
 			return cs::String();
 		}
@@ -359,7 +427,7 @@ namespace SpaceGod::UI
 	void GalaxyMapScreen::DrawModeTabs(Rect r)
 	{
 		float x = r.x + 150;
-		for (int i = 0; i <= static_cast<int>(MapMode::Society); i++)
+		for (int i = 0; i <= static_cast<int>(MapMode::Opinion); i++)
 		{
 			auto m = static_cast<MapMode>(i);
 			float w = m == MapMode::Exploration ? 108.0f : 88.0f;
@@ -641,6 +709,9 @@ namespace SpaceGod::UI
 		case MapMode::Society:
 			DrawSocietyLegend(y, x, w, jd);
 			break;
+		case MapMode::Opinion:
+			DrawOpinionLegend(y, x, w);
+			break;
 		default:
 			break;
 		}
@@ -753,6 +824,9 @@ namespace SpaceGod::UI
 		case MapMode::Society:
 			DrawSocietyDetail(y, x, w, m, jd);
 			break;
+		case MapMode::Opinion:
+			DrawOpinionDetail(y, x, w, m);
+			break;
 		default:
 			break;
 		}
@@ -791,6 +865,69 @@ namespace SpaceGod::UI
 			Line(y, x, w, cs::Cat(Days(cs::Math::Max(0.0, jd - e->Jd)), " ago: ", Narrator::Render(*e)), Color::white());
 			told++;
 		}
+		y += 6;
+	}
+
+	void GalaxyMapScreen::DrawOpinionLegend(float& y, float x, float w)
+	{
+		auto words = WordsOf(opinionTopic);
+		Heading(y, x, w, "TOPIC");
+		if (GUI::Button(Rect(x, y, 26, 22), "<", button)) NextTopic(-1);
+		if (GUI::Button(Rect(x + w - 26, y, 26, 22), ">", button)) NextTopic(1);
+		GUI::Label(Rect(x + 34, y + 2, w - 68, 22), cs::String(words.Name), title);
+		y += 26;
+		Line(y, x, w, "the OPINION tab again: the next topic", Dim);
+		y += 6;
+		Heading(y, x, w, "KEY");
+		Swatch(y, x, w, OpinionForColor, words.For, false);
+		Swatch(y, x, w, OpinionNeutralColor, "neutral, or not yet heard", false);
+		Swatch(y, x, w, OpinionAgainstColor, words.Against, false);
+		Swatch(y, x, w, Unknown, "no settled world: uncoloured", false);
+		y += 6;
+		auto civ = app->Galaxy != nullptr ? Civilization::Find(*app->Galaxy) : nullptr;
+		if (civ == nullptr || civ->Populace == nullptr)
+		{
+			Line(y, x, w, "The galaxy's people hold no opinions yet: let a day pass.", Dim);
+			return;
+		}
+		// The systems furthest each way.
+		std::vector<std::pair<double, cs::Ref<MapSystem>>> held;
+		for (const auto& m : model->Systems)
+		{
+			auto look = LookOf(m->System);
+			if (look != nullptr && look->OpinionWorlds > 0) held.emplace_back(look->Opinion, m);
+		}
+		std::sort(held.begin(), held.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+		if (held.empty()) { Line(y, x, w, "no settled worlds on the map", Dim); return; }
+		Heading(y, x, w, "MOST FOR");
+		if (held.front().first <= 0) Line(y, x, w, "none", Dim);
+		for (size_t i = 0; i < held.size() && i < 3 && held[i].first > 0; i++)
+			Line(y, x, w, cs::Cat(held[i].second->System->Name, ": ", Stance(held[i].first)), OpinionTint(held[i].first));
+		Heading(y, x, w, "MOST AGAINST");
+		if (held.back().first >= 0) Line(y, x, w, "none", Dim);
+		for (size_t i = 0; i < held.size() && i < 3 && held[held.size() - 1 - i].first < 0; i++)
+		{
+			const auto& h = held[held.size() - 1 - i];
+			Line(y, x, w, cs::Cat(h.second->System->Name, ": ", Stance(h.first)), OpinionTint(h.first));
+		}
+	}
+
+	void GalaxyMapScreen::DrawOpinionDetail(float& y, float x, float w, const cs::Ref<MapSystem>& m)
+	{
+		auto words = WordsOf(opinionTopic);
+		Heading(y, x, w, cs::Cat("OPINION: ", words.Name));
+		auto civ = app->Galaxy != nullptr ? Civilization::Find(*app->Galaxy) : nullptr;
+		int worlds = 0;
+		if (civ != nullptr)
+			for (const auto& c : civ->Worlds)
+			{
+				if (c == nullptr || c->Where == nullptr || c->System != m->System) continue;
+				worlds++;
+				double stance = Populace::MoodOf(*app->Galaxy, c->Where, static_cast<Topic>(opinionTopic));
+				Line(y, x, w, cs::Cat(c->Where->Name, ": ", Stance(stance), stance > 0 ? cs::Cat(", ", words.For) : stance < 0 ? cs::Cat(", ", words.Against) : cs::String()),
+					OpinionTint(stance));
+			}
+		if (worlds == 0) Line(y, x, w, "No settled world here to ask.", Dim);
 		y += 6;
 	}
 }
