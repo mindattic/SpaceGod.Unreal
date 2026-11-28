@@ -9,6 +9,7 @@
 #include "Persistence/ObjectGraph.h"
 #include "Ships.h"
 #include "Systems/Civilization/Civilization.h" // US-T275
+#include "Systems/Civilization/Populace.h" // US-T985
 #include "Systems/Galaxy.h"
 #include "Systems/Polities.h"
 #include "Systems/Statecraft.h"
@@ -715,6 +716,8 @@ namespace SpaceGod::Core
 			rate = YieldPerYear / 12 * wellbeing - 0.02 * s->Unrest + 0.0015 * b->Branches.Count() + 0.02 * (Unit(r) - 0.5);
 			if (galaxy.Polities != nullptr && galaxy.Polities->AtWar(s->Owner)) rate -= b->Kind == BusinessKind::Shipwright ? -0.004 : 0.004;
 			if (b->Kind == BusinessKind::Shipping && PirateHeld(b->System)) rate -= 0.006;
+			// US-T985: a world that trusts its traders deals more freely.
+			if (double trust = Populace::MoodOf(galaxy, s, Topic::TradeTrust); trust != 0) rate += 0.004 * trust;
 		}
 		double earned = b->Capital * rate;
 		b->Capital += earned;
@@ -824,9 +827,15 @@ namespace SpaceGod::Core
 			if (free.Count() == 0) continue;
 			auto who = Pick(free, r >> 7);
 			double p = Unit(r >> 11);
+			// US-T985: a world wary of traders books fewer trips into pirate-held systems.
+			const double trust = Populace::MoodOf(galaxy, h->Home, Topic::TradeTrust);
+			auto plan = [&](const cs::Ref<Settlement>& to, TripPurpose why, const cs::Ref<Citizen>& meeting) -> cs::Ref<Trip> {
+				if (trust < 0 && PirateHeld(SystemOf(galaxy, to)) && Unit(H(r, 0x7A0Du)) < -0.5 * trust) return nullptr;
+				return Plan(galaxy, who, to, why, meeting, jd, r);
+			};
 			cs::Ref<Trip> trip;
 			if (p < 0.3 && who->Spouse != nullptr && who->Spouse->Alive() && who->Spouse->House != h && who->Spouse->House->Home != h->Home)
-				trip = Plan(galaxy, who, who->Spouse->House->Home, TripPurpose::FamilyVisit, who->Spouse, jd, r);
+				trip = plan(who->Spouse->House->Home, TripPurpose::FamilyVisit, who->Spouse);
 			else if (p < 0.65 && h->Business != nullptr && h->Business->Trading())
 			{
 				// Business travel: to one of its offices, or to meet another house's head on a world it trades with.
@@ -840,17 +849,17 @@ namespace SpaceGod::Core
 					if (contacts.Count() > 0)
 					{
 						auto o = Pick(contacts, r >> 13);
-						trip = Plan(galaxy, who, o->Home, TripPurpose::Business, o->Head(), jd, r);
+						trip = plan(o->Home, TripPurpose::Business, o->Head());
 					}
 				}
-				else trip = Plan(galaxy, who, to, TripPurpose::Business, nullptr, jd, r);
+				else trip = plan(to, TripPurpose::Business, nullptr);
 			}
 			else
 			{
 				cs::List<cs::Ref<Settlement>> resorts;
 				for (const auto& s : all)
 					if (Stands(s) && s != h->Home && s->Population > 5e4 && !Hostile(galaxy, h->Home->Owner, s->Owner)) resorts.Add(s);
-				if (resorts.Count() > 0) trip = Plan(galaxy, who, Pick(resorts, r >> 13), TripPurpose::Holiday, nullptr, jd, r);
+				if (resorts.Count() > 0) trip = plan(Pick(resorts, r >> 13), TripPurpose::Holiday, nullptr);
 			}
 			if (trip != nullptr) active++;
 		}

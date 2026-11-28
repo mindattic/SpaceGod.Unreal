@@ -321,6 +321,7 @@ namespace SpaceGod::Core
 			light.switched = true;
 		}
 		Perceive(civ, galaxy, jd);
+		Trade(civ, galaxy, jd); // US-T985
 		Census(civ, galaxy, jd);
 		long long last = std::min<long long>(due, static_cast<long long>(now) + MaxStrideDays);
 		if (!light.switched && static_cast<long long>(now) < switchDay) last = std::min(last, switchDay);
@@ -627,5 +628,6 @@ namespace SpaceGod::Core
 		SG_F(Groups), SG_F(OriginJd),
 		b.FieldWith<LightStateCodec>("State", &Self::state),
 		SG_OPT(SeenEventId), SG_OPT(SeenRobberies), SG_OPT(SeenRobberyJd), SG_OPT(Wanted), // US-T975
-		SG_OPT(FedDay), SG_OPT(NextPollJd), SG_OPT(Bands)) // US-T984
+		SG_OPT(FedDay), SG_OPT(NextPollJd), SG_OPT(Bands), // US-T984
+		SG_OPT(NextTradeJd)) // US-T985
 }

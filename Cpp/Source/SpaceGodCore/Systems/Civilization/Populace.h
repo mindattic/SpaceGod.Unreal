@@ -115,6 +115,10 @@ namespace SpaceGod::Core
 		void Hear(int group, Topic topic, float push, float magnitude, double jd);
 		/// <summary>US-T984: the society's readout day, or -1 when there is no society.</summary>
 		int ReadDay() const;
+		/// <summary>US-T985: each month the trading houses' heads of each world deal with each other; the mean outcome is heard
+		/// as trade trust. NextTradeJd is the day of the next round (NaN until the first).</summary>
+		void Trade(Civilization& civ, Galaxy& galaxy, double jd);
+		double NextTradeJd = cs::Double::NaN;
 
 	private:
 		LightState state;
