@@ -1223,11 +1223,12 @@ namespace SpaceGod::Smoke::FeatureAudit
 		}
 
 		/// A seat (gun, station, launched craft, EVA worker): F / 3 / Home leave the seat's own camera alone.
-		void SeatRole(const char* role, Key k, std::initializer_list<Key> mods, int earth)
+		void SeatRole(const char* role, Key k, std::initializer_list<Key> mods, int earth, const cs::Ref<Ship>& host)
 		{
 			cs::String id = cs::Cat("roles.", roleScale, ".", role);
 			ToCommand();
-			if (!SelectAShip()) { Log(cs::Cat("AUDIT ", id, ".focus-never-grabs INFO: no ship to select")); return; }
+			if (host != nullptr && !host->Destroyed) app->Select(Target::OfShip(host));
+			if (!app->Selected.IsShip() && !SelectAShip()) { Log(cs::Cat("AUDIT ", id, ".focus-never-grabs INFO: no ship to select")); return; }
 			Tap(k, mods);
 			frames(5);
 			if (!app->IsSeated()) { Log(cs::Cat("AUDIT ", id, ".focus-never-grabs INFO: no seat taken ('", Toast(), "')")); ToCommand(); return; }
@@ -1281,10 +1282,22 @@ namespace SpaceGod::Smoke::FeatureAudit
 			HullRole("hauler", ShipClass::Freighter, FlightFamily::Hauler, false, earth);
 			app->StartDogfightDemo(false);
 			frames(3);
+			// A fighter has no turret to man and no EVA crew: the seats are probed on a carrier staged in the demo's fight.
+			int body = app->PilotFrameBody();
+			DVec3 at = app->PilotOffsetKm() + app->PilotForward() * 2.0;
+			DVec3 fwd = app->PilotForward();
+			auto carrier = StageAtHelm("Audit Seat Carrier", ShipClass::Carrier, body, at, fwd);
+			if (carrier != nullptr)
+			{
+				auto raider = app->Fleet()->SpawnAt("Audit Seat Raider", ShipClass::Fighter, app->World()->Pirates, body, at + fwd * 3.0, -fwd, app->Clock->Jd);
+				raider->Ports = app->World()->FreeShipPorts();
+				app->World()->War->TryStartPlayerBattle(carrier, body, at, fwd, app->Clock->Jd);
+				frames(3);
+			}
 			ToCommand();
-			SeatRole("turret", Key::Slash, {}, earth);
-			SeatRole("worker", Key::P, { Key::LeftShift }, earth);
-			SeatRole("launched-craft", Key::Slash, { Key::LeftShift }, earth);
+			SeatRole("turret", Key::Slash, {}, earth, carrier);
+			SeatRole("worker", Key::P, { Key::LeftShift }, earth, carrier);
+			SeatRole("launched-craft", Key::Slash, { Key::LeftShift }, earth, carrier);
 			FreeRole(earth);
 		}
 

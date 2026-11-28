@@ -1013,7 +1013,7 @@ namespace SpaceGod
 		if (backwards)
 		{
 			// Schedules only run forward; rebuild every system at the new date.
-			int index = Galaxy->Systems.IndexOf(ActiveSystem);
+			cs::String activeName = ActiveSystem != nullptr ? ActiveSystem->Name : cs::String();
 			auto cameraAt = SpaceCamera->ScenePosition;
 			auto cameraRotation = SpaceCamera->Rotation;
 			// US-T863: the same game's galaxy again, from its seed, keeping how it began.
@@ -1025,7 +1025,11 @@ namespace SpaceGod
 			UnityCompat::Destroy(Interstellar->Root);
 			Interstellar = cs::New<Views::InterstellarView>(Galaxy, worldRoot);
 			SubscribeWorlds();
-			Activate(Galaxy->Systems[cs::Math::Max(0, index)]);
+			// By name: a system built on arrival is not in the rebuilt list, and indices past the start ones shift.
+			auto back = Galaxy->Systems[0];
+			for (const auto& sys : Galaxy->Systems)
+				if (sys->Name == activeName) { back = sys; break; }
+			Activate(back);
 			SpaceCamera->SetPose(cameraAt, cameraRotation);
 			GalaxyRebuilt.Invoke();
 		}
