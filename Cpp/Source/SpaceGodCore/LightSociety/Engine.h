@@ -100,6 +100,8 @@ namespace MindAttic::Society
 		void Decide(const PolicyBatch& batch, PolicyOut& out) override;
 	};
 
+	class ChunkPool;
+
 	class Engine
 	{
 	public:
@@ -112,6 +114,12 @@ namespace MindAttic::Society
 
 		/// <summary>Sets f_pi; null restores the built-in <see cref="DefaultPolicy"/>. Not owned, not saved.</summary>
 		void SetPolicy(IPolicy* policy) { external = policy; }
+
+		/// <summary>
+		/// Runs the policy and agent passes' chunks on <paramref name="threads"/> (null: inline). The chunks and the order
+		/// their results merge in stay the same, so the pool never changes a result. Not owned, not saved.
+		/// </summary>
+		void SetPool(ChunkPool* threads) { pool = threads; }
 
 		/// <summary>
 		/// Queues events from the environment. Ones on an unknown topic, or with a non-finite time, push or magnitude, are
@@ -168,6 +176,7 @@ namespace MindAttic::Society
 		Readout readout;
 
 		IPolicy* external = nullptr;
+		ChunkPool* pool = nullptr;
 		DefaultPolicy builtIn;
 		std::vector<QueuedEvent> batch;
 		std::vector<Perception> perceptions;

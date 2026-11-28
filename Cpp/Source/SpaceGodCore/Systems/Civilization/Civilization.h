@@ -48,6 +48,7 @@ namespace SpaceGod::Core
 	class Health;
 	class Press;
 	class Witness;
+	class Populace;
 
 	/// <summary>What a social event is (US-T274). Append only: saves hold the numbers, Prose keys hold the slugs.</summary>
 	enum class SocialKind : int
@@ -249,6 +250,8 @@ namespace SpaceGod::Core
 		cs::Ref<SpaceGod::Core::Press> Press;
 		/// <summary>US-T292: the eyes on the wider simulation, run first each day.</summary>
 		cs::Ref<SpaceGod::Core::Witness> Witness;
+		/// <summary>US-T974: the people's opinions (Light Society), pumped at the top of every update.</summary>
+		cs::Ref<SpaceGod::Core::Populace> Populace;
 
 		/// <summary>Running tallies of events by kind (index = SocialKind).</summary>
 		cs::List<int> Tally = cs::List<int>();

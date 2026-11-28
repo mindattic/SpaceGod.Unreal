@@ -3,6 +3,7 @@
 #include "LightSociety/Engine.h"
 
 #include "LightSociety/Rng.h"
+#include "LightSociety/Worker.h"
 
 #include <algorithm>
 #include <cmath>
@@ -36,11 +37,16 @@ namespace MindAttic::Society
 			return s > SupporterStance ? 2 : (s < -SupporterStance ? 0 : 1);
 		}
 
-		/// <summary>Calls f(first, last) for each fixed-size chunk of [0, n), in order.</summary>
-		template <class F>
-		void ForEachChunk(uint32_t n, uint32_t chunk, F&& f)
+		/// <summary>Calls f(chunkIndex, first, last) for each fixed-size chunk of [0, n): on the pool when there is one, else in order.</summary>
+		void ForEachChunk(ChunkPool* pool, uint32_t n, uint32_t chunk, const ChunkPool::ChunkFn& f)
 		{
-			for (uint32_t first = 0; first < n; first += chunk) f(first, std::min(n, first + chunk));
+			if (pool != nullptr)
+			{
+				pool->ParallelFor(n, chunk, f);
+				return;
+			}
+			uint32_t i = 0;
+			for (uint32_t first = 0; first < n; first += chunk) f(i++, first, std::min(n, first + chunk));
 		}
 	}
 
@@ -223,9 +229,8 @@ namespace MindAttic::Society
 			const uint32_t count = static_cast<uint32_t>(perceptions.size());
 			const uint32_t chunks = (count + config.chunk - 1) / config.chunk;
 			if (outs.size() < chunks) outs.resize(chunks);
-			uint32_t k = 0;
-			ForEachChunk(count, config.chunk, [&](uint32_t from, uint32_t to) {
-				PolicyOut& out = outs[k++];
+			ForEachChunk(pool, count, config.chunk, [&](uint32_t k, uint32_t from, uint32_t to) {
+				PolicyOut& out = outs[k];
 				out.Clear();
 				const PolicyBatch call{store, config, topics, kind, events,
 					std::span<const Perception>(perceptions.data() + from, to - from), round};
@@ -292,7 +297,7 @@ namespace MindAttic::Society
 		day++;
 		now = static_cast<double>(day);
 		EvolveEnvironment();
-		ForEachChunk(store.Capacity(), config.chunk, [&](uint32_t first, uint32_t last) { EvolveAgents(first, last); });
+		ForEachChunk(pool, store.Capacity(), config.chunk, [&](uint32_t, uint32_t first, uint32_t last) { EvolveAgents(first, last); });
 		TakeReadout();
 	}
 

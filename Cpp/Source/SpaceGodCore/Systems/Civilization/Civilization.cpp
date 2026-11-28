@@ -19,6 +19,7 @@
 #include "Systems/Civilization/Press.h"
 #include "Systems/Civilization/Narrator.h"
 #include "Systems/Civilization/Witness.h"
+#include "Systems/Civilization/Populace.h"
 #include "Systems/Galaxy.h"
 #include "Systems/InterstellarWars.h"
 #include "Systems/Polities.h"
@@ -370,6 +371,9 @@ namespace SpaceGod::Core
 			OpenedJd = nextDayJd;
 		}
 		int foundedBefore = Orgs.Count();
+		// US-T974: wait for the populace's last batch, apply it, launch the next (every update, not only on a new day).
+		if (Populace == nullptr) Populace = cs::New<SpaceGod::Core::Populace>();
+		Populace->Pump(*this, galaxy, jd);
 		if (jd < nextDayJd) return;
 		if (jd - nextDayJd > MaxCatchUpDays) nextDayJd = cs::Math::Floor(jd);
 		while (nextDayJd <= jd)
@@ -638,5 +642,6 @@ namespace SpaceGod::Core
 		SG_OPT(Culture), // US-T285
 		SG_OPT(Health), // US-T286
 		SG_OPT(Press), // US-T288
-		SG_OPT(Witness)) // US-T292
+		SG_OPT(Witness), // US-T292
+		SG_OPT(Populace)) // US-T974
 }
