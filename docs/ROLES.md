@@ -15,12 +15,12 @@ not audited.
 |---|---|---|
 | Free SpaceGod (command view) | nothing held; P lets go of anything | `AtControls() == false` |
 | Rider (US-T954) | Ctrl+P or "Ride along" on a selected ship; Esc back to the god's view. P takes its helm (the gate counts the ridden hull as held); letting go rides on in it, and P or Esc from there is the god (US-T955). The ship keeps its job, the warp keeps running, nothing is held | `IsRiding()`, `RiddenShip()` (`UnitySpaceApp.RideAlong.cpp`); still `AtControls() == false` |
-| Fighter (light: fighter, interceptor, courier runner; bomber) | P on a hull, Shift+V practice fighter, V spawn-and-pilot (pending US-T186) | `ShipHelm`, `FlightFamily::LightFighter / Interceptor / Bomber / Runner` |
+| Fighter (light: fighter, interceptor, courier runner; bomber) | P on a hull, Shift+V practice fighter, V spawn-and-pilot (US-T186) | `ShipHelm`, `FlightFamily::LightFighter / Interceptor / Bomber / Runner` |
 | Heavy (gunship) | P on a gunship | `FlightFamily::HeavyFighter` |
 | Capital (battleship, cruiser, destroyer) | P on a hull | `FlightFamily::Capital`, `CapitalHandling`, `CapitalManeuver` |
 | Carrier | P on a carrier | capital handling plus `CarrierWings`, `FlightDecks` |
 | Hauler (freighter, miner) | P on a hull | `FlightFamily::Hauler`, `HaulerFlight` |
-| Station | `'` / `;` / `/` onto a settlement defence platform or a gate fort | `StationSeat` |
+| Station | `'` / `;` / `/` onto a settlement defence platform or a gate fort in a fight; in a fight or out of one, Inhabit on a selected station or ring, or F9 (US-T953) | `StationSeat`, `Embodiables::StationsAt` |
 | Turret | `/` onto a gun mount of a hull or station in a fight | `MountedTurret` |
 | Launched craft | Shift+/ from a carrier helm | `FighterSeat` |
 | EVA worker | Shift+P from a capital or station | `RepairWorker`, `CycleWorker` |
@@ -34,7 +34,7 @@ frame: the craft's at the controls, the command view's otherwise.
 
 | Feature | Free SpaceGod | Fighter | Heavy | Capital / carrier | Hauler | Station / turret | Launched craft | EVA worker | Satellite |
 |---|---|---|---|---|---|---|---|---|---|
-| Camera | free swim (pending US-T184 swim tuning); F / double-click focus | chase, locked on the hull (`PilotLocked`) | chase | chase, wider | chase | the mount's rig (down the barrel) | chase on the craft | shoulder rig | boresight rig |
+| Camera | free swim (US-T184 swim tuning); F / double-click focus | chase, locked on the hull (`PilotLocked`) | chase | chase, wider | chase | the mount's rig (down the barrel) | chase on the craft | shoulder rig | boresight rig |
 | Mouse | look (right-drag), select | string mouse aim (US-T129/T168): nose follows a slack string, left fires | taut string, short lead | steers the heading target, broadside on hold | helm | aims the barrel | as fighter | torch (left = weld) | points the boresight |
 | W A S D Q E | swim the camera | thrust, strafe, rise (Shift: lateral boost on light hulls) | same, no boost | W S the engine telegraph, A D Q E turn | telegraph | no | as fighter | walk the hull | station-keeping |
 | Roll (Z / X) | no | roll | roll | roll; Shift+Del rolls weak patches round; the helm rolls to turn damaged facings away | roll | no | roll | no | no |
@@ -47,23 +47,23 @@ frame: the craft's at the controls, the command view's otherwise.
 | Drive regime (`DriveRegime`: Normal, CruiseSpool, Cruise, Lane, Ftl) | n/a | all five | all five | all five | all five | n/a | Normal | n/a | n/a |
 | Hyper-lane flight (caae6e2, tunnels 33f7c52) | no | ride, steer A D Q E, surge / drop out Shift / Ctrl | yes | yes | yes | no | no | no | no |
 | Field pulse beside a lane (US-T961, helm bar) | no | with its band's projector | with its band's projector | with its own or its band's projector | with a projector fitted (9,000 t and up) | no | no | no | no |
-| Lane wiring (US-T196) | pending | pending | pending | pending | pending | n/a | n/a | n/a | n/a |
+| Lane wiring (US-T196) | no | yes | yes | yes | yes | n/a | n/a | n/a | n/a |
 | Hyperspace toll (ed7979f) | n/a | paid on entry | paid | paid | paid (cargo-weighted) | n/a | n/a | n/a | n/a |
 | FTL (Enter, PgDn, End) | no | yes, past the rim | yes | yes | yes | no | no | no | no |
 | Tractor (Shift+T) | no | yes (cargo pods) | yes | yes | yes | no | no | no | no |
 | Time dial (`,` `.` Space) | yes | yes; held at real time in a fight or when hunted | same | same | same | yes (a seat in a fight holds real time while the battle steps) | same | same | yes |
 | Reset time (T) | yes | no: T locks the hull | no | no | no | no | no | no | no |
 | Scale (G) and orbit lines (O), labels (L), lanes (N), satellites (K) | yes | yes (view only) | yes | yes | yes | yes | yes | yes | yes |
-| Focus (F, 1-9, Home, Tab, double-click, drawer, panel rows) | yes; (US-T185 occluders pending) | never: the camera is the craft's | never | never | never | never | never | never | never |
+| Focus (F, 1-9, Home, Tab, double-click, drawer, panel rows) | yes (US-T185 occluders) | never: the camera is the craft's | never | never | never | never | never | never | never |
 | HUD | command HUD, selection panel | flight HUD, sights, power, lock | same | helm HUD, broadside, captain's orders | helm, market, cargo | gun reticle, station panel | flight HUD | repair panel, weld bar | satellite panel |
-| Bottom drawer (Shift+U, US-T200) | pending: lists everything | pending: hail / cruise to a row, no focus | pending | pending | pending | pending | pending | pending | pending |
+| Bottom drawer (Shift+U, US-T200) | yes | yes, with the helm's own panels (cruise, ...) | same | same | same | yes | yes | yes | yes |
 | Comms (Shift+H hail any ship) | no | yes | yes | yes | yes | yes | yes | yes (host's) | no |
 | Hailing the locked ship (US-T201) | no | yes | yes | yes | yes | n/a | yes | n/a | n/a |
 | Weapons (weapon families, US-T189) | no | guns, missiles, EMP, mine | same | broadsides, captain's orders | defensive | station's guns / the barrel | craft's guns | n/a | n/a |
 | Lock target (T), boarding (B), self-destruct | no | yes | yes | yes | yes | self-destruct yes | yes | no | no |
 | Squadrons (922e43d) | n/a | band captain: Shift+last number stands the band down | same | commands the wings | n/a | n/a | wingman | n/a | n/a |
 | Carrier launch (Shift+1..) | n/a | n/a | n/a | yes (carrier) | n/a | station hangars: second trigger | n/a | n/a | n/a |
-| Biomass visuals (US-T192), economy / territory (US-T190), fighter visibility (US-T202), spawn-and-pilot (US-T186) | pending | pending | pending | pending | pending | pending | pending | pending | pending |
+| Biomass visuals (US-T192), economy / territory (US-T190), fighter visibility (US-T202), spawn-and-pilot (US-T186) | yes | yes | yes | yes | yes | yes | yes | yes | yes |
 | Ship catalog handling (7d618e9) | n/a | each hull flies its catalog turn, roll, thrust and braking | same | same | same | n/a | craft's catalog | n/a | n/a |
 | Esc | closes panels, then leaves focus, then deselects, then the pause menu | panels, then the pause menu (never leaves the chase) | same | same | same | same | same | same | same |
 

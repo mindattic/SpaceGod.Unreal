@@ -697,6 +697,11 @@ namespace SpaceGod
 		// US-T90: and the stations in the fight in view, which ' and ; reach too.
 		for (const auto& s : SeatsInFight(battle))
 			if (EmbodiableIndexOf(pickerSeats, s) < 0) pickerSeats.Add(s);
+		// US-T953: and the stations at the body in view, in a fight or not.
+		int body = SpaceCamera->FrameBody();
+		if (body >= 0 && body < Catalog()->Count())
+			for (const auto& s : Embodiables::StationsAt(World(), body))
+				if (EmbodiableIndexOf(pickerSeats, s) < 0) pickerSeats.Add(s);
 		return pickerSeats;
 	}
 

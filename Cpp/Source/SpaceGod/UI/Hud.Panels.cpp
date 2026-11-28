@@ -33,6 +33,7 @@
 #include "Combat/PilotTuning.h"
 #include "Combat/War.h"
 #include "Economy/Companies.h"
+#include "Embodiment/Embodiment.h" // US-T953: Inhabit on the selection card
 #include "Economy/Economy.h"
 #include "Economy/Goods.h"
 #include "Economy/Holdings.h"
@@ -1373,9 +1374,25 @@ namespace SpaceGod::UI
 		// US-T806: drop into the fight (or take the fleet's helm) from the god view.
 		// US-T954: beside it, ride along in the ship instead (it keeps its job; Ctrl+P).
 		bool ride = t.IsShip() && app->CanRideAlong(t.Ship);
-		float flyW = ride ? (w - 344) * 0.5f - 4 : w - 344;
-		if (!app->AtControls() && app->CanFlyThis(t) && GUI::Button(Rect(r.x + 330, r.yMax() - 32, flyW, 24), "Fly this", buttonActive)) app->FlyThis(t);
-		if (ride && GUI::Button(Rect(r.x + 330 + (w - 344) * 0.5f + 4, r.yMax() - 32, (w - 344) * 0.5f - 4, 24), "Ride along", button)) app->StartRideAlong(t.Ship);
+		bool fly = !app->AtControls() && app->CanFlyThis(t);
+		// US-T953: Inhabit takes the thing itself (a station, a hull in a fight, its seat) through the one TakeSeat path. A ship out
+		// of a fight has none of its own: Fly this already takes its helm.
+		auto inhabit = app->EmbodiableAt(t);
+		if (inhabit != nullptr && ((t.IsShip() && t.Ship->Battle == nullptr) || EmbodiableEquals(inhabit, app->HeldSeat()))) inhabit = nullptr;
+		int buttons = (fly ? 1 : 0) + (inhabit != nullptr ? 1 : 0) + (ride ? 1 : 0);
+		float slotW = buttons > 0 ? ((w - 344) - 8 * (buttons - 1)) / buttons : 0;
+		float bx = r.x + 330;
+		if (fly)
+		{
+			if (GUI::Button(Rect(bx, r.yMax() - 32, slotW, 24), "Fly this", buttonActive)) app->FlyThis(t);
+			bx += slotW + 8;
+		}
+		if (inhabit != nullptr)
+		{
+			if (GUI::Button(Rect(bx, r.yMax() - 32, slotW, 24), "Inhabit", button)) app->TakeSeat(inhabit);
+			bx += slotW + 8;
+		}
+		if (ride && GUI::Button(Rect(bx, r.yMax() - 32, slotW, 24), "Ride along", button)) app->StartRideAlong(t.Ship);
 	}
 
 	cs::String Hud::PropellantText(const cs::Ref<Ship>& ship)

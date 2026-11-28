@@ -11,6 +11,7 @@
 #include "Views/EvaWorkerView.h" // US-T158
 #include "Views/MechView.h" // US-T83
 #include "Fleet.h"
+#include "Infrastructure/Infrastructure.h" // US-T953: a station's settlement
 #include "Sensors/SensorPosture.h" // US-T136
 #include "Sensors/Sensors.h"
 #include "Coop/CoopPeer.h"
@@ -115,7 +116,15 @@ namespace SpaceGod
 		}
 		cs::Ref<Battle> battle;
 		auto platform = DefencePlatformAt(t, battle);
-		return platform != nullptr ? cs::Ref<IEmbodiable>(Embodiables::StationOf(World(), battle, platform)) : nullptr;
+		if (platform != nullptr) return cs::Ref<IEmbodiable>(Embodiables::StationOf(World(), battle, platform));
+		// US-T953: out of a fight, a station or ring is inhabited as its settlement's defence platform (a ring with no settlement of
+		// its own: any at its body; a structure with none, a telescope or a relay, has nothing to inhabit).
+		if (!(t.IsStructure() || t.IsRing())) return nullptr;
+		auto settlement = t.IsStructure() ? t.Structure->Settlement : t.Ring->Settlement;
+		if (settlement == nullptr && t.IsStructure()) return nullptr;
+		for (const auto& s : Embodiables::StationsAt(World(), t.Body))
+			if (settlement == nullptr || s->Settlement == settlement) return cs::Ref<IEmbodiable>(s);
+		return nullptr;
 	}
 
 	bool UnitySpaceApp::EmbodyTarget()
