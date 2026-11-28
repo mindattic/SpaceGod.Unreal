@@ -306,7 +306,9 @@ namespace SpaceGod::Views
 			// US-T929 probe: backdrop giants are never given a map (nothing sets _UseTexture 1), so they always draw the noise fallback.
 			Debug::Log(cs::Cat("[Unity.SpaceGod] SkyLayers backdrop giant in ", system, ": noise fallback only (_UseTexture 0, no map path)"));
 			g.Mat->SetColor("_Color", Color(w.Light.R, w.Light.G, w.Light.B));
-			g.Mat->SetFloat("_NoiseStrength", w.Banded ? 0.18f : 0.3f);
+			// US-T938: a banded giant gets latitude streaks (the shader's _Haze 1 noise path), a rocky one livelier noise.
+			if (w.Banded) g.Mat->SetFloat("_Haze", 1.0f);
+			g.Mat->SetFloat("_NoiseStrength", w.Banded ? 0.22f : 0.45f);
 			g.Mat->SetFloat("_NoiseScale", w.Banded ? 1.4f : 3.0f);
 			g.Mat->SetColor("_AtmoColor", Color(w.Atmosphere.R, w.Atmosphere.G, w.Atmosphere.B));
 			g.Mat->SetFloat("_AtmoStrength", 0.7f);

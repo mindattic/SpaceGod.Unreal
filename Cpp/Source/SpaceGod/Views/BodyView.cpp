@@ -178,8 +178,37 @@ namespace SpaceGod::Views
 			bool clouds = body->SurfaceHaze >= 0.99f;
 			// A visible-light cloud deck (Venus) is nearly featureless: keep its contrast faint.
 			// US-T930: a body with no map keeps this look for good, so its noise is livelier (the old 0.12 read as flat asphalt).
-			material->SetFloat("_NoiseStrength", clouds ? 0.05f : body->Kind == BodyKind::Planet ? (mapped ? 0.12f : 0.3f) : 0.32f);
-			material->SetFloat("_NoiseScale", clouds ? 1.6f : body->Kind == BodyKind::Planet ? 2.2f : 3.5f);
+			float noiseStrength = clouds ? 0.05f : body->Kind == BodyKind::Planet ? (mapped ? 0.12f : 0.3f) : 0.32f;
+			float noiseScale = clouds ? 1.6f : body->Kind == BodyKind::Planet ? 2.2f : 3.5f;
+			if (!mapped)
+			{
+				// US-T938: a per-body-type fallback look for the bodies with no map, from data they already have.
+				if (clouds)
+				{
+					// A cloud deck (Venus): pale, yellow-white and nearly featureless.
+					tint = Color(tint.r + (1.0f - tint.r) * 0.45f, tint.g + (0.97f - tint.g) * 0.45f, tint.b + (0.82f - tint.b) * 0.45f);
+					material->SetColor("_Color", tint);
+					noiseStrength = 0.035f;
+				}
+				else if (body->Kind == BodyKind::Asteroid)
+				{
+					// Dark cratered rock: darker than its catalogue colour, strong fine-grained contrast.
+					tint = tint * 0.8f;
+					material->SetColor("_Color", tint);
+					noiseStrength = 0.6f;
+					noiseScale = 5.0f;
+				}
+				else if (body->Kind == BodyKind::DwarfPlanet)
+				{
+					// An icy dwarf (Eris): bright, near white, only a faint frost mottling.
+					tint = Color(tint.r + (1.0f - tint.r) * 0.6f, tint.g + (1.0f - tint.g) * 0.6f, tint.b + (1.0f - tint.b) * 0.6f);
+					material->SetColor("_Color", tint);
+					noiseStrength = 0.12f;
+					noiseScale = 3.0f;
+				}
+			}
+			material->SetFloat("_NoiseStrength", noiseStrength);
+			material->SetFloat("_NoiseScale", noiseScale);
 			if (windProfile) material->SetTexture("_MainTex", AssetStreamer::Swatch(tint));
 			if (mapped)
 			{
