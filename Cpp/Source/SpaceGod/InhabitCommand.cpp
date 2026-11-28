@@ -654,21 +654,28 @@ namespace
 			UE_LOG(LogSpaceGod, Display, TEXT("sg.Inhabit: %s: the %s pulled out the %s (%.0f t aboard)"), *Str(scene->fight->Name), *Str(raider->Name), *Str(rider->Name), rider->CargoTonnes);
 			return true;
 		}, 10.0);
-		push(TEXT("ransom into the hold"), [scene, r](UnitySpaceApp& app, double t)
+		// The hold-to-rewind window (US-T417) keeps a surrender's terms back for HoldRewindTuning::WindowS lived seconds so a
+		// hold can still undo them; the plunder reaches the hold once that window has run out, so the step waits for it.
+		auto offered = std::make_shared<bool>(false);
+		push(TEXT("ransom into the hold"), [scene, r, offered](UnitySpaceApp& app, double t)
 		{
 			if (t < 1.0) return false;
-			auto b = scene->fight;
-			auto u = b->UnitOf(scene->rider);
-			if (u == nullptr || !u->Present()) throw std::runtime_error("the laden rider is out of the fight before it could be ransomed");
-			// It strikes its colours (its morale's call, made here) and the helm answers 1, its cargo.
-			b->Surrender(u);
-			if (!b->OfferSurrenderTerms(u, SurrenderTerms::RansomCargo)) throw std::runtime_error("the ransom terms were refused");
+			if (!*offered)
+			{
+				auto b = scene->fight;
+				auto u = b->UnitOf(scene->rider);
+				if (u == nullptr || !u->Present()) throw std::runtime_error("the laden rider is out of the fight before it could be ransomed");
+				// It strikes its colours (its morale's call, made here) and the helm answers 1, its cargo.
+				b->Surrender(u);
+				if (!b->OfferSurrenderTerms(u, SurrenderTerms::RansomCargo)) throw std::runtime_error("the ransom terms were refused");
+				*offered = true;
+			}
 			double taken = scene->raider->PlunderTonnes() - scene->plunder;
-			if (taken <= 0) throw std::runtime_error("the ransomed cargo did not reach the raider's hold");
+			if (taken <= 0) return false;
 			r->Pass(5, FString::Printf(TEXT("the %s pulsed the %s lane at %.2f and took %.0f t from the %s into its plunder"), *Str(scene->raider->Name),
 				*scene->lane, scene->progress, taken, *Str(scene->rider->Name)));
 			return true;
-		}, 10.0);
+		}, 40.0);
 		shot(TEXT("plunder"));
 
 		// ---- 6: a pirate hull's guns on its own clan: cast out, it sails with the Renegades (US-T959)
