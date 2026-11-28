@@ -3,6 +3,7 @@
 #include "Systems/Civilization/Populace.h"
 
 #include "Economy/Settlement.h"
+#include "Law/Outlaws.h"
 #include "LightSociety/Distill.h"
 #include "LightSociety/Engine.h"
 #include "LightSociety/Graph.h"
@@ -336,7 +337,10 @@ namespace SpaceGod::Core
 		});
 	}
 
-	void Populace::Perceive(Civilization&, Galaxy&, double) {}
+	void Populace::Queue(const LS::EnvEvent& e)
+	{
+		if (state.impl != nullptr) state.impl->inputs.push_back(e);
+	}
 
 	void Populace::Feedback(Civilization&, Galaxy&, double) {}
 
@@ -599,5 +603,6 @@ namespace SpaceGod::Core
 
 	SG_SERIALIZE(Populace, "SpaceGod.Core.Populace",
 		SG_F(Groups), SG_F(OriginJd),
-		b.FieldWith<LightStateCodec>("State", &Self::state))
+		b.FieldWith<LightStateCodec>("State", &Self::state),
+		SG_OPT(SeenEventId), SG_OPT(SeenRobberies), SG_OPT(SeenRobberyJd), SG_OPT(Wanted)) // US-T975
 }

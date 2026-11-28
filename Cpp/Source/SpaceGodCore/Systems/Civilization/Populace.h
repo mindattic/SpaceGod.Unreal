@@ -12,10 +12,16 @@
 #include <cstdint>
 #include <memory>
 
+namespace MindAttic::Society
+{
+	struct EnvEvent;
+}
+
 namespace SpaceGod::Core
 {
 	class Civilization;
 	class Galaxy;
+	class Outlaw;
 	class RangeSetting;
 	class Settlement;
 
@@ -87,6 +93,12 @@ namespace SpaceGod::Core
 
 		/// <summary>US-T975: turns what happened up to <paramref name="jd"/> into events for the next batch.</summary>
 		void Perceive(Civilization& civ, Galaxy& galaxy, double jd);
+		/// <summary>US-T975: the last civilization event perceived, the lane robberies counted and the last robbed arrival
+		/// perceived, and the outlaws at large at the last look (whose fates are diffed for bounty kills).</summary>
+		int SeenEventId = 0;
+		int SeenRobberies = 0;
+		double SeenRobberyJd = cs::Double::NaN;
+		cs::List<cs::Ref<Outlaw>> Wanted = cs::List<cs::Ref<Outlaw>>();
 		/// <summary>US-T976: moves the worlds by the readout just taken.</summary>
 		void Feedback(Civilization& civ, Galaxy& galaxy, double jd);
 
@@ -97,6 +109,8 @@ namespace SpaceGod::Core
 		/// <summary>US-T982: who was born, died or fell with their world since the last batch, as joins and leaves for the next.</summary>
 		void Census(Civilization& civ, Galaxy& galaxy, double jd);
 		int GroupOf(const cs::Ref<Settlement>& s) const;
+		/// <summary>US-T975: an event for the next batch.</summary>
+		void Queue(const MindAttic::Society::EnvEvent& e);
 
 		SG_SERIALIZABLE(Populace);
 	};
