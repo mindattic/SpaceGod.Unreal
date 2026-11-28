@@ -368,7 +368,15 @@ namespace
 	/// then prints the summary and topics and a PASS/FAIL line per check. Gives up after ten real minutes.</summary>
 	void LiveCheck(int days, bool quit)
 	{
-		struct State { double started = FPlatformTime::Seconds(); bool askedNewGame = false, warped = false; };
+		struct State
+		{
+			double started = FPlatformTime::Seconds();
+			bool askedNewGame = false, warped = false;
+			int failed = 0, frames = 0;
+			bool reloaded = false; // US-T989: past the checks, saved and loaded; waiting to compare
+			uint64_t savedHash = 0;
+			int savedDay = -1, savedAgents = 0;
+		};
 		auto st = std::make_shared<State>();
 		Say(cs::Cat("sg.LightSociety live: waiting for the society to read day ", days));
 		FTSTicker::GetCoreTicker().AddTicker(FTickerDelegate::CreateLambda([st, days, quit](float) {
@@ -402,6 +410,31 @@ namespace
 			}
 			auto civ = Core::Civilization::Find(*app->Galaxy);
 			Populace* pop = civ != nullptr ? civ->Populace.get() : nullptr;
+			if (st->reloaded)
+			{
+				// US-T989: the save round trip. The loaded society must read the same day with the same readout.
+				if (++st->frames < 3) return true;
+				if (pop == nullptr || !pop->Status().Built)
+				{
+					if (st->frames < 600) return true;
+					Warn("sg.LightSociety live: FAIL save round trip: no society after the load");
+					st->failed++;
+				}
+				else
+				{
+					auto back = pop->Status();
+					bool same = pop->ReadoutHash() == st->savedHash && back.Day == st->savedDay && back.Agents == st->savedAgents;
+					cs::String what = cs::Cat("save round trip: day ", st->savedDay, " -> ", back.Day, ", agents ", st->savedAgents, " -> ", back.Agents,
+						", readout ", Hex(st->savedHash), " -> ", Hex(pop->ReadoutHash()));
+					if (same) Say(cs::Cat("sg.LightSociety live: PASS ", what));
+					else
+					{
+						Warn(cs::Cat("sg.LightSociety live: FAIL ", what));
+						st->failed++;
+					}
+				}
+				return finish(st->failed == 0, st->failed == 0 ? cs::String("PASS (6 checks, 0 failed)") : cs::Cat("FAIL (6 checks, ", st->failed, " failed)"));
+			}
 			if (pop == nullptr) return true;
 			auto status = pop->Status();
 			if (!status.Built || status.Day < days) return true;
@@ -418,7 +451,23 @@ namespace
 			expect(pop->ReadoutHash() != 0, cs::Cat("readout hash ", Hex(pop->ReadoutHash())));
 			expect(status.Distilled, "a surrogate is distilled");
 			expect(status.Switched || status.Route != Populace::Routing::Scheduled, "the schedule switched to the surrogate");
-			return finish(failed == 0, failed == 0 ? cs::String("PASS (5 checks, 0 failed)") : cs::Cat("FAIL (5 checks, ", failed, " failed)"));
+			// US-T989: stop the clock, save, load; the next ticks compare the loaded society with this one.
+			st->failed = failed;
+			app->Clock->SetPaused(true);
+			st->savedHash = pop->ReadoutHash();
+			st->savedDay = status.Day;
+			st->savedAgents = status.Agents;
+			bool saved = app->SaveTo("lightsociety-live", "US-T989 society round trip");
+			bool loaded = saved && app->LoadFrom("lightsociety-live");
+			if (loaded && app->Clock != nullptr) app->Clock->SetPaused(true); // no day may pass before the compare
+			if (!saved || !loaded)
+			{
+				Warn(cs::Cat("sg.LightSociety live: FAIL save round trip: save ", saved ? "ok" : "failed", ", load ", loaded ? "ok" : "failed"));
+				st->failed++;
+				return finish(false, cs::Cat("FAIL (6 checks, ", st->failed, " failed)"));
+			}
+			st->reloaded = true;
+			return true;
 		}));
 	}
 
