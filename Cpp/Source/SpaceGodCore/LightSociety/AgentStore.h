@@ -83,6 +83,8 @@ namespace MindAttic::Society
 
 		// Static.
 		const Profile& GetProfile(AgentId id) const { return profiles[id]; }
+		/// <summary>The profile, for what ages with time (age).</summary>
+		Profile& MutableProfile(AgentId id) { return profiles[id]; }
 
 		// Internal.
 		int16_t& Stance(AgentId id, uint32_t topic) { return stance[static_cast<size_t>(id) * topics + topic]; }

@@ -77,6 +77,8 @@ namespace MindAttic::Society
 		All = 0,
 		Group = 1,
 		Agent = 2,
+		/// <summary>The social-graph neighbours of the target agent.</summary>
+		Neighbours = 3,
 	};
 
 	/// <summary>Something the world does to the society (a raid, a battle, a sermon), pushed into its event queue.</summary>
