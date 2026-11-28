@@ -181,6 +181,32 @@ view); the helm again and then let go (0.3 and 0.8 s out, then the god's view ag
 far it is in, the show's time, the motes lit, the rim and sheen, the field of view, and what the picture holds of the
 freighter, the courier and the fighter.
 
+```powershell
+./tools/play.ps1 -Offscreen -Capture '' -Seconds 900 -ExecCmds "sg.Inhabit shot R:/Temp/inhabit quit"
+```
+
+`sg.Inhabit [shot <dir>] [quit]` (US-T963) runs six steps in Sol and logs one `sg.Inhabit: PASS n` or `FAIL n` line per
+step, with a screenshot each (`inhabit-<n>-<tag>.png`, `inhabit-<n>-fail.png` where one failed), then
+`sg.Inhabit: summary k/6 passed`. A scripted run ignores the Free possession setting, so the run waives the embody
+limits itself. Each step starts from the god's view, stages what it needs and fails on a timeout with its reason; the
+run then goes on to the next.
+
+1. Ride a hauler: rides along (`StartRideAlong`) in a belt works' freighter or a trader, warps through its phases and
+   passes once its trip has moved on twice (or once, then 45 s).
+2. Take and hand back: P (a scripted key) takes the ridden helm, letting go rides on in it, and it must be bound for the
+   body its cargo is booked for (if laden) and move on to its next phase.
+3. Patrol vs lurker: a Sol destroyer is put beside a pirate lying in wait off a lane with a lawful jurisdiction (after
+   25 s with none, a pirate under way), its helm taken and fire opened (`War::TryStartPlayerAttack`, which hands a target
+   off any orbit to `EngageUnderWay`). The run's own hits break the pirates up; once the fight is over the patrol must
+   have been paid (`Law::PayPirateKills`, or the bounty on a wanted captain).
+4. Inhabit a station: the first structure with a settlement whose `EmbodiableAt` gives a station seat is selected and
+   taken; it passes once that station is held.
+5. Pirate pulse and ransom: a pirate destroyer fitted with a field projector (as a sandbox spawn is) is put 3,000 km
+   off a lane beside a laden ship riding it, its helm taken, and `War::PlayerPulse` fired; the laden ship strikes its
+   colours and the helm's answer is its cargo, which must land in the destroyer's `Plunder`.
+6. Turncoat: a pirate battleship's helm is taken by a station out of any fight and fires on a clan destroyer beside it;
+   once the fight is over the battleship must sail with the Renegades (`Law::Turncoat`).
+
 ## Limits
 
 - Weapons fire, wrecks, launched craft, mechs and the satellites are not filtered by the picture: a fight's fire shows
