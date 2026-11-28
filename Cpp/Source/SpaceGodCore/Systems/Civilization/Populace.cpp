@@ -342,8 +342,6 @@ namespace SpaceGod::Core
 		if (state.impl != nullptr) state.impl->inputs.push_back(e);
 	}
 
-	void Populace::Feedback(Civilization&, Galaxy&, double) {}
-
 	double Populace::Mood(const cs::Ref<Settlement>& s, Topic topic) const
 	{
 		if (state.impl == nullptr) return 0;
@@ -352,6 +350,30 @@ namespace SpaceGod::Core
 		const LS::TopicReadout* cell = state.impl->readout.Find(static_cast<LS::GroupId>(g), static_cast<uint32_t>(topic));
 		return cell != nullptr && cell->count > 0 ? cell->mean : 0;
 	}
+
+	double Populace::Share(const cs::Ref<Settlement>& s, Topic topic) const
+	{
+		if (state.impl == nullptr) return 0;
+		int g = GroupOf(s);
+		if (g < 0) return 0;
+		const LS::TopicReadout* cell = state.impl->readout.Find(static_cast<LS::GroupId>(g), static_cast<uint32_t>(topic));
+		return cell != nullptr && cell->count > 0 ? cell->supporter : 0;
+	}
+
+	void Populace::Hear(int group, Topic topic, float push, float magnitude, double jd)
+	{
+		if (state.impl == nullptr || group < 0 || group >= Groups.Count() || cs::Double::IsNaN(OriginJd)) return;
+		LS::EnvEvent e;
+		e.time = cs::Math::Max(jd, OriginJd) - OriginJd;
+		e.topic = static_cast<uint8_t>(topic);
+		e.push = push;
+		e.magnitude = magnitude;
+		e.scope = LS::Scope::Group;
+		e.target = static_cast<uint32_t>(group);
+		state.impl->inputs.push_back(e);
+	}
+
+	int Populace::ReadDay() const { return state.impl != nullptr ? static_cast<int>(state.impl->readout.day) : -1; }
 
 	double Populace::MoodOf(const Galaxy& galaxy, const cs::Ref<Settlement>& s, Topic topic)
 	{
@@ -604,5 +626,6 @@ namespace SpaceGod::Core
 	SG_SERIALIZE(Populace, "SpaceGod.Core.Populace",
 		SG_F(Groups), SG_F(OriginJd),
 		b.FieldWith<LightStateCodec>("State", &Self::state),
-		SG_OPT(SeenEventId), SG_OPT(SeenRobberies), SG_OPT(SeenRobberyJd), SG_OPT(Wanted)) // US-T975
+		SG_OPT(SeenEventId), SG_OPT(SeenRobberies), SG_OPT(SeenRobberyJd), SG_OPT(Wanted), // US-T975
+		SG_OPT(FedDay), SG_OPT(NextPollJd), SG_OPT(Bands)) // US-T984
 }

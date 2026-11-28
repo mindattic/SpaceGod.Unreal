@@ -101,6 +101,20 @@ namespace SpaceGod::Core
 		cs::List<cs::Ref<Outlaw>> Wanted = cs::List<cs::Ref<Outlaw>>();
 		/// <summary>US-T976: moves the worlds by the readout just taken.</summary>
 		void Feedback(Civilization& civ, Galaxy& galaxy, double jd);
+		/// <summary>US-T984: the readout day last fed back, the day of the next poll (NaN until the first feedback), and each
+		/// group's mood bands (group * <see cref="BandCount"/> + band): -1, 0 or 1.</summary>
+		int FedDay = 0;
+		double NextPollJd = cs::Double::NaN;
+		cs::List<int> Bands = cs::List<int>();
+		static constexpr int BandCount = 4;
+		static const cs::Ref<RangeSetting>& FeedbackGain();
+		static const cs::Ref<RangeSetting>& FeedbackCap();
+		/// <summary>US-T984: a world's share of supporters on a topic (0..1); 0 before the society has read it.</summary>
+		double Share(const cs::Ref<Settlement>& s, Topic topic) const;
+		/// <summary>US-T984: pushes group <paramref name="group"/>'s stance on a topic in the next batch, as of day jd.</summary>
+		void Hear(int group, Topic topic, float push, float magnitude, double jd);
+		/// <summary>US-T984: the society's readout day, or -1 when there is no society.</summary>
+		int ReadDay() const;
 
 	private:
 		LightState state;
