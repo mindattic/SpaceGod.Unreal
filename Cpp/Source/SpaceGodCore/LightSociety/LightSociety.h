@@ -6,5 +6,6 @@
 
 #include "LightSociety/AgentStore.h"
 #include "LightSociety/Codec.h"
+#include "LightSociety/Graph.h"
 #include "LightSociety/Rng.h"
 #include "LightSociety/Types.h"
