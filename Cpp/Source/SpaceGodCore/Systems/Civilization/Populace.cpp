@@ -20,6 +20,7 @@
 #include "Systems/Society.h"
 
 #include <algorithm>
+#include <cstring>
 #include <utility>
 #include <vector>
 
@@ -375,6 +376,47 @@ namespace SpaceGod::Core
 	}
 
 	int Populace::ReadDay() const { return state.impl != nullptr ? static_cast<int>(state.impl->readout.day) : -1; }
+
+	uint64_t Populace::ReadoutHash() const
+	{
+		if (state.impl == nullptr) return 0;
+		// FNV-1a over the readout's fields in their stored order, floats by their bits.
+		uint64_t h = 1469598103934665603ull;
+		auto mix = [&h](uint32_t v) {
+			for (int i = 0; i < 4; i++)
+			{
+				h ^= (v >> (8 * i)) & 0xFFu;
+				h *= 1099511628211ull;
+			}
+		};
+		auto mixF = [&mix](float f) {
+			uint32_t bits;
+			std::memcpy(&bits, &f, sizeof bits);
+			mix(bits);
+		};
+		const LS::Readout& r = state.impl->readout;
+		mix(r.day);
+		mix(r.topics);
+		for (LS::GroupId g : r.groups) mix(g);
+		for (const LS::TopicReadout& c : r.cells)
+		{
+			mix(c.count);
+			mixF(c.mean);
+			mixF(c.supporter);
+			mixF(c.neutral);
+			mixF(c.skeptic);
+			mixF(c.confidence);
+			mixF(c.variance);
+			mixF(c.changeRate);
+		}
+		return h;
+	}
+
+	uint64_t Populace::ReadoutHashOf(const Galaxy& galaxy)
+	{
+		auto civ = Civilization::Find(galaxy);
+		return civ != nullptr && civ->Populace != nullptr ? civ->Populace->ReadoutHash() : 0;
+	}
 
 	double Populace::MoodOf(const Galaxy& galaxy, const cs::Ref<Settlement>& s, Topic topic)
 	{

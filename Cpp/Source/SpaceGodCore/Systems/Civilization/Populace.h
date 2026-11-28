@@ -119,6 +119,12 @@ namespace SpaceGod::Core
 		/// as trade trust. NextTradeJd is the day of the next round (NaN until the first).</summary>
 		void Trade(Civilization& civ, Galaxy& galaxy, double jd);
 		double NextTradeJd = cs::Double::NaN;
+		/// <summary>US-T977: a world's group (its index in <see cref="Groups"/>), or -1 when the society holds none of it.</summary>
+		int GroupOf(const cs::Ref<Settlement>& s) const;
+		/// <summary>US-T977: a hash of the readout last taken, the same on every co-op peer in lockstep; 0 when there is no society.</summary>
+		uint64_t ReadoutHash() const;
+		/// <summary>US-T977: the galaxy's populace's <see cref="ReadoutHash"/>, or 0 when the galaxy has none (the Bench).</summary>
+		static uint64_t ReadoutHashOf(const Galaxy& galaxy);
 
 	private:
 		LightState state;
@@ -126,7 +132,6 @@ namespace SpaceGod::Core
 		bool Build(Civilization& civ, Galaxy& galaxy, double jd);
 		/// <summary>US-T982: who was born, died or fell with their world since the last batch, as joins and leaves for the next.</summary>
 		void Census(Civilization& civ, Galaxy& galaxy, double jd);
-		int GroupOf(const cs::Ref<Settlement>& s) const;
 		/// <summary>US-T975: an event for the next batch.</summary>
 		void Queue(const MindAttic::Society::EnvEvent& e);
 

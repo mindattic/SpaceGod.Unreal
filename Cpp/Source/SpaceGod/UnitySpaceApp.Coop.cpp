@@ -53,6 +53,7 @@
 #include "Ships.h"
 #include "SimClock.h"
 #include "Systems/Galaxy.h"
+#include "Systems/Civilization/Populace.h" // US-T977
 #include "World.h"
 
 #include <exception>
@@ -760,6 +761,7 @@ namespace SpaceGod
 		sb += cs::Cat(" ", Course != nullptr && Course->Destination != nullptr ? Course->Destination->Name : cs::String("-"), " ",
 			PlottedCourse != nullptr ? "ftl" : "-", InFtlCruise() ? " cruise" : "", "\n");
 		CoopDigestStatecraft(sb); // US-T47
+		sb += cs::Cat("light ", Wire::Hex(Core::Populace::ReadoutHashOf(*Galaxy)), "\n"); // US-T977: the populace's readout
 		return sb;
 	}
 

@@ -19,6 +19,7 @@
 #include "Systems/Civilization/Health.h"
 #include "Systems/Civilization/Press.h"
 #include "Systems/Civilization/Narrator.h"
+#include "Systems/Civilization/Populace.h" // US-T977: sway
 #include "Economy/Settlement.h"
 #include "Systems/Polities.h"
 #include "Ships.h"
@@ -49,13 +50,17 @@ namespace SpaceGod
 
 	namespace CivHands
 	{
+		/// <summary>US-T977: how strongly a sway is heard (its event's magnitude, 0..1).</summary>
+		constexpr float SwayMagnitude = 0.5f;
+
 		const std::vector<const char*>& Verbs()
 		{
 			static const std::vector<const char*> verbs = { "feud", "reconcile", "fame", "seduce", "elect", "coup", "acquit", "summit",
 				"riot", "arm", "spy", "hire", "hit", "racket", "crackdown",
 				"takeover", "bankrun", "landmark", "preach", "festival", "rig", "rumour",
 				"plague", "cure", "disaster", "aid", "slant", "investigate", "donate",
-				"fund", "bribe", "ruin", "send", "expose" }; // US-T385: Society's own hands (sg.Society's), on the screen and in co-op
+				"fund", "bribe", "ruin", "send", "expose", // US-T385: Society's own hands (sg.Society's), on the screen and in co-op
+				"sway" }; // US-T977: the populace's opinion of a world
 			return verbs;
 		}
 
@@ -209,6 +214,36 @@ namespace SpaceGod
 			if (verb == "ruin") return said(society->Ruin(galaxy, society->BusinessById(num(1)), jd), "A run on the firm");
 			if (verb == "send") return said(society->Send(galaxy, person(1), world(2), jd), "A business trip is booked");
 			if (verb == "expose") return said(society->Expose(galaxy, society->BribeById(num(1)), jd), "A bribe comes to light");
+
+			// US-T977: "sway <topic> <world> <push>": the world's people heard pushing their stance on a topic toward push (-1..1),
+			// queued for the populace's next batch as of today, so every peer's society hears it on the same day.
+			if (verb == "sway")
+			{
+				if (civ.Populace == nullptr) return "the populace has not woken yet (let a day pass)";
+				if (args.size() < 4) return "sway <topic> <world> <push>";
+				cs::String name = cs::Strings::ToLowerInvariant(args[1]);
+				int topic = -1;
+				for (int t = 0; t < static_cast<int>(Core::Topic::Count_); t++)
+					if (name == cs::Strings::ToLowerInvariant(cs::String(Core::ToString(static_cast<Core::Topic>(t))))) topic = t;
+				if (topic < 0) return cs::Cat("'", args[1], "' is not a topic (PolitySupport, PirateFear, GodFaith, TradeTrust, WarHawk)");
+				cs::String rest;
+				for (size_t j = 2; j + 1 < args.size(); j++) rest = cs::Cat(rest, j > 2 ? " " : "", args[j]);
+				cs::String want = cs::Strings::ToUpperInvariant(rest);
+				cs::Ref<Core::Settlement> where;
+				if (galaxy.Polities != nullptr)
+					for (const auto& s : galaxy.Polities->Settlements())
+						if (cs::Strings::ToUpperInvariant(s->Name) == want)
+						{
+							where = s;
+							break;
+						}
+				int group = civ.Populace->GroupOf(where);
+				if (group < 0) return cs::Cat("the populace has no world called '", rest, "'");
+				double push = cs::Math::Clamp(std::atof(args.back().c_str()), -1.0, 1.0);
+				civ.Populace->Hear(group, static_cast<Core::Topic>(topic), static_cast<float>(push), SwayMagnitude, jd);
+				done = "The people are swayed";
+				return "";
+			}
 
 			// US-T277 Kinship.
 			if (civ.Kinship != nullptr)
