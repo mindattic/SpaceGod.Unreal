@@ -428,6 +428,9 @@ namespace SpaceGod::Input
 		{
 			if (!c.UsesMods()) return false;
 			int context = Info(action).context;
+			// US-T939: the flight keys sit under command, so a Controls binding with more modifiers (Shift+T, the tractor)
+			// pre-empts a command-only one on the same key (T, back to the start) while its modifiers are held.
+			if ((context & KeyContext::Command) != 0) context |= KeyContext::Controls;
 			for (const ActionInfo& other : Actions())
 			{
 				if (other.action == action || (other.context & context) == 0) continue;
