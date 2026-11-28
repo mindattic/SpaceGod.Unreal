@@ -51,6 +51,7 @@
 #include "Combat/TachyonLances.h"
 #include "Combat/WeakPatches.h"
 #include "Economy/TradeDesk.h"
+#include "Law/Law.h"
 #include "Rendering/Skyboxes.h"
 #include "Sensors/Sensors.h"
 #include "Settings/DevFlags.h"
@@ -120,6 +121,8 @@ namespace SpaceGod::Core
 		WeakPatches::AiRolls(); WeakPatches::Protection(); found++;
 		// ---- Core/Economy/
 		TradeRules::RunClassConstructor(); found++;                         // Economy/TradeDesk.cs
+		// ---- Core/Law/
+		Law::PirateKillPayShare(); Law::PirateKillStanding(); found++;      // US-T958 (not a C# source)
 		// ---- Core/Rendering/
 		SkyboxSettings::DefaultSky(); SkyboxSettings::Brightness(); SkyboxSettings::NebulaResolution(); found++; // Rendering/Skyboxes.cs
 		// ---- Core/Sensors/

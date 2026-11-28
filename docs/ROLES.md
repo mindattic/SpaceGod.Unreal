@@ -89,6 +89,12 @@ frame: the craft's at the controls, the command view's otherwise.
    (a flip-and-burn transit) is fought off the helm's frame body where the helm is. Either needs the target within the
    hull's scanner reach; a ship riding a lane is out of reach. When the fight's frame is not the helm's, the helm moves to
    it in place (no jump). Only the piloted hull takes this path, so the headless sim (and the bench digests) never do.
+9. **A lawful hull is paid for pirates** (US-T958, `Law::PayPirateKills`). When a battle ends, every pirate hull killed or
+   taken on the side the piloted hull fought against earns the hull `tune.law.pirateKillPay` (default 0.01) of its yard
+   price (`Economy::HullPrice`, so a cruiser pays more than an interceptor) in `Ship::Credits`, paid by the battle's
+   lawful jurisdiction, and `tune.law.pirateKillStanding` (default 2) standing with it per hull, with a toast. A hull whose
+   commander is wanted is left to that bounty (`Outlaws::ClaimInBattle`); a pirate hull, a pilot wanted there, or a
+   fight with no lawful jurisdiction is paid nothing. Only the piloted hull is paid, so the bench digests never see it.
 
 ## Audit
 

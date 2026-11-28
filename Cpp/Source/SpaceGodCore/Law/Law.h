@@ -27,6 +27,7 @@ namespace SpaceGod::Core
 	class BattleUnit;
 	class CargoItem;
 	class Characters;
+	class RangeSetting;
 	struct LaneHop;
 	enum class ContactLevel : int;
 
@@ -224,6 +225,13 @@ namespace SpaceGod::Core
 		/// victim's faction, when that is someone else.</summary>
 		static constexpr double VictimStandingShare = 0.6;
 
+		/// <summary>What the lawful authority pays the player for each pirate hull killed or taken, as a share of the
+		/// hull's yard price (<see cref="Economy.HullPrice"/>), so a cruiser pays more than an interceptor (US-T958).</summary>
+		static const cs::Ref<RangeSetting>& PirateKillPayShare();
+
+		/// <summary>The standing the lawful authority grants the player for each pirate hull killed or taken (US-T958).</summary>
+		static const cs::Ref<RangeSetting>& PirateKillStanding();
+
 		explicit Law(cs::Ref<World> world);
 		/// For ObjectGraph.
 		Law() = default;
@@ -341,7 +349,8 @@ namespace SpaceGod::Core
 		/// interdiction commits nothing, and a wanted ship it stopped is charged only if it destroyed or took one of
 		/// the patrol's ships. A wanted commander killed or taken by bounty hunters or the player is theirs to collect on, at
 		/// the dead rate for a kill and in full alive (see <see cref="Outlaws.ClaimInBattle"/>); by a faction that posted a bounty on it, it has paid that one
-		/// (a dead NPC captain's bounties all lapse).
+		/// (a dead NPC captain's bounties all lapse). Every other pirate hull killed or taken against the player's hull earns
+		/// it pay and standing from the lawful authority there (see <see cref="PayPirateKills"/>).
 		/// </summary>
 		void OnBattleEnded(const cs::Ref<Battle>& b, double jd);
 
@@ -412,6 +421,12 @@ namespace SpaceGod::Core
 		static void Fade(const cs::Ref<LawRecord>& r, double fade, double jd);
 
 		bool HidesHaven(int body);
+
+		/// <summary>The player's pay for pirate hulls killed or taken by the side its hull fought on (US-T958): the lawful
+		/// <paramref name="juris"/> credits the piloted ship <see cref="PirateKillPayShare"/> of each hull's price and raises the
+		/// pilot's standing by <see cref="PirateKillStanding"/>. A hull whose commander is wanted is left to the bounty on them
+		/// (<see cref="Outlaws.ClaimInBattle"/>); nothing for a pirate hull, a pilot wanted there, or a battle the player was not in.</summary>
+		void PayPirateKills(const cs::Ref<Battle>& b, const cs::Ref<Faction>& juris, int shownBody, double jd);
 
 		/// <summary>The record of the captain commanding a ship in battle: its group leader's, opened if need be.</summary>
 		cs::Ref<LawRecord> RecordOfCaptain(const cs::Ref<Ship>& ship);

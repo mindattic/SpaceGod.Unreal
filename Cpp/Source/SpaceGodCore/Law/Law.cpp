@@ -24,6 +24,8 @@
 #include "Persistence/ObjectGraph.h"
 #include "ScaleModel.h"
 #include "Sensors/Sensors.h"
+#include "Settings/GameSetting.h"
+#include "Settings/Tuning.h"
 #include "Ships.h"
 #include "Systems/JumpGate.h"
 #include "World.h"
@@ -84,6 +86,20 @@ namespace SpaceGod::Core
 
 	// US-T148: no record of the SpaceGod's: the player answers to the record of whichever pilot they are embodied in.
 	Law::Law(cs::Ref<World> world) { this->world = std::move(world); }
+
+	const cs::Ref<RangeSetting>& Law::PirateKillPayShare()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("law", "pirateKillPay", "Pirate kill pay", 0.01, 0, 0.1, 0.001, "",
+			TuningScope::Simulation, "What the lawful authority pays the player for each pirate hull killed or taken, as a share of the hull's yard price.");
+		return s;
+	}
+
+	const cs::Ref<RangeSetting>& Law::PirateKillStanding()
+	{
+		static const cs::Ref<RangeSetting> s = Tuning::Knob("law", "pirateKillStanding", "Pirate kill standing", 2, 0, 20, 0.5, "",
+			TuningScope::Simulation, "The standing the lawful authority grants the player for each pirate hull killed or taken.");
+		return s;
+	}
 
 	std::tuple<double, double, double> Law::Severity(CrimeKind k)
 	{
@@ -449,6 +465,9 @@ namespace SpaceGod::Core
 			}
 		}
 
+		// Before the bounties below settle: a hull whose commander is wanted is paid for by its bounty, not here.
+		PayPirateKills(b, juris, shownBody, jd);
+
 		// Bounties paid in full: a wanted commander killed or taken by those who posted them.
 		for (const auto& u : b->Units)
 		{
@@ -481,6 +500,35 @@ namespace SpaceGod::Core
 				if (player) Notice(cs::Cat(f->Name, " has collected its bounty on you with the ", u->Ship->Name));
 			}
 		}
+	}
+
+	void Law::PayPirateKills(const cs::Ref<Battle>& b, const cs::Ref<Faction>& juris, int shownBody, double jd)
+	{
+		auto piloted = world ? world->PilotedShip : nullptr;
+		if (piloted == nullptr || juris == nullptr || juris->IsPirate || (piloted->Faction != nullptr && piloted->Faction->IsPirate)) return;
+		int side = -1;
+		for (const auto& v : b->Units)
+			if (v->PlayerFlown && v->Ship == piloted && !v->Dead && !v->Captured) side = v->Side;
+		if (side < 0) return;
+		auto rec = RecordOf(piloted);
+		if (rec->WantedBy(juris)) return;
+		int hulls = 0;
+		double paid = 0;
+		for (const auto& u : b->Units)
+		{
+			if (u->Kind != UnitKind::Ship || u->Ship == nullptr || u->Ship->Spec == nullptr || !(u->Dead || u->Captured)) continue;
+			if (u->FoughtOn() != 1 - side || u->Faction == nullptr || !u->Faction->IsPirate) continue;
+			auto commander = u->Ship->IsEscort() ? (world->Outlaws ? world->Outlaws->RecordCommanding(u->Ship) : nullptr) : FindRecord(u->Ship);
+			if (commander != nullptr && commander->Wanted()) continue;
+			hulls++;
+			paid += Economy::HullPrice(u->Ship->Spec->Class) * PirateKillPayShare()->Value;
+		}
+		if (hulls == 0) return;
+		piloted->Credits += paid;
+		Adjust(rec, juris, hulls * PirateKillStanding()->Value);
+		cs::String what = hulls == 1 ? cs::String("a pirate hull") : cs::Cat(hulls, " pirate hulls");
+		world->Log(jd, cs::Cat(juris->Name, " pays the ", piloted->Name, " ", Cr(paid), " cr for ", what, " at ", b->Name), WorldEventKind::Law, shownBody);
+		Notice(cs::Cat(juris->Name, " pays ", Cr(paid), " cr for ", what, " at ", b->Name, ". Your standing with them rises"));
 	}
 
 	bool Law::HidesHaven(int body)
