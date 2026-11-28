@@ -1237,7 +1237,19 @@ namespace SpaceGod
 				// schedule resumes -- otherwise it picks up from the stale pre-piloting orbit and
 				// the ship snaps back to wherever that orbit would have drifted to on its own.
 				PinWherePiloted(ship);
-				Fleet()->ScheduleNext(ship, Clock->Jd);
+				// US-T956: the crew takes up its job again: a flagship rejoins the group it handed on, a laden trader flies on
+				// to the market its cargo is booked for, the rest plan afresh.
+				int bookedBody = ship->HasCargo && ship->CargoDestination != nullptr && !ship->OutOfPropellant && !ship->IsEscort()
+					? ship->CargoDestination->Body : -1;
+				if (World()->War == nullptr || !World()->War->RejoinBand(ship, Clock->Jd))
+				{
+					if (bookedBody >= 0 && bookedBody != ship->Orbit->Body)
+					{
+						ship->DestinationBody = ship->FinalBody = bookedBody;
+						ship->PhaseStartJd = ship->PhaseEndJd = Clock->Jd;
+					}
+					else Fleet()->ScheduleNext(ship, Clock->Jd);
+				}
 			}
 		}
 		if (CoopHelmMine()) SpaceCamera->ExitFocus(); // US-T44 (US-T43): the holder's view only

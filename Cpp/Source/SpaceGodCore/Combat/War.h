@@ -148,6 +148,8 @@ namespace SpaceGod::Core
 		cs::Dictionary<cs::Ref<Ship>, double> retreating = cs::Dictionary<cs::Ref<Ship>, double>();
 		cs::Dictionary<cs::Ref<Ship>, LanePass> laneSeen = cs::Dictionary<cs::Ref<Ship>, LanePass>();
 		cs::Dictionary<cs::Ref<Ship>, double> pulseReady = cs::Dictionary<cs::Ref<Ship>, double>();
+		// US-T956: the flagship last taken at the helm and the heir its group went on under (RejoinBand); not saved.
+		cs::Ref<Ship> helmFlagship, helmHeir;
 		cs::Dictionary<cs::Ref<BattleUnit>, cs::Ref<Faction>> captures = cs::Dictionary<cs::Ref<BattleUnit>, cs::Ref<Faction>>();
 		cs::Dictionary<cs::Ref<Settlement>, double> assaultDays = cs::Dictionary<cs::Ref<Settlement>, double>();
 
@@ -727,6 +729,17 @@ namespace SpaceGod::Core
 		/// flagship (a hunt voyage takes it up again when it comes home) rather than handing it on.
 		/// </summary>
 		void HandOverCommand(const cs::Ref<Ship>& leader, bool keepHunter = false);
+
+		/// <summary>
+		/// US-T956: the player lets go the helm of a flagship whose group went on under an heir when the helm was taken
+		/// (<see cref="HandOverCommand"/>): it rejoins its group, leading it again if it is the bigger hull (the heir flying
+		/// escort), else flying escort itself. Only that group, of the same faction, out of any fight and within
+		/// <see cref="BandRejoinKm"/>; false (the hull goes its own way) otherwise.
+		/// </summary>
+		bool RejoinBand(const cs::Ref<Ship>& ship, double jd);
+
+		/// <summary>How far, km, a flagship let go at the helm may lie from its group's heir and still rejoin it.</summary>
+		static constexpr double BandRejoinKm = 100000;
 
 		/// <summary>
 		/// A ship gone from this system for good without a successor taking its place (through a jump gate or its own

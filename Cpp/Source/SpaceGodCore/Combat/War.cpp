@@ -2065,7 +2065,38 @@ namespace SpaceGod::Core
 	void War::HandOverCommand(const cs::Ref<Ship>& leader, bool keepHunter)
 	{
 		if (leader == nullptr || leader->IsEscort()) return;
+		// US-T956: a flagship taken at the helm (never so in the Bench) remembers the heir, to rejoin it when let go.
+		bool helm = leader == world->PilotedShip && !leader->Destroyed;
+		cs::List<cs::Ref<Ship>> group;
+		if (helm)
+			for (const auto& s : Fleet()->Ships())
+				if (s->Leader == leader) group.Add(s);
 		Succession(leader, keepHunter);
+		if (!helm) return;
+		helmFlagship = leader;
+		helmHeir = nullptr;
+		for (const auto& s : group)
+			if (s->Leader == nullptr) helmHeir = s;
+	}
+
+	bool War::RejoinBand(const cs::Ref<Ship>& ship, double jd)
+	{
+		if (ship == nullptr || ship != helmFlagship) return false;
+		auto heir = helmHeir;
+		helmFlagship = helmHeir = nullptr;
+		if (heir == nullptr || heir->Destroyed || heir->Derelict || heir->IsEscort() || heir->Battle != nullptr || heir->Faction != ship->Faction ||
+			ship->Destroyed || ship->Derelict || ship->IsEscort() || ship->Battle != nullptr || ship->Combat == nullptr || heir->Combat == nullptr)
+			return false;
+		if ((Fleet()->StateOf(heir, jd).HelioKm - Fleet()->StateOf(ship, jd).HelioKm).Length() > BandRejoinKm) return false;
+		int escorts = 0;
+		for (const auto& s : Fleet()->Ships())
+			if (s->Leader == heir) escorts++;
+		Fleet()->AddEscort(heir, ship, Core::Fleet::SlotFor(escorts));
+		if (ship->Combat->Spec->Hull <= heir->Combat->Spec->Hull) return true;
+		// The bigger hull leads again: the heir's schedule, orders and escorts pass back to it, and the heir falls in beside it.
+		Succession(heir, false, ship);
+		Fleet()->AddEscort(ship, heir, Core::Fleet::SlotFor(escorts));
+		return true;
 	}
 
 	void War::Forget(const cs::Ref<Ship>& ship)
