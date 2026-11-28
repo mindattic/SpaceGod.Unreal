@@ -103,6 +103,15 @@ frame: the craft's at the controls, the command view's otherwise.
    "Sell plunder": every good sold as the clans' smugglers sell (`BlackMarket::SellPlunder`, `BlackMarket::Sell`'s
    prices), paid into `Ship::Credits` and the hull's faction treasury. Only the piloted hull takes this path, so the bench
    digests never see it.
+11. **Turning on your own** (US-T959, `Law::Turncoat`). When a battle ends with the piloted hull alive and its own, and
+   units of its own faction fought on the other side, and the piloted hull's side started it or killed or took one of them
+   (stopped by its own faction's patrol, only killing or taking one counts): a pirate hull and its escorts defect to the
+   Renegades clan (founded with `World::Polity` the first time, saved with the other polities), so its old clan, every
+   other clan and the law are hostile to it; it keeps its hold and plunder; a toast and a world log line. A lawful hull's
+   pilot commits assault (piracy if it took or ransomed one) with its own faction as jurisdiction and victim, so its own
+   faction posts the bounty, seen by a surviving victim or anyone in sensor range. Only the piloted hull takes this path,
+   so the bench digests never see it.
+
 ## Audit
 
 `roles.*` probes (opt-in with `-SpaceGodAuditFacade`, after `input.*`):

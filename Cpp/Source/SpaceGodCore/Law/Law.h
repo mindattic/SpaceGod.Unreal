@@ -350,7 +350,8 @@ namespace SpaceGod::Core
 		/// the patrol's ships. A wanted commander killed or taken by bounty hunters or the player is theirs to collect on, at
 		/// the dead rate for a kill and in full alive (see <see cref="Outlaws.ClaimInBattle"/>); by a faction that posted a bounty on it, it has paid that one
 		/// (a dead NPC captain's bounties all lapse). Every other pirate hull killed or taken against the player's hull earns
-		/// it pay and standing from the lawful authority there (see <see cref="PayPirateKills"/>).
+		/// it pay and standing from the lawful authority there (see <see cref="PayPirateKills"/>). The player's hull fighting its
+		/// own faction turns renegade or criminal (see <see cref="Turncoat"/>).
 		/// </summary>
 		void OnBattleEnded(const cs::Ref<Battle>& b, double jd);
 
@@ -427,6 +428,13 @@ namespace SpaceGod::Core
 		/// pilot's standing by <see cref="PirateKillStanding"/>. A hull whose commander is wanted is left to the bounty on them
 		/// (<see cref="Outlaws.ClaimInBattle"/>); nothing for a pirate hull, a pilot wanted there, or a battle the player was not in.</summary>
 		void PayPirateKills(const cs::Ref<Battle>& b, const cs::Ref<Faction>& juris, int shownBody, double jd);
+
+		/// <summary>The player's hull fought units of its own faction (US-T959), on the side that started it or hurting them
+		/// (stopped by its own faction's law, only hurting them counts). A pirate hull and its escorts defect to the
+		/// Renegades clan (founded the first time, <see cref="World.Polity"/>), which its old clan and the law are hostile to;
+		/// it keeps its hold. A lawful hull's pilot commits assault (piracy if it took or ransomed one) against its own faction,
+		/// which posts the bounty. Nothing for a battle the player's hull was not in, or lost.</summary>
+		void Turncoat(const cs::Ref<Battle>& b, const cs::HashSet<cs::Ref<Ship>>& inBattle, DVec3 where, int shownBody, double jd);
 
 		/// <summary>The record of the captain commanding a ship in battle: its group leader's, opened if need be.</summary>
 		cs::Ref<LawRecord> RecordOfCaptain(const cs::Ref<Ship>& ship);

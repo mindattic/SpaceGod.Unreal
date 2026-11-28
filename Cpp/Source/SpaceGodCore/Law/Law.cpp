@@ -27,6 +27,7 @@
 #include "Settings/GameSetting.h"
 #include "Settings/Tuning.h"
 #include "Ships.h"
+#include "Systems/InterstellarTraffic.h"
 #include "Systems/JumpGate.h"
 #include "World.h"
 
@@ -465,6 +466,8 @@ namespace SpaceGod::Core
 			}
 		}
 
+		Turncoat(b, inBattle, where, shownBody, jd);
+
 		// Before the bounties below settle: a hull whose commander is wanted is paid for by its bounty, not here.
 		PayPirateKills(b, juris, shownBody, jd);
 
@@ -500,6 +503,56 @@ namespace SpaceGod::Core
 				if (player) Notice(cs::Cat(f->Name, " has collected its bounty on you with the ", u->Ship->Name));
 			}
 		}
+	}
+
+	void Law::Turncoat(const cs::Ref<Battle>& b, const cs::HashSet<cs::Ref<Ship>>& inBattle, DVec3 where, int shownBody, double jd)
+	{
+		auto piloted = world ? world->PilotedShip : nullptr;
+		auto own = piloted != nullptr ? piloted->Faction : nullptr;
+		if (own == nullptr) return;
+		int side = -1;
+		for (const auto& v : b->Units)
+			if (v->PlayerFlown && v->Ship == piloted && !v->Dead && !v->Captured) side = v->Side;
+		if (side < 0) return;
+		cs::List<cs::Ref<BattleUnit>> kin;
+		bool harmed = false, robbed = false;
+		for (const auto& v : b->Units)
+		{
+			if (v->FoughtOn() != 1 - side || v->Kind == UnitKind::Fighter || v->Faction != own) continue;
+			kin.Add(v);
+			bool takenHere = v->Captured && v->Side == side;
+			harmed |= v->Dead || takenHere;
+			robbed |= takenHere || v->SurrenderOutcome == SurrenderTerms::RansomCargo
+				|| (v->SurrenderOutcome == SurrenderTerms::TakeShip && (!v->Captured || takenHere));
+		}
+		if (kin.Count() == 0) return;
+		// Stopped by its own faction's law, it answers only for hurting the patrol; set upon by its own, only for hurting them.
+		if (b->EnforcingSide == 1 - side ? !harmed : side != b->AggressorSide && !harmed) return;
+		if (own->IsPirate)
+		{
+			auto renegades = world->Polity("Renegades", "", Rgb(0.75f, 0.45f, 0.2f), PolityKind::PirateClan, 0);
+			if (renegades == own) return;
+			for (const auto& s : world->Fleet->Ships())
+			{
+				if (s->Destroyed || s->Faction != own || (s != piloted && s->Leader != piloted)) continue;
+				s->Faction = renegades;
+				if (s->Voyage != nullptr && s->Voyage->Faction == own) s->Voyage->Faction = renegades;
+			}
+			world->Log(jd, cs::Cat("The ", piloted->Name, " turned its guns on its own at ", b->Name, ": ", own->Name, " cast it out, and it sails with the Renegades now"), WorldEventKind::Diplomacy, shownBody);
+			Notice(cs::Cat("You fought your own clan at ", b->Name, ". ", own->Name, " has cast you out: you sail with the Renegades now, and they and the law will hunt you"));
+			return;
+		}
+		auto rec = RecordOf(piloted);
+		cs::String witness;
+		for (const auto& v : kin)
+			if (!v->Dead && !v->Captured && !BroadcastArrays::Silenced(v))
+			{
+				witness = v->Ship != nullptr ? cs::Cat("the ", v->Ship->Name) : v->Platform != nullptr ? v->Platform->Name : v->Fort != nullptr ? v->Fort->Name : cs::String();
+				if (!witness.empty()) break;
+			}
+		if (witness.empty()) witness = FindWitness(where, jd, [&inBattle](cs::Ref<Ship> s) { return inBattle.Contains(s); });
+		auto crime = Commit(rec, robbed ? CrimeKind::Piracy : CrimeKind::Assault, own, own, shownBody, jd, witness, b->Name);
+		if (!crime->Recorded()) Notice(cs::Cat("You fought your own at ", b->Name, ", and nobody lived to report it"));
 	}
 
 	void Law::PayPirateKills(const cs::Ref<Battle>& b, const cs::Ref<Faction>& juris, int shownBody, double jd)
