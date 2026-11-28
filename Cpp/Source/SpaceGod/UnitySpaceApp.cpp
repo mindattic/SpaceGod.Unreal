@@ -210,6 +210,8 @@ namespace SpaceGod
 		pauseMenu->ShowSaveGame = [this] { OpenSaves(SavesMode::Save); }; // US-T607
 		pauseMenu->ShowLoadGame = [this] { OpenSaves(SavesMode::Load); };
 		pauseMenu->SaveBlocker = [this] { return SaveBlocker(); };
+		pauseMenu->AtControls = [this] { return AtControls(); }; // US-T928
+		pauseMenu->ReturnToCommand = [this] { ReturnToCommand(); };
 		pauseMenu->ShowHelp = [this] { ShowHelp = true; };
 		pauseMenu->ShowEncyclopedia = [this] { ShowEncyclopedia = true; }; // US-T271
 		pauseMenu->ShowSociety = [this] { ShowSociety = true; }; // US-T293

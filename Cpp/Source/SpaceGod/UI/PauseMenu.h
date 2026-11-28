@@ -95,8 +95,8 @@ namespace SpaceGod::UI
 
 		/// US-T311: the first page's button the keys have picked (-1 until Up / Down is pressed), and the leave question's
 		/// (0 leave, 1 stay; Stay first), shown only once the keys have been used on it.
-		static constexpr int MainCount = 11; // US-T450: Showcase Tour; US-T607: Save Game and Load Game
-		static constexpr int SaveEntry = 1; // US-T607: greyed out while SaveBlocker says why
+		static constexpr int MainCount = 12; // US-T450: Showcase Tour; US-T607: Save Game and Load Game
+		static constexpr int SaveEntry = 2; // US-T607: greyed out while SaveBlocker says why
 		int mainPick = -1, leavePick = 1;
 		bool leaveKeyed = false;
 
@@ -136,6 +136,10 @@ namespace SpaceGod::UI
 
 		/// US-T607: why no save can be made right now (empty when one can): Save Game is greyed out with it.
 		cs::Func<cs::String> SaveBlocker;
+
+		/// US-T928: whether the player is at a seat's controls, and the way back to command (the menu closes first).
+		cs::Func<bool> AtControls;
+		cs::Action<> ReturnToCommand;
 
 		/// Help: the game's Help screen, every key and control (the menu closes first, U.SPC-T494).
 		cs::Action<> ShowHelp;

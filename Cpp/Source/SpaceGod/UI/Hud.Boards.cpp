@@ -1646,6 +1646,14 @@ namespace SpaceGod::UI
 		DrawSeatSight();
 		DrawDeckGuide();
 		DrawRolePanel(); // US-T135
+		// US-T928: leaving a seat was undiscoverable: a persistent hint, above the seat line, that the Pilot key goes back to command.
+		if (app->AtControls())
+		{
+			const auto old = GUI::contentColor;
+			GUI::contentColor = Dim;
+			GUI::Label(Rect(Screen::width * 0.5f - 200, Screen::height - 96, 400, 18), cs::Cat(BoundKeys(::SpaceGod::Input::KeyAction::Pilot), " returns to command (the galaxy view)"), small);
+			GUI::contentColor = old;
+		}
 	}
 
 	// ---------------------------------------------------------------- the helm's abilities (US-T106)

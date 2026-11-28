@@ -224,7 +224,7 @@ namespace SpaceGod::UI
 	{
 		// US-T271: one more button, the Encyclopedia; US-T293: and Society; US-T311: and the keys' hint under them.
 		// US-T450: and the showcase tour, from inside the game. US-T607: Save Game and Load Game apart, Options, Return to Title, Exit Game.
-		static const char* const labels[MainCount] = { "Resume", "Save Game", "Load Game", "Options", "Help", "Encyclopedia", "Society", "Showcase Tour", "Credits", "Return to Title", "Exit Game" };
+		static const char* const labels[MainCount] = { "Resume", "Return to command (P)", "Save Game", "Load Game", "Options", "Help", "Encyclopedia", "Society", "Showcase Tour", "Credits", "Return to Title", "Exit Game" };
 		const cs::String blocked = SaveBlocker ? SaveBlocker() : cs::String();
 		const float w = 320, h = 102 + MainCount * 44;
 		auto r = Centred(w, h);
@@ -234,7 +234,7 @@ namespace SpaceGod::UI
 		const float y = r.y + 70;
 		for (int i = 0; i < MainCount; i++)
 		{
-			const bool off = i == SaveEntry && !blocked.empty();
+			const bool off = (i == SaveEntry && !blocked.empty()) || (i == 1 && !(AtControls && AtControls())); // US-T928: Return to command only at the controls
 			const bool was = GUI::enabled;
 			if (off) GUI::enabled = false;
 			if (GUI::Button(Rect(r.x + 20, y + i * 44, w - 40, 34), labels[i], i == mainPick ? buttonActive : button)) PressMain(i, false);
@@ -249,39 +249,44 @@ namespace SpaceGod::UI
 		switch (i)
 		{
 			case 0: Close(); break;
+			case 1: // US-T928
+				if (!AtControls || !AtControls()) break;
+				Close();
+				if (ReturnToCommand) ReturnToCommand();
+				break;
 			case SaveEntry: // US-T607
 				if (SaveBlocker && !SaveBlocker().empty()) break;
 				Close();
 				if (ShowSaveGame) ShowSaveGame();
 				break;
-			case 2: // US-T607
+			case 3: // US-T607
 				Close();
 				if (ShowLoadGame) ShowLoadGame();
 				break;
-			case 3: page = Page::Settings; break;
-			case 4:
+			case 4: page = Page::Settings; break;
+			case 5:
 				Close();
 				if (ShowHelp) ShowHelp();
 				break;
-			case 5: // US-T271
+			case 6: // US-T271
 				Close();
 				if (ShowEncyclopedia) ShowEncyclopedia();
 				break;
-			case 6: // US-T293
+			case 7: // US-T293
 				Close();
 				if (ShowSociety) ShowSociety();
 				break;
-			case 7: // US-T450: the showcase tour from its first stop, in the game already running (sg.Tour, as the main menu's Extras)
+			case 8: // US-T450: the showcase tour from its first stop, in the game already running (sg.Tour, as the main menu's Extras)
 				Close();
 				if (GEngine) GEngine->Exec(nullptr, TEXT("sg.Tour"));
 				break;
-			case 8: // US-T246
+			case 9: // US-T246
 				if (!credits) credits = cs::New<CreditsScreen>();
 				credits->Restart();
 				page = Page::Credits;
 				break;
-			case 9: AskLeave(Leave::MainMenu, keyed); break;
-			case 10: AskLeave(Leave::Quit, keyed); break;
+			case 10: AskLeave(Leave::MainMenu, keyed); break;
+			case 11: AskLeave(Leave::Quit, keyed); break;
 			default: break;
 		}
 	}
