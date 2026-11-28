@@ -9,7 +9,6 @@
 #include "Combat/CombatState.h"
 #include "Combat/Dogfighting.h"
 #include "Combat/Fighters.h"
-#include "Combat/LaneInterdictors.h" // US-T961
 #include "Combat/SquadOrders.h" // US-T140
 #include "Combat/War.h" // US-T961
 #include "Embodiment/ShipHelm.h"
@@ -112,12 +111,11 @@ namespace SpaceGod::Core
 				ship->LaneHold < 1 && side > 0 && side <= Fleet::RejoinKm;
 		}
 
-		/// <summary>The hull carrying the working field projector <paramref name="ship"/> would pulse with: its own, else its band's.</summary>
+		/// <summary>The hull carrying the working field projector <paramref name="ship"/>, lying beside its held lane, would pulse
+		/// with: its own, its band's, or a clan hull's lying by (<see cref="War.PlayerEmitter"/>).</summary>
 		cs::Ref<Ship> PulseEmitter(const cs::Ref<World>& world, const cs::Ref<Ship>& ship)
 		{
-			auto emitter = LaneInterdictors::EmitterOf(ship, world->Fleet->Ships());
-			if (emitter == nullptr && ship->IsEscort()) emitter = LaneInterdictors::EmitterOf(ship->Controller(), world->Fleet->Ships());
-			return emitter;
+			return world->War->PlayerEmitter(ship, world->Fleet->RejoinPoint(ship, world->Jd) + ship->LaneHoldSide, world->Jd);
 		}
 
 		/// <summary>The projector's charge still to come, as the bar and the toast say it ("3.5 hours", "40 minutes").</summary>
@@ -138,7 +136,7 @@ namespace SpaceGod::Core
 				case War::PulseResult::Ok:
 					return cs::Cat("FIELD PULSE: the ", lane->Name, " lane's field collapses, and its riders are thrown out into the fight");
 				case War::PulseResult::NoProjector:
-					return "No field projector aboard or in the band: a yard fits one into a destroyer or bigger";
+					return "No field projector aboard, in the band or on a clan hull lying by: a yard fits one into a destroyer or bigger";
 				case War::PulseResult::Recharging:
 					return cs::Cat("The field projector is still charging: ", ChargeLeft(world->War->PulseReadyJd(ship) - world->Jd), " to go");
 				case War::PulseResult::NoVictims:

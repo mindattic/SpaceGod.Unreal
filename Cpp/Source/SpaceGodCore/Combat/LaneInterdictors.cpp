@@ -61,6 +61,15 @@ namespace SpaceGod::Core
 		return s;
 	}
 
+	const cs::Ref<RangeSetting>& LaneInterdictors::HelmReachKm()
+	{
+		static const cs::Ref<RangeSetting> s = cs::New<RangeSetting>("war.pulseHelmReachKm", SettingGroups::Ai,
+			"Clan projector reach", 50, 5, 500, 5,
+			"How near (km) a working field projector hull of your own faction must lie for the Field pulse at your helm to fire it, when neither your hull nor its band carries one.",
+			cs::Func<cs::String, double>([](double v) { return cs::Cat(cs::Fmt(v, "0"), " km"); }), "interdictor projector pulse lane hyperlane helm player pirate clan reach");
+		return s;
+	}
+
 	cs::Ref<Ship> LaneInterdictors::EmitterOf(const cs::Ref<Ship>& leader, const cs::List<cs::Ref<Ship>>& ships)
 	{
 		if (leader == nullptr || leader->Destroyed) return nullptr;

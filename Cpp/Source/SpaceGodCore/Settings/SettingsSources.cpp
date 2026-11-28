@@ -109,7 +109,7 @@ namespace SpaceGod::Core
 		LightFighterSettings::TurnPenalty(); found++;                       // Combat/FlightModels.cs
 		GateBreakers::TeamMarines(); GateBreakers::FieldRepair(); GateBreakers::FortFocus(); GateBreakers::PerNavy(); found++;
 		GatePickets::PerGate(); GatePickets::JumpWatchAu(); found++;
-		LaneInterdictors::RechargeDays(); LaneInterdictors::PicketChance(); found++;
+		LaneInterdictors::RechargeDays(); LaneInterdictors::PicketChance(); LaneInterdictors::HelmReachKm(); found++;
 		MarineHabitats::DrillDays(); MarineHabitats::DrillBonus(); found++;
 		NaniteRepairs::RunClassConstructor(); found++;                      // US-T102 (not a C# source)
 		Radiators::RunClassConstructor(); found++;

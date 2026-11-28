@@ -63,6 +63,10 @@ namespace SpaceGod::Core
 
 		static const cs::Ref<RangeSetting>& PicketChance();
 
+		/// <summary>US-T983: how near, km, a working projector hull of the helm's own faction must lie for the player's field
+		/// pulse to fire it (<see cref="War.PlayerEmitter"/>).</summary>
+		static const cs::Ref<RangeSetting>& HelmReachKm();
+
 		/// <summary>
 		/// The hull in <paramref name="leader"/>'s group carrying a working field projector: the leader itself, else an escort
 		/// flying with it (one of <paramref name="ships"/>), or null when none is left (lost, stripped, or never fitted).
@@ -72,7 +76,7 @@ namespace SpaceGod::Core
 		/// <summary>Whether <paramref name="leader"/>'s group carries a working field projector.</summary>
 		static bool Fielded(const cs::Ref<Ship>& leader, const cs::List<cs::Ref<Ship>>& ships);
 
-	private:
+		/// <summary>Whether <paramref name="s"/> itself carries a projector that still works (not lost, not a derelict).</summary>
 		static bool Working(const cs::Ref<Ship>& s);
 	};
 }

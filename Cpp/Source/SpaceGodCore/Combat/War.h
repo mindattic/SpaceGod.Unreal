@@ -337,6 +337,14 @@ namespace SpaceGod::Core
 		/// <summary>When <paramref name="ship"/>'s projector is charged again (a date), or 0 if it has never pulsed.</summary>
 		double PulseReadyJd(const cs::Ref<Ship>& ship) const;
 
+		/// <summary>
+		/// US-T983: the hull whose field projector <paramref name="ship"/> at the helm pulses with: its own or its band's
+		/// (<see cref="LaneInterdictors.EmitterOf"/>), else a working projector hull of its own faction out of any fight within
+		/// <see cref="LaneInterdictors.HelmReachKm"/> of <paramref name="helio"/> (the clan's, as the band a leader taken at the
+		/// helm hands its heir). Null when there is none.
+		/// </summary>
+		cs::Ref<Ship> PlayerEmitter(const cs::Ref<Ship>& ship, DVec3 helio, double jd);
+
 	private:
 		void Interdict(const cs::Ref<Ship>& lurker, double station, cs::List<cs::Ref<Ship>>& victims, double jd);
 

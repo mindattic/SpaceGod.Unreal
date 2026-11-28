@@ -288,8 +288,7 @@ namespace SpaceGod::Core
 		auto lanes = Fleet()->Lanes;
 		if (lanes == nullptr || hop.Lane == nullptr || ship == nullptr || ship->Destroyed || ship->Battle != nullptr || ship->Planetside())
 			return PulseResult::Unable;
-		auto emitter = LaneInterdictors::EmitterOf(ship, Fleet()->Ships());
-		if (!emitter && ship->IsEscort()) emitter = LaneInterdictors::EmitterOf(ship->Controller(), Fleet()->Ships());
+		auto emitter = PlayerEmitter(ship, Fleet()->LanePoint(ship, jd, progress) + side, jd);
 		if (!emitter) return PulseResult::NoProjector;
 		double ready = 0;
 		if (pulseReady.TryGetValue(ship, ready) && jd < ready) return PulseResult::Recharging;
@@ -314,6 +313,20 @@ namespace SpaceGod::Core
 	{
 		double ready = 0;
 		return pulseReady.TryGetValue(ship, ready) ? ready : 0;
+	}
+
+	cs::Ref<Ship> War::PlayerEmitter(const cs::Ref<Ship>& ship, DVec3 helio, double jd)
+	{
+		const auto& ships = Fleet()->Ships();
+		auto emitter = LaneInterdictors::EmitterOf(ship, ships);
+		if (!emitter && ship->IsEscort()) emitter = LaneInterdictors::EmitterOf(ship->Controller(), ships);
+		if (emitter) return emitter;
+		double reach = LaneInterdictors::HelmReachKm()->Value;
+		for (const auto& s : ships)
+			if (s != ship && s->Faction == ship->Faction && s->Battle == nullptr && !s->Planetside() && LaneInterdictors::Working(s) &&
+				(Fleet()->StateOf(s, jd).HelioKm - helio).Length() <= reach)
+				return s;
+		return nullptr;
 	}
 
 	bool War::WorthPulsing(const cs::Ref<Ship>& lurker, const cs::List<cs::Ref<Ship>>& victims)
@@ -408,6 +421,8 @@ namespace SpaceGod::Core
 			unit->SetPlayerControlled(true);
 			for (const auto& e : Fleet()->Ships())
 				if (e->Leader == lurker && !e->Destroyed && e->Battle == nullptr) Join(b, e, 0, false);
+			// US-T983: a clan hull lying by whose projector the helm fired fights beside it.
+			if (emitter != lurker && emitter->Leader != lurker && emitter->Battle == nullptr) Join(b, emitter, 0, false);
 		}
 		else Join(b, lurker, 0, false);
 		for (const auto& v : victims) Join(b, v, 1, false);

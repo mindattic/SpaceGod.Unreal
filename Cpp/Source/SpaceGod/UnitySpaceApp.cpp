@@ -61,6 +61,7 @@
 #include "Combat/CombatState.h"
 #include "Combat/Crews.h"
 #include "Combat/FlightModels.h"
+#include "Combat/LaneInterdictors.h" // US-T983
 #include "Combat/PilotAim.h"
 #include "Combat/PilotFlight.h"
 #include "Combat/PilotTuning.h"
@@ -1138,6 +1139,7 @@ namespace SpaceGod
 		cs::String name = cs::Cat("Sandbox ", cls, " ", spawned);
 		auto ship = Fleet()->SpawnAt(name, cls, faction, frame, offsetKm, forward, Clock->Jd);
 		ship->Ports = World()->FreeShipPorts(); // not a hidden haven's rock, as for every free ship
+		if (hostile && LaneInterdictors::CanCarry(cls)) LaneInterdictors::Fit(ship); // US-T983: a raider's hull to pulse lanes with
 
 		EnterPiloting(Target::OfShip(ship));
 	}
