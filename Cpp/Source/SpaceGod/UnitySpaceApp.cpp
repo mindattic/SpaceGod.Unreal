@@ -554,7 +554,7 @@ namespace SpaceGod
 			if (!Travel->Active && !InFtlCruise())
 			{
 				KeepReoriented();
-				SpaceCamera->Update(dt, AtControls() ? Input.ForChaseCamera() : Input);
+				SpaceCamera->Update(dt, AtControls() || IsRiding() ? Input.ForChaseCamera() : Input);
 			}
 			UpdateClipPlanes(dt);
 			UpdateStreaming(dt);
@@ -628,7 +628,7 @@ namespace SpaceGod
 			ReapplyHandOffSettle();
 			KeepReoriented();
 			// US-T90: at the controls the camera follows the craft and takes none of its keys (the wheel zooms the chase).
-			SpaceCamera->Update(dt, AtControls() ? Input.ForChaseCamera() : Input);
+			SpaceCamera->Update(dt, AtControls() || IsRiding() ? Input.ForChaseCamera() : Input);
 		}
 		UpdateClipPlanes(dt);
 		// US-T724: the fleets' sim tiers measured from where the player watches. Solo only: co-op peers must sidestep alike.
@@ -733,6 +733,7 @@ namespace SpaceGod
 		hud->Draw();
 		DrawSystemCruise(); // US-T127/US-T197: the cruise drive's look (the edge glow, the flash, the streaks)
 		DrawTractorHud(); // US-T264: the mining beam's readout
+		DrawRideAlongHud(); // US-T954: the ride's caption
 		DrawInfluence(); // US-T140: the embody gate's refusals (an alert)
 		Tour::ShowcaseTour::Draw(*this); // US-T147: the showcase tour's strip
 		DrawTutorial(); // US-T254: the welcome offer, and the outline round what a step points at
@@ -856,10 +857,14 @@ namespace SpaceGod
 		}
 		if (i.Home && !AtControls()) FocusSystemOverview();
 		if (i.Focus && !AtControls()) FocusSelected();
-		if (i.Escape) BackOut();
+		// US-T954: riding along, P or Esc is back to the god's view (a click panel open still closes first).
+		if (i.Escape && IsRiding() && !ClickPanelOpen()) StopRideAlong();
+		else if (i.Escape) BackOut();
 		if (i.CycleShips && !AtControls()) CycleShips(i.CycleBackward ? -1 : 1);
 		if (i.NumberKey >= 0 && !AtControls()) NumberHotkey(i.NumberKey);
-		if (i.Pilot) TogglePiloting();
+		if (i.Pilot && IsRiding()) StopRideAlong();
+		else if (i.Pilot) TogglePiloting();
+		if (i.RideAlong) ToggleRideAlong(); // US-T954: Ctrl+P
 		// Take charge of anything, any time (U.SPC-T422): the next seat in the fight in view, or the next gun on the hull.
 		if (i.CycleSeat != 0) CycleSeat(i.CycleSeat);
 		if (i.ManGun) ManNextGun();

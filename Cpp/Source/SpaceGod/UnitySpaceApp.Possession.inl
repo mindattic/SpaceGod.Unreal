@@ -114,6 +114,8 @@ private:
 	PossessionShowState possessionShow;
 	cs::Ref<Core::Ship> possessedHelm;
 	cs::Ref<Core::IEmbodiable> possessedSeat;
+	/// <summary>US-T954: the ship ridden along in (no helm, no seat: its picture is the view-side one, swept from its sensors).</summary>
+	cs::Ref<Core::Ship> possessedRide;
 	PerceptionKind perceiving = PerceptionKind::God;
 	float perceptionShown = 0;
 	cs::Ref<Core::ContactBook> perceivedBook;

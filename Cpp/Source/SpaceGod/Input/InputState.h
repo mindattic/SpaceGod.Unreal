@@ -220,6 +220,9 @@ namespace SpaceGod::Input
 		/// <summary>Shift+P (US-T135): out on the hull held, flown or selected as its next EVA repair worker.</summary>
 		bool EmbodyCrew = false;
 
+		/// <summary>Ctrl+P (US-T954): ride along in the selected ship, its job and the god's warp left running.</summary>
+		bool RideAlong = false;
+
 		/// <summary>Shift+Y (US-T166): in a launched craft's cockpit, eject: the pilot out in a pressure suit (EVA), the craft
 		/// left coasting on.</summary>
 		bool Eject = false;

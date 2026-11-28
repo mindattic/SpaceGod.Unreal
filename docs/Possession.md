@@ -95,6 +95,18 @@ and the camera's glide play as for any take; time warp drops to 1x and comes bac
   co-op has no command to carry a launch ordered from the god view.
 - Else any side's free fighter. Out of a fight, the ship's own helm.
 
+## Riding along (US-T954)
+
+**Ctrl+P** on a selected ship (or **Ride along** beside Fly this on its selection card) rides along in it without taking
+its helm (`UnitySpaceApp.RideAlong.cpp`). The camera sits in the hull's chase (`SpaceCamera::EnterPilotChase`) and follows
+it as its crew flies its own schedule: transits, lane rides, parking, its fights. `UpdatePossession` counts the ridden
+ship as held, so the show plays going in and coming out and the view becomes the hull's own: a view-side picture swept
+from `SensorSuite::Of(hull)` like any non-helm seat's. Nothing else is touched: no `PilotedShip`, no session seat, no
+`TakeCharge`, no hand-over of a war's command, no co-op frame, and the god's time warp stays where it was. A caption over
+the view names the ship, its role and its phase. P or Esc goes back to the god's view the ride was started from; the
+ride ends by itself if the ship is destroyed or leaves the system shown, if the camera is taken off it, or if a seat is
+taken. Taking over the helm from a ride is US-T955.
+
 ## The consciousness between bodies: the seat transition (US-T855)
 
 The owner: "need transition for god-to-ship, and ship-to-ship, and ship-to-god; the universe needs to slow to a

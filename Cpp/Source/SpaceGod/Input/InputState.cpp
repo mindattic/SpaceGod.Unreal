@@ -167,6 +167,7 @@ namespace SpaceGod::Input
 		Home = hit(A::Home);
 		Pilot = hit(A::Pilot);
 		EmbodyCrew = hit(A::EmbodyCrew); // US-T135
+		RideAlong = hit(A::RideAlong); // US-T954
 		Eject = hit(A::Eject); // US-T166
 		DeployMech = hit(A::DeployMech); // US-T83: Shift+N, the mech out of the bay
 		CycleSeat = hit(A::NextSeat) ? 1 : hit(A::PrevSeat) ? -1 : 0;
@@ -431,6 +432,7 @@ namespace SpaceGod::Input
 		ThrottleStep = 0;
 		ManGun = false;
 		EmbodyCrew = false; // US-T135
+		RideAlong = false; // US-T954
 		Eject = false; // US-T166
 		JumpJets = DeployMech = false; // US-T83
 		jumpJetsPressed = keyBoost = padBoost = false;

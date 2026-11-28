@@ -107,6 +107,7 @@ The pure part is unit-checked by `BindingCoreTests` (tools/build-core.ps1); `sg.
 | Action | Key | Where | Menu path |
 |---|---|---|---|
 | Embody / let go | P | anywhere | dev menu > Helm |
+| Ride along in the selected ship / back to the god's view (US-T954) | Ctrl+P / P or Esc | command / riding | selection card > Ride along |
 | Spawn and pilot grid | V | command | dev menu > Spawn |
 | Practice fighter | Shift+V | command | dev menu > Spawn |
 | Steer | Mouse | controls | - |

@@ -14,6 +14,7 @@ not audited.
 | Role | How you get it | Code |
 |---|---|---|
 | Free SpaceGod (command view) | nothing held; P lets go of anything | `AtControls() == false` |
+| Rider (US-T954) | Ctrl+P or "Ride along" on a selected ship; P or Esc back to the god's view. The ship keeps its job, the warp keeps running, nothing is held | `IsRiding()`, `RiddenShip()` (`UnitySpaceApp.RideAlong.cpp`); still `AtControls() == false` |
 | Fighter (light: fighter, interceptor, courier runner; bomber) | P on a hull, Shift+V practice fighter, V spawn-and-pilot (pending US-T186) | `ShipHelm`, `FlightFamily::LightFighter / Interceptor / Bomber / Runner` |
 | Heavy (gunship) | P on a gunship | `FlightFamily::HeavyFighter` |
 | Capital (battleship, cruiser, destroyer) | P on a hull | `FlightFamily::Capital`, `CapitalHandling`, `CapitalManeuver` |

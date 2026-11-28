@@ -89,22 +89,24 @@ namespace SpaceGod
 		// The god's full view until the energy has gone in (and at once on letting go: the god sees everything again).
 		if (perceptionShown < 0.5f) return nullptr;
 		if (possessedHelm != nullptr) return World() != nullptr && World()->Sensors != nullptr ? World()->Sensors->Player : nullptr;
-		if (possessedSeat != nullptr) return perceivedBook;
+		if (possessedSeat != nullptr || possessedRide != nullptr) return perceivedBook;
 		return nullptr;
 	}
 
 	void UnitySpaceApp::UpdatePossession()
 	{
 		float dt = Mathf::Min(Time::unscaledDeltaTime, 0.1f);
-		// What this machine's player holds now: the helm flown here, else a session seat.
+		UpdateRideAlong(); // US-T954
+		// What this machine's player holds now: the helm flown here, else a session seat, else the ship ridden along in.
 		cs::Ref<Ship> helm = IsPiloting() ? Piloted.Ship : nullptr;
 		cs::Ref<IEmbodiable> seat = helm == nullptr ? HeldNonHelm() : nullptr;
-		bool same = helm == possessedHelm
+		cs::Ref<Ship> ride = helm == nullptr && seat == nullptr ? RiddenShip() : nullptr;
+		bool same = helm == possessedHelm && ride == possessedRide
 			&& ((seat == nullptr && possessedSeat == nullptr) || (seat != nullptr && possessedSeat != nullptr && EmbodiableEquals(seat, possessedSeat)));
 		if (!same)
 		{
-			bool had = possessedHelm != nullptr || possessedSeat != nullptr;
-			bool has = helm != nullptr || seat != nullptr;
+			bool had = possessedHelm != nullptr || possessedSeat != nullptr || possessedRide != nullptr;
+			bool has = helm != nullptr || seat != nullptr || ride != nullptr;
 			if (has || had)
 			{
 				possessionShow = PossessionShowState();
@@ -112,14 +114,16 @@ namespace SpaceGod
 				possessionShow.Entering = has;
 				// From one seat straight into the next the energy jumps across quicker, as the view does (US-T90's Hurry).
 				possessionShow.Speed = has && had ? Tune::SwitchSpeed : 1.0f;
-				possessionShow.Helm = has ? helm : possessedHelm;
+				// The ridden hull is placed and rimmed as a helm is (PlacePossession).
+				possessionShow.Helm = has ? (helm != nullptr ? helm : ride) : (possessedHelm != nullptr ? possessedHelm : possessedRide);
 				possessionShow.Seat = has ? seat : possessedSeat;
 			}
 			possessedHelm = helm;
 			possessedSeat = seat;
+			possessedRide = ride;
 			perceivedBook = nullptr;
 			perceptionSweepTimer = 0;
-			if (has) perceiving = PerceptionOf(helm, seat);
+			if (has) perceiving = ride != nullptr ? PerceptionKind::Sensors : PerceptionOf(helm, seat);
 			// From seat to seat the view changes with the seat (the old picture is not the new seat's).
 			if (has && had) perceptionShown = 0;
 		}
@@ -129,7 +133,7 @@ namespace SpaceGod
 			if (possessionShow.T >= (possessionShow.Entering ? Tune::EnterSeconds : Tune::LeaveSeconds)) possessionShow.Active = false;
 		}
 
-		bool holding = possessedHelm != nullptr || possessedSeat != nullptr;
+		bool holding = possessedHelm != nullptr || possessedSeat != nullptr || possessedRide != nullptr;
 		bool settled = holding && (!possessionShow.Active || !possessionShow.Entering || possessionShow.T >= Tune::SettleStartS);
 		perceptionShown = settled ? Mathf::Min(1.0f, perceptionShown + dt / Tune::SettleSeconds)
 			: Mathf::Max(0.0f, perceptionShown - dt / Tune::ReleaseSeconds);
@@ -143,11 +147,19 @@ namespace SpaceGod
 			perceiverHelio = PlayerHelioKm();
 			perceivedReachKm = Sensors::PilotSuite(possessedHelm).RangeKm;
 		}
-		else if (possessedSeat != nullptr)
+		else if (possessedSeat != nullptr || possessedRide != nullptr)
 		{
-			auto sub = possessedSeat->Subject();
-			perceiverShip = sub.Ship != nullptr ? sub.Ship : sub.Unit != nullptr ? sub.Unit->Ship : nullptr;
-			if (perceiving != PerceptionKind::Eyes) perceivedReachKm = SuiteOf(possessedSeat).RangeKm;
+			if (possessedRide != nullptr)
+			{
+				perceiverShip = possessedRide;
+				perceivedReachKm = SensorSuite::Of(possessedRide).RangeKm;
+			}
+			else
+			{
+				auto sub = possessedSeat->Subject();
+				perceiverShip = sub.Ship != nullptr ? sub.Ship : sub.Unit != nullptr ? sub.Unit->Ship : nullptr;
+				if (perceiving != PerceptionKind::Eyes) perceivedReachKm = SuiteOf(possessedSeat).RangeKm;
+			}
 			perceptionSweepTimer -= dt;
 			if (perceptionSweepTimer <= 0)
 			{
@@ -177,16 +189,26 @@ namespace SpaceGod
 
 	void UnitySpaceApp::SweepPerception()
 	{
-		if (possessedSeat == nullptr || World() == nullptr || Fleet() == nullptr) return;
+		if ((possessedSeat == nullptr && possessedRide == nullptr) || World() == nullptr || Fleet() == nullptr) return;
 		if (perceivedBook == nullptr) perceivedBook = cs::New<ContactBook>();
 		double jd = Clock->Jd;
-		// Where the seat is: its pose, in its frame body's km (ecliptic).
-		auto pose = possessedSeat->PoseAt(jd);
-		if (pose.FrameBody >= 0 && pose.FrameBody < Catalog()->Count()) perceiverHelio = Ephemeris()->Helio(pose.FrameBody) + pose.OffsetKm;
-		bool eyes = perceiving == PerceptionKind::Eyes;
-		auto suite = SuiteOf(possessedSeat);
-		auto mine = possessedSeat->Faction();
 		const auto& ships = Fleet()->Ships();
+		if (possessedRide != nullptr)
+		{
+			// US-T954: the ridden hull, where its own schedule (or its fight) has it.
+			int id = possessedRide->Id;
+			DVec3 vel;
+			if (id >= 0 && id < ships.Count() && id < shipStates.Count()) perceiverHelio = PerceivedHelioOf(id, vel);
+		}
+		else
+		{
+			// Where the seat is: its pose, in its frame body's km (ecliptic).
+			auto pose = possessedSeat->PoseAt(jd);
+			if (pose.FrameBody >= 0 && pose.FrameBody < Catalog()->Count()) perceiverHelio = Ephemeris()->Helio(pose.FrameBody) + pose.OffsetKm;
+		}
+		bool eyes = perceiving == PerceptionKind::Eyes;
+		auto suite = possessedRide != nullptr ? SensorSuite::Of(possessedRide) : SuiteOf(possessedSeat);
+		auto mine = possessedRide != nullptr ? possessedRide->Faction : possessedSeat->Faction();
 		int n = cs::Math::Min(ships.Count(), shipStates.Count());
 		for (int i = 0; i < n; i++)
 		{

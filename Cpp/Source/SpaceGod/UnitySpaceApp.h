@@ -51,6 +51,7 @@
 #include "UnitySpaceApp.Possession.deps.h" // US-T446
 #include "UnitySpaceApp.Effects.deps.h" // US-T447
 #include "UnitySpaceApp.Radio.deps.h" // US-T656
+#include "UnitySpaceApp.RideAlong.deps.h" // US-T954
 #include "NewGameSetup.h" // US-T247: the New Game setup page's choices
 
 namespace SpaceGod
@@ -128,5 +129,6 @@ namespace SpaceGod
 #include "UnitySpaceApp.Possession.inl" // US-T446: possession as a show, and the possessed view (docs/Possession.md)
 #include "UnitySpaceApp.Effects.inl" // US-T447: the world's effects: exhaust clouds, venting, a fight's sparks and smoke (docs/Effects.md)
 #include "UnitySpaceApp.Radio.inl" // US-T656: the radio host, ticked once a frame
+#include "UnitySpaceApp.RideAlong.inl" // US-T954: riding along in a ship that keeps doing its job (docs/Possession.md)
 	};
 }

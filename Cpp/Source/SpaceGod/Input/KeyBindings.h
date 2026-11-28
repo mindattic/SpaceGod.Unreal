@@ -53,7 +53,7 @@ namespace SpaceGod::Input
 		// Travel
 		ActivateGate, Eject, EngageFtl, FtlAutopilot, NextFtlTarget, PrevFtlTarget, ClearFtlCourse, RollPatches,
 		// Seats
-		Pilot, EmbodyCrew, DeployMech, NextSeat, PrevSeat, ManGun, JumpToCraft, MoveToHost, Picker, Boarding,
+		Pilot, EmbodyCrew, RideAlong /* US-T954 */, DeployMech, NextSeat, PrevSeat, ManGun, JumpToCraft, MoveToHost, Picker, Boarding,
 		// Command view
 		Focus, Home, CycleShips, CycleBackward, WatchBattle, ResetTime, Reorient, News,
 		// Time and scale
