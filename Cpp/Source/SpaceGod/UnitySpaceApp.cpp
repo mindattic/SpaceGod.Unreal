@@ -2,6 +2,7 @@
 // OnGUI, OnDestroy), system activation, commands and piloting. Lines 1471-end are UnitySpaceApp.Main2.cpp.
 
 #include "UnitySpaceApp.h"
+#include "SpaceGodLog.h" // US-T940: AUDIT STEP marks
 #include "CaptureEvents.h" // US-T72
 #include "Misc/App.h" // US-T555: FApp::HasFocus
 
@@ -288,6 +289,7 @@ namespace SpaceGod
 
 	void UnitySpaceApp::Activate(const cs::Ref<StarSystem>& system)
 	{
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.0 enter")); // US-T940
 		// Let go of anything in the old system first: its ships, structures and indices are about to go.
 		SpaceCamera->ExitFocus();
 		if (systemRoot != nullptr)
@@ -331,7 +333,9 @@ namespace SpaceGod
 		shipViews = cs::List<cs::Ref<Views::ShipView>>(); // C#: null (the old views went with systemRoot)
 		// US-T131: the place's graveyards are laid the first time a player comes (their hulks are wrecks in its fleet).
 		Core::Graveyards::Populate(World(), Clock->Jd);
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.1 before BuildShipViews")); // US-T940
 		BuildShipViews();
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.2 ship views built")); // US-T940
 		pathLine = cs::New<Views::LineStrip>("Flight path", systemRoot);
 		pathLine->SetVisible(false);
 		battleFx = cs::New<Views::BattleFx>(this, systemRoot);
@@ -362,14 +366,17 @@ namespace SpaceGod
 		Scale()->Layout(Ephemeris(), bodyScene);
 		UpdateRadii();
 		ResetHandOffSettle(); // US-T481: a new system starts with nothing carried
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.3 before UpdateShips")); // US-T940
 		UpdateShips(0);
 		SettleHandOff(0);
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.4 ships updated")); // US-T940
 		Structures->Layout();
 		// A new system starts level with the ecliptic again (auto-reorient then swings to its own plane).
 		SpaceCamera->SetUpFrame(Quaternion::identity());
 		SpaceCamera->SetPose(SpaceCamera->ScenePosition, SpaceCamera->Rotation);
 		// Each system keeps its own sky (U.SPC-T595); the last one stays up until this one has loaded.
 		if (Sky != nullptr) Sky->Show(system->Name);
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP activate.5 before CoopActivated")); // US-T940
 		CoopActivated(system); // US-T44: the host's frame tells its clients
 	}
 

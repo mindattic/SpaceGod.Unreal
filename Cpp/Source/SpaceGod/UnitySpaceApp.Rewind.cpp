@@ -3,6 +3,7 @@
 // (Persistence/RewindRing.h).
 
 #include "UnitySpaceApp.h"
+#include "SpaceGodLog.h" // US-T940: AUDIT STEP marks
 #include "PlayerOptions.h"
 #include "UI/Hud.h"
 #include "UI/GalaxyMapScreen.h" // US-T492: an order replayed
@@ -306,6 +307,7 @@ namespace SpaceGod
 
 	void UnitySpaceApp::RewindAfterLoad()
 	{
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP rewind.0 RewindAfterLoad")); // US-T940
 		ClearHoldRewind(false); // US-T409: a load or a keyframe rewind: the hold rewind's tracks and resume points are another world's (US-T410: and its held-back bookings, thrown away with it)
 		if (rewindRestoring) return;
 		Rewind.Clear();
@@ -313,9 +315,11 @@ namespace SpaceGod
 		rewindLastJd = Clock != nullptr ? Clock->Jd : std::numeric_limits<double>::quiet_NaN();
 		rewindFrames.clear();
 		rewindKeySerial.clear();
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP rewind.1 before ClearInterventions")); // US-T940
 		ClearInterventions();
 		rewindReplaying = false;
 		rewindFrameStarted = false;
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP rewind.2 done")); // US-T940
 	}
 
 	// ---------------------------------------------------------------- phase 3: the frame log and seeking by replay

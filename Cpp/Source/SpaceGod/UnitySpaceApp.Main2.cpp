@@ -3,6 +3,7 @@
 // A C# null string is the empty string here (SalvageApproach, EndSalvage's toast).
 
 #include "UnitySpaceApp.h"
+#include "SpaceGodLog.h" // US-T940: AUDIT STEP marks in ResetToNow
 #include "CaptureEvents.h" // US-T72
 #include "GraphicsSettings.h" // US-T251: the flown field of view
 #include "PlayerOptions.h" // US-T555: the camera shake's strength
@@ -1005,6 +1006,7 @@ namespace SpaceGod
 		if (InFtlCruise()) { ShowToast("Not under FTL: wait until the drive drops out before resetting the time"); return; }
 		double now = CoopNow.has_value() ? *CoopNow : GameStartJd(); // US-T44 (US-T43): in co-op the asker's; US-T863: the game's own start, never the wall clock's date
 		if (CoopSends("reset", Coop::Wire::D(now))) return; // US-T44 (US-T43): into the frames
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.0 start (backwards=%d)"), now < Clock->Jd ? 1 : 0); // US-T940
 		bool backwards = now < Clock->Jd;
 		// Rebuilding the systems mid-trip would leave the trip pointing at the old ones: land first.
 		if (backwards && Travel->Active) Travel->Finish();
@@ -1024,17 +1026,24 @@ namespace SpaceGod
 			Rendering::Materials::DestroyOwned(Interstellar->Root->transform);
 			UnityCompat::Destroy(Interstellar->Root);
 			Interstellar = cs::New<Views::InterstellarView>(Galaxy, worldRoot);
+			UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.1 galaxy rebuilt")); // US-T940
 			SubscribeWorlds();
+			UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.2 worlds subscribed")); // US-T940
 			// By name: a system built on arrival is not in the rebuilt list, and indices past the start ones shift.
 			auto back = Galaxy->Systems[0];
 			for (const auto& sys : Galaxy->Systems)
 				if (sys->Name == activeName) { back = sys; break; }
 			Activate(back);
+			UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.3 activated")); // US-T940
 			SpaceCamera->SetPose(cameraAt, cameraRotation);
+			UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.4 camera posed")); // US-T940
 			GalaxyRebuilt.Invoke();
+			UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.5 GalaxyRebuilt invoked")); // US-T940
 		}
 		ShowToast(cs::Cat("Time back to the game's start, ", Core::NewGameSetup::FormatDate(now)));
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.6 before RewindAfterLoad")); // US-T940
 		RewindAfterLoad(); // US-T504: a reset is not replayed, so it starts a new timeline as a load does (no keyframes of the old galaxy, no years of session time)
+		UE_LOG(LogSpaceGod, Display, TEXT("AUDIT STEP reset.7 done")); // US-T940
 	}
 
 	void UnitySpaceApp::RefreshCharts()
