@@ -38,8 +38,8 @@ namespace SpaceGod::CaptureFixedStep
 			FApp::SetUseFixedTimeStep(true);
 			FApp::SetFixedDeltaTime(step);
 		});
-		// A frame done sooner than 1/fps of real time waits the rest, so the frame feed, which reads back on the wall
-		// clock, sees each frame once.
+		// A frame done sooner than 1/fps of real time waits the rest, so the run plays at no more than real speed. The
+		// tape doesn't need it: the capture plugin reads -capture-fixed too and holds each frame until the host has taken it.
 		FCoreDelegates::OnEndFrame.AddLambda([step]
 		{
 			static double due = 0;

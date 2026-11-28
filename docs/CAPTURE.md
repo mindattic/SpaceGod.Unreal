@@ -39,11 +39,12 @@ tape, and so does free RAM under 2 GB (parallel Unreal builds); the valve's reas
 (FApp's fixed delta, which the sim, the Unity clock and the tour read), and a frame done sooner than 1/fps of real time
 waits the rest. A slow frame is slow motion in real time, never a jump in the game. `tools/play.ps1 -Offscreen -FixedStep
 -ResX 1920 -ResY 1080 -ExecCmds 'sg.Tour auto quit'` films the tour this way, lossless `video` unless `-Capture` says
-otherwise; end such a run with its scenario, since `-Seconds` counts real seconds. The rest is MindAttic.Media.Capture's
-(M.CAPT-T242): until its frame feed reads back every frame, waits for the host to take each one and records the ring as
-a fixed-timestep tape (frame-index stamps at fps/1, a blocking sink, no encoder-lag stop; the RAM valve stays), the host
-still paces the tape by the wall clock, so a game running slower than real time is filmed with held frames and a slow
-lossless encoder can still trip the lag valve.
+otherwise; end such a run with its scenario, since `-Seconds` counts real seconds. The tape is frame-perfect: the
+MindAttic.Media.Capture plugin reads the same `-capture-fixed` flag (M.CAPT-T242), reads back every rendered frame and
+holds the game until the host has taken each one, and the host records the ring as a fixed-timestep tape (frame-index
+stamps at fps/1, a blocking sink, no encoder-lag stop; the RAM valve stays). So frame N of the tape is the game's Nth
+frame: no held or dropped frames, and a slow lossless encoder slows the game down instead of tripping the lag valve
+(1920x1080 FFV1 runs the game at about 15-18 frames/s of real time). A fixed-step tape has no audio.
 
 ## 2. Output
 
