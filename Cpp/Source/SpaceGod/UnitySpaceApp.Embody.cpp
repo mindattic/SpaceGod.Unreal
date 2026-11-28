@@ -95,6 +95,8 @@ namespace SpaceGod
 		// US-T140: weighed against everything the SpaceGod's hands hold now (every seat and the helm flown), as SeatAuthority does.
 		cs::List<cs::Ref<IEmbodiable>> held;
 		for (const auto& h : session->State()->Held()) held.Add(h.Seat);
+		// US-T955: the hull ridden along in is already the SpaceGod's, so its helm is taken even mid-fight.
+		if (auto ride = RiddenShip()) held.Add(cs::Ref<IEmbodiable>(Embodiables::HelmOf(World(), ride)));
 		auto verdict = Embodiables::MayEmbody(EmbodyContext::Of(World(), held), next);
 		if (verdict.Ok) return true;
 		NoteEmbodyRefusal(next != nullptr ? next->Name() : cs::String("that"), verdict);

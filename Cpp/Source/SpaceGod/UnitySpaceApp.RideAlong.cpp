@@ -4,6 +4,9 @@
 #include "UnitySpaceApp.h"
 
 #include "Camera/SpaceCamera.h"
+#include "Coop/CoopPeer.h"
+#include "Embodiment/Embodiables.h"
+#include "Embodiment/ShipHelm.h"
 #include "Input/KeyBindings.h"
 #include "Ships.h"
 #include "SimClock.h"
@@ -22,6 +25,13 @@ namespace SpaceGod
 		{
 			if (ship->Battle != nullptr) return "in battle";
 			return cs::Cat(Lower(ToString(ship->Role)), " \xC2\xB7 ", Lower(ToString(ship->Phase)));
+		}
+
+		/// <summary>US-T955: the keys on a ride: P takes the helm, Esc is the god; back from the helm, either is the god.</summary>
+		cs::String RideKeys(bool handedBack)
+		{
+			auto p = Input::KeyBindings::Keys(Input::KeyAction::Pilot);
+			return handedBack ? cs::Cat(p, " or Esc back to god") : cs::Cat(p, " take the helm \xC2\xB7 Esc back to god");
 		}
 	}
 
@@ -62,15 +72,48 @@ namespace SpaceGod
 		}
 		RememberCommand();
 		rideAlong = Target::OfShip(ship);
+		rideHandedBack = false;
 		Select(rideAlong);
 		SpaceCamera->EnterPilotChase(rideAlong, 6);
 		BeginSeatTransition(-1); // the drift in, as for any seat; the warp is left as it is
-		ShowToast(cs::Cat("Riding along in the ", ship->Name, ", ", Clock->Warp().Label, "  (", Input::KeyBindings::Keys(Input::KeyAction::Pilot), " or Esc to go back)"));
+		ShowToast(cs::Cat("Riding along in the ", ship->Name, ", ", Clock->Warp().Label, "  (", RideKeys(false), ")"));
+	}
+
+	void UnitySpaceApp::TakeRiddenHelm()
+	{
+		auto ship = RiddenShip();
+		if (ship == nullptr) return;
+		TakeSeat(Embodiables::HelmOf(World(), ship));
+		// In co-op the take goes into the frames and the release does too: no ride to go back to there.
+		if (Coop::CoopPeer::Current() == nullptr && IsPiloting() && Piloted.Ship == ship) helmFromRide = ship;
+	}
+
+	bool UnitySpaceApp::RideOnAfterHelm(const cs::String& why)
+	{
+		auto ship = helmFromRide;
+		helmFromRide = nullptr;
+		if (ship == nullptr || !why.empty() || IsSeated() || !IsPiloting() || !(Piloted.Ship == ship)) return false;
+		if (ship->Destroyed || ship->GateDeparted || !TargetValid(Target::OfShip(ship))) return false;
+		ExitPiloting(); // its crew has the helm back and its schedule picks up from here
+		if (AtControls()) return false;
+		rideAlong = Target::OfShip(ship);
+		rideHandedBack = true;
+		Select(rideAlong);
+		SpaceCamera->PilotView = std::nullopt;
+		SpaceCamera->PilotEye = nullptr;
+		SpaceCamera->EnterPilotChase(rideAlong, 6);
+		// The warp the ride ran at comes back as the energy leaves the helm; the god's view stays the one the ride remembered.
+		int warp = commandWarp;
+		BeginSeatTransition(warp);
+		auto label = warp >= 0 && warp < SimClock::Levels().Count() ? SimClock::Levels()[warp].Label : Clock->Warp().Label;
+		ShowToast(cs::Cat(ship->Name, " handed back to its crew: riding along, ", label, "  (", RideKeys(true), ")"));
+		return true;
 	}
 
 	void UnitySpaceApp::StopRideAlong(const cs::String& why)
 	{
 		if (rideAlong.IsNone()) return;
+		rideHandedBack = false;
 		Target anchor = rideAlong;
 		cs::String name = rideAlong.Ship != nullptr ? rideAlong.Ship->Name : cs::String();
 		rideAlong = Target::None();
@@ -87,7 +130,13 @@ namespace SpaceGod
 
 	void UnitySpaceApp::UpdateRideAlong()
 	{
-		if (rideAlong.IsNone()) return;
+		// US-T955: the ride's helm is only remembered while it is still the one flown here.
+		if (helmFromRide != nullptr && !(IsPiloting() && Piloted.Ship == helmFromRide)) helmFromRide = nullptr;
+		if (rideAlong.IsNone())
+		{
+			rideHandedBack = false;
+			return;
+		}
 		// A seat taken from the ride (the picker, Fly this) is the seat's from here: the ride just ends.
 		if (AtControls())
 		{
@@ -121,6 +170,6 @@ namespace SpaceGod
 			rideStyle->clipping = TextClipping::Clip;
 		}
 		float w = 760;
-		GUI::Label(Rect((Screen::width - w) * 0.5f, 96, w, 22), cs::Cat("RIDING ALONG \xC2\xB7 ", ship->Name, " \xC2\xB7 ", JobLine(ship)), rideStyle);
+		GUI::Label(Rect((Screen::width - w) * 0.5f, 96, w, 22), cs::Cat("RIDING ALONG \xC2\xB7 ", ship->Name, " \xC2\xB7 ", JobLine(ship), "  (", RideKeys(rideHandedBack), ")"), rideStyle);
 	}
 }

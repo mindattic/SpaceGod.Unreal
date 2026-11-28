@@ -103,9 +103,22 @@ it as its crew flies its own schedule: transits, lane rides, parking, its fights
 ship as held, so the show plays going in and coming out and the view becomes the hull's own: a view-side picture swept
 from `SensorSuite::Of(hull)` like any non-helm seat's. Nothing else is touched: no `PilotedShip`, no session seat, no
 `TakeCharge`, no hand-over of a war's command, no co-op frame, and the god's time warp stays where it was. A caption over
-the view names the ship, its role and its phase. P or Esc goes back to the god's view the ride was started from; the
-ride ends by itself if the ship is destroyed or leaves the system shown, if the camera is taken off it, or if a seat is
-taken. Taking over the helm from a ride is US-T955.
+the view names the ship, its role and its phase, and the keys. Esc goes back to the god's view the ride was started from;
+the ride ends by itself if the ship is destroyed or leaves the system shown, if the camera is taken off it, or if a seat is
+taken (a seat taken from a ride still goes back to the god's view remembered when the ride began: `RememberCommand`
+keeps it while riding).
+
+### Taking over and handing back (US-T955)
+
+**P** while riding takes the ridden ship's helm through the one `TakeSeat(HelmOf(ship))` path (`TakeRiddenHelm`), so the
+seat transition and the possession show play as for any seat. `PassesEmbodyGate` counts the ridden hull as already held
+(rule 1, moving about a body the SpaceGod holds), so a hull ridden into a fight can be taken there even with Free
+possession off. The helm remembers it came from a ride (`helmFromRide`). Letting go of it by choice (P, or Return to
+command, anything through `ReturnToCommand` with no reason) runs `ExitPiloting` (its crew has the helm back, its schedule
+picks up from where it was left) and rides on in the same ship at the god's warp (`RideOnAfterHelm`); from that ride P or
+Esc goes back to the god's view. A hull destroyed under the helm, or a helm lost for any reason, goes to the god's view
+as before. In co-op the helm take and release go into the frames as they always have, and no ride is gone back to (the
+ride itself is local, view only).
 
 ## The consciousness between bodies: the seat transition (US-T855)
 

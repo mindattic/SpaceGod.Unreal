@@ -204,7 +204,7 @@ namespace SpaceGod::Input
 
 				{ KeyAction::Pilot, "pilot", "Seats: embody / let go", Both, EdgeKind, { Key::P, Pad(PadButton::LeftStick) }, "Embody what is selected or under the mouse; at any controls, let go." },
 				{ KeyAction::EmbodyCrew, "embodyCrew", "Seats: EVA repair worker", Both, EdgeKind, { InputBinding(Key::P, S) }, "Out on the hull as its next EVA repair worker." },
-		{ KeyAction::RideAlong, "rideAlong", "Seats: ride along", Command, EdgeKind, { InputBinding(Key::P, C) }, "Ride along in the selected ship: its view and its sensors while it keeps flying its own job; P or Esc back to the god's view (US-T954)." },
+		{ KeyAction::RideAlong, "rideAlong", "Seats: ride along", Command, EdgeKind, { InputBinding(Key::P, C) }, "Ride along in the selected ship: its view and its sensors while it keeps flying its own job; P takes its helm, Esc back to the god's view (US-T954, US-T955)." },
 				{ KeyAction::DeployMech, "deployMech", "Seats: mech out of the bay", Both, EdgeKind, { InputBinding(Key::N, S) }, "In a fight: the mech out of the bay of the hull held, flown or selected (a capital ship or station), you at its controls." },
 				{ KeyAction::NextSeat, "nextSeat", "Seats: next seat", Both, EdgeKind, { Key::Quote }, "Take the next seat in the fight in view." },
 				{ KeyAction::PrevSeat, "prevSeat", "Seats: previous seat", Both, EdgeKind, { Key::Semicolon }, "Take the seat before." },

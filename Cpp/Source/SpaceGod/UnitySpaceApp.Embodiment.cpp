@@ -117,7 +117,8 @@ namespace SpaceGod
 
 	void UnitySpaceApp::RememberCommand()
 	{
-		if (AtControls()) return;
+		// US-T955: riding along, the god's view was remembered when the ride began; a seat taken from the ride goes back to it.
+		if (AtControls() || IsRiding()) return;
 		commandWarp = Clock->WarpIndex;
 		commandFocus = SpaceCamera->Mode != Cameras::SpaceCamera::CameraMode::Free ? SpaceCamera->FocusTarget : Target::None();
 		// US-T855: the god's eye itself, for the ghost's drift back to it.
@@ -259,6 +260,7 @@ namespace SpaceGod
 
 	void UnitySpaceApp::ReturnToCommand(const cs::String& why, const cs::String& lostName)
 	{
+		if (RideOnAfterHelm(why)) return; // US-T955: a helm taken from a ride goes back to riding along in it
 		// A seat already lost (the session let go of it) is named by the caller, so the toast can still say why.
 		auto held = HeldNonHelm();
 		cs::String name = held ? held->Name() : lostName;

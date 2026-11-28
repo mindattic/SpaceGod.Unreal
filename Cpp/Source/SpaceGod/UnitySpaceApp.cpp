@@ -857,12 +857,17 @@ namespace SpaceGod
 		}
 		if (i.Home && !AtControls()) FocusSystemOverview();
 		if (i.Focus && !AtControls()) FocusSelected();
-		// US-T954: riding along, P or Esc is back to the god's view (a click panel open still closes first).
+		// US-T954: riding along, Esc is back to the god's view (a click panel open still closes first).
 		if (i.Escape && IsRiding() && !ClickPanelOpen()) StopRideAlong();
 		else if (i.Escape) BackOut();
 		if (i.CycleShips && !AtControls()) CycleShips(i.CycleBackward ? -1 : 1);
 		if (i.NumberKey >= 0 && !AtControls()) NumberHotkey(i.NumberKey);
-		if (i.Pilot && IsRiding()) StopRideAlong();
+		// US-T955: riding along, P takes its helm; back on the ride after handing it back, P is the god's view again.
+		if (i.Pilot && IsRiding())
+		{
+			if (rideHandedBack) StopRideAlong();
+			else TakeRiddenHelm();
+		}
 		else if (i.Pilot) TogglePiloting();
 		if (i.RideAlong) ToggleRideAlong(); // US-T954: Ctrl+P
 		// Take charge of anything, any time (U.SPC-T422): the next seat in the fight in view, or the next gun on the hull.
