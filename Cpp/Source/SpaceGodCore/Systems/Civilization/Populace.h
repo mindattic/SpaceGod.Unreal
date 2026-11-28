@@ -94,6 +94,8 @@ namespace SpaceGod::Core
 		LightState state;
 
 		bool Build(Civilization& civ, Galaxy& galaxy, double jd);
+		/// <summary>US-T982: who was born, died or fell with their world since the last batch, as joins and leaves for the next.</summary>
+		void Census(Civilization& civ, Galaxy& galaxy, double jd);
 		int GroupOf(const cs::Ref<Settlement>& s) const;
 
 		SG_SERIALIZABLE(Populace);

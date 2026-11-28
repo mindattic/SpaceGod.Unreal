@@ -3,9 +3,12 @@
 #include "Systems/Civilization/Populace.h"
 
 #include "Economy/Settlement.h"
+#include "LightSociety/Distill.h"
 #include "LightSociety/Engine.h"
 #include "LightSociety/Graph.h"
 #include "LightSociety/Router.h"
+#include "LightSociety/Surrogate.h"
+#include "LightSociety/Teacher.h"
 #include "LightSociety/Worker.h"
 #include "Persistence/ObjectGraph.h"
 #include "Settings/GameSetting.h"
@@ -45,6 +48,16 @@ namespace SpaceGod::Core
 		LS::ChunkPool pool{0};
 		std::vector<LS::EnvEvent> inputs;
 		LS::Readout readout;
+		/// <summary>The rule teacher distillation asks, and the surrogate it distils (job-owned until the job is waited for).</summary>
+		LS::Teacher teacher;
+		LS::Surrogate surrogate;
+		bool distilled = false;
+		/// <summary>Whether the surrogate is registered on the router: from engine day <see cref="Populace.DistillDays"/> on.</summary>
+		bool switched = false;
+		/// <summary>The census's changes for the next job: leavers, joiners and new ties (an end at NewAgent + i names joins[i]).</summary>
+		std::vector<LS::AgentId> leave;
+		std::vector<LS::Profile> joins;
+		std::vector<LS::Edge> links;
 		/// <summary>Last, so it is destroyed (its job cancelled and its thread joined) before what the job touches.</summary>
 		LS::JobRunner runner;
 
@@ -137,6 +150,87 @@ namespace SpaceGod::Core
 		/// <summary>Ties each agent makes within its world (Barabasi-Albert m), and links one business branch makes.</summary>
 		constexpr uint32_t WithinTies = 3;
 		constexpr uint32_t BranchLinks = 2;
+		/// <summary>An edge end at or past this names the census's joiner (end - NewAgent), seated by the next job.</summary>
+		constexpr LS::AgentId NewAgent = 0x80000000u;
+
+		std::uint32_t Seed32(const Galaxy& galaxy, double originJd) { return H(static_cast<std::uint32_t>(galaxy.Seed), DayOf(originJd), 0x1A9Fu); }
+
+		/// <summary>A living citizen as an agent: their house, business, age and traits, their world's schooling.</summary>
+		LS::Profile Anchor(const cs::Ref<Citizen>& c, const cs::Ref<Household>& h, int g, const cs::Ref<Civics>& cv, double jd, std::uint32_t seed32)
+		{
+			double learning = cv != nullptr ? cv->Learning : 0.3;
+			std::uint32_t r = H(static_cast<std::uint32_t>(c->Id), seed32, 0xA4C7u);
+			auto has = [&](Trait t) { return (c->Traits & static_cast<int>(t)) != 0; };
+			LS::Profile p;
+			p.externalId = static_cast<uint64_t>(c->Id);
+			p.group = static_cast<LS::GroupId>(g);
+			p.household = static_cast<uint32_t>(h->Id);
+			p.business = h->Business != nullptr ? static_cast<uint32_t>(h->Business->Id) : LS::NoUnit;
+			p.age = Byte(c->AgeYears(jd));
+			p.cls = WealthClass(h);
+			p.edu = Byte(learning * 4 + Unit(H(r, 1)));
+			p.big5[0] = Byte(128 + (has(Trait::Curious) ? 60 : 0) + Noise(H(r, 2), 30));
+			p.big5[1] = Byte(128 + (has(Trait::Honest) ? 40 : 0) + (has(Trait::Loyal) ? 40 : 0) + Noise(H(r, 3), 30));
+			p.big5[2] = Byte(128 + (has(Trait::Charming) ? 60 : 0) + Noise(H(r, 4), 30));
+			p.big5[3] = Byte(128 - (has(Trait::Cruel) ? 60 : 0) - (has(Trait::Vengeful) ? 30 : 0) + Noise(H(r, 5), 30));
+			p.big5[4] = Byte(128 + (has(Trait::Reckless) ? 40 : 0) + (has(Trait::Vengeful) ? 30 : 0) + Noise(H(r, 6), 30));
+			p.traits = static_cast<uint16_t>(c->Traits & 0xFFFF);
+			return p;
+		}
+
+		/// <summary>A synthetic agent of world g drawn from hash r, shaped by its Civics, its class that of one of its houses.</summary>
+		LS::Profile Synthetic(int g, std::uint32_t r, const cs::Ref<Civics>& cv, const std::vector<cs::Ref<Household>>& houses)
+		{
+			double liberty = cv != nullptr ? cv->Liberty : 0, hawk = cv != nullptr ? cv->Hawk : 0;
+			double learning = cv != nullptr ? cv->Learning : 0.3, faith = cv != nullptr ? cv->FaithShare : 0;
+			double weariness = cv != nullptr ? cv->Weariness : 0;
+			LS::Profile p;
+			p.group = static_cast<LS::GroupId>(g);
+			p.age = Byte(16 + H(r, 1) % 60u);
+			p.cls = houses.empty() ? 1 : WealthClass(houses[H(r, 2) % houses.size()]);
+			p.edu = Byte(learning * 4 + Unit(H(r, 3)));
+			p.big5[0] = Byte(128 + liberty * 60 + Noise(H(r, 4), 40));
+			p.big5[1] = Byte(128 + Noise(H(r, 5), 40));
+			p.big5[2] = Byte(128 + Noise(H(r, 6), 40));
+			p.big5[3] = Byte(128 - hawk * 60 + Noise(H(r, 7), 40));
+			p.big5[4] = Byte(128 + weariness * 60 + Noise(H(r, 8), 40));
+			if (Roll(H(r, 9), faith)) p.traits = static_cast<uint16_t>(Trait::Pious);
+			return p;
+		}
+
+		/// <summary>The teacher's persuasion distilled into a surrogate, from the society as it stands (run on the worker).</summary>
+		void Distil(LightState::Impl& light)
+		{
+			const LS::Config& config = light.engine.GetConfig();
+			LS::CaptureConfig capture;
+			capture.seed = config.seed;
+			capture.topics = config.topics;
+			LS::TrainSet samples = LS::CaptureFromStore(light.teacher, LS::Op::Shift, light.engine.Store(), light.engine.Topics(), capture);
+			LS::DistillConfig distill;
+			distill.seed = config.seed;
+			LS::DistillResult result = LS::Distill(light.teacher, samples, distill);
+			if (result.ok) light.surrogate = std::move(result.backend);
+			light.distilled = true;
+		}
+
+		/// <summary>Seats the census's joiners, retires its leavers and wires the new ties (run on the worker).</summary>
+		void Seat(LS::Engine& engine, const std::vector<LS::AgentId>& leave, const std::vector<LS::Profile>& joins, std::vector<LS::Edge> links)
+		{
+			for (LS::AgentId a : leave) engine.Leave(a);
+			if (joins.empty() && links.empty()) return;
+			// Drop the leavers' ties first, so a joiner seated in a freed slot does not inherit them.
+			if (!leave.empty() && !joins.empty()) engine.Link({});
+			std::vector<LS::AgentId> seated;
+			seated.reserve(joins.size());
+			for (const LS::Profile& p : joins) seated.push_back(engine.Join(p));
+			auto resolve = [&](LS::AgentId a) { return a >= NewAgent ? (a - NewAgent < seated.size() ? seated[a - NewAgent] : LS::NoAgent) : a; };
+			for (LS::Edge& e : links)
+			{
+				e.a = resolve(e.a);
+				e.b = resolve(e.b);
+			}
+			engine.Link(links);
+		}
 	}
 
 	LightState::LightState() = default;
@@ -148,6 +242,9 @@ namespace SpaceGod::Core
 		impl->runner.Wait();
 		LS::Writer w;
 		impl->engine.Write(w);
+		// US-T982: the distilled surrogate follows the engine (a blob that ends there has none yet).
+		w.Bool(impl->distilled);
+		if (impl->distilled) impl->surrogate.Write(w);
 		return ToBase64(w.Bytes());
 	}
 
@@ -159,6 +256,8 @@ namespace SpaceGod::Core
 		auto fresh = std::make_unique<Impl>();
 		LS::Reader r(bytes);
 		if (!r.Ok() || !fresh->engine.Read(r) || !r.Ok()) return;
+		// A bad surrogate is distilled again by the next job rather than losing the society.
+		if (!r.AtEnd()) fresh->distilled = r.Bool() && r.Ok() && fresh->surrogate.Read(r);
 		fresh->readout = fresh->engine.Latest();
 		impl = std::move(fresh);
 	}
@@ -190,7 +289,12 @@ namespace SpaceGod::Core
 
 	void Populace::Pump(Civilization& civ, Galaxy& galaxy, double jd)
 	{
-		if (state.impl == nullptr && !Build(civ, galaxy, jd)) return;
+		if (state.impl == nullptr)
+		{
+			// Built this update, stepped from the next: f_I and the distillation run on the worker meanwhile.
+			Build(civ, galaxy, jd);
+			return;
+		}
 		LightState::Impl& light = *state.impl;
 		try
 		{
@@ -208,11 +312,27 @@ namespace SpaceGod::Core
 		const long long due = static_cast<long long>(cs::Math::Floor(jd) - OriginJd);
 		const uint32_t now = light.engine.Day();
 		if (due <= static_cast<long long>(now)) return;
+		// The surrogate takes over on a sim day, never when a thread happens to finish: batches stop at the switch day.
+		const long long switchDay = static_cast<long long>(cs::Math::Max(0.0, DistillDays()->Value));
+		if (!light.switched && light.distilled && static_cast<long long>(now) >= switchDay)
+		{
+			light.router.Register(LS::BackendKind::Surrogate, LS::Op::Shift, &light.surrogate);
+			light.switched = true;
+		}
 		Perceive(civ, galaxy, jd);
-		const uint32_t to = static_cast<uint32_t>(std::min<long long>(due, static_cast<long long>(now) + MaxStrideDays));
-		light.runner.Submit([&engine = light.engine, events = std::exchange(light.inputs, {}), to](const std::atomic<bool>&) {
-			engine.Inject(events);
-			engine.StepTo(static_cast<double>(to));
+		Census(civ, galaxy, jd);
+		long long last = std::min<long long>(due, static_cast<long long>(now) + MaxStrideDays);
+		if (!light.switched && static_cast<long long>(now) < switchDay) last = std::min(last, switchDay);
+		// A save without a surrogate distils in this batch, one day long so the switch after it lands on a fixed day.
+		const bool distil = !light.distilled;
+		if (distil) last = static_cast<long long>(now) + 1;
+		const uint32_t to = static_cast<uint32_t>(last);
+		light.runner.Submit([&light, events = std::exchange(light.inputs, {}), leave = std::exchange(light.leave, {}),
+								joins = std::exchange(light.joins, {}), links = std::exchange(light.links, {}), to, distil](const std::atomic<bool>&) {
+			Seat(light.engine, leave, joins, links);
+			if (distil) Distil(light);
+			light.engine.Inject(events);
+			light.engine.StepTo(static_cast<double>(to));
 		});
 	}
 
@@ -255,7 +375,7 @@ namespace SpaceGod::Core
 		for (const auto& w : civ.Worlds)
 			if (GroupOf(w->Where) < 0) Groups.Add(w->Where);
 
-		const std::uint32_t seed32 = H(static_cast<std::uint32_t>(galaxy.Seed), DayOf(OriginJd), 0x1A9Fu);
+		const std::uint32_t seed32 = Seed32(galaxy, OriginJd);
 		const uint64_t seed = (static_cast<uint64_t>(seed32) << 32) | H(seed32, 0x50C1u);
 		const uint32_t cap = static_cast<uint32_t>(cs::Math::Clamp(MaxAgents()->Value, 1.0, static_cast<double>(LS::MaxAgents)));
 		const int perWorld = static_cast<int>(cs::Math::Max(0.0, AgentsPerSettlement()->Value));
@@ -284,28 +404,11 @@ namespace SpaceGod::Core
 			if (g < 0) continue;
 			housesOf[static_cast<size_t>(g)].push_back(h);
 			auto cv = civicsOf(static_cast<size_t>(g));
-			double learning = cv != nullptr ? cv->Learning : 0.3;
 			std::vector<LS::AgentId> family;
 			for (const auto& c : h->Members)
 			{
 				if (!c->Alive() || profiles.size() >= cap) continue;
-				std::uint32_t r = H(static_cast<std::uint32_t>(c->Id), seed32, 0xA4C7u);
-				auto has = [&](Trait t) { return (c->Traits & static_cast<int>(t)) != 0; };
-				LS::Profile p;
-				p.externalId = static_cast<uint64_t>(c->Id);
-				p.group = static_cast<LS::GroupId>(g);
-				p.household = static_cast<uint32_t>(h->Id);
-				p.business = h->Business != nullptr ? static_cast<uint32_t>(h->Business->Id) : LS::NoUnit;
-				p.age = Byte(c->AgeYears(jd));
-				p.cls = WealthClass(h);
-				p.edu = Byte(learning * 4 + Unit(H(r, 1)));
-				p.big5[0] = Byte(128 + (has(Trait::Curious) ? 60 : 0) + Noise(H(r, 2), 30));
-				p.big5[1] = Byte(128 + (has(Trait::Honest) ? 40 : 0) + (has(Trait::Loyal) ? 40 : 0) + Noise(H(r, 3), 30));
-				p.big5[2] = Byte(128 + (has(Trait::Charming) ? 60 : 0) + Noise(H(r, 4), 30));
-				p.big5[3] = Byte(128 - (has(Trait::Cruel) ? 60 : 0) - (has(Trait::Vengeful) ? 30 : 0) + Noise(H(r, 5), 30));
-				p.big5[4] = Byte(128 + (has(Trait::Reckless) ? 40 : 0) + (has(Trait::Vengeful) ? 30 : 0) + Noise(H(r, 6), 30));
-				p.traits = static_cast<uint16_t>(c->Traits & 0xFFFF);
-				LS::AgentId a = add(p);
+				LS::AgentId a = add(Anchor(c, h, g, cv, jd, seed32));
 				family.push_back(a);
 				anchors.emplace_back(c->Id, a);
 			}
@@ -326,20 +429,7 @@ namespace SpaceGod::Core
 			for (int k = static_cast<int>(members[g].size()); k < perWorld && profiles.size() < cap; k++)
 			{
 				std::uint32_t r = H(world, static_cast<std::uint32_t>(k));
-				double liberty = cv != nullptr ? cv->Liberty : 0, hawk = cv != nullptr ? cv->Hawk : 0;
-				double learning = cv != nullptr ? cv->Learning : 0.3, faith = cv != nullptr ? cv->FaithShare : 0;
-				double weariness = cv != nullptr ? cv->Weariness : 0;
-				LS::Profile p;
-				p.group = static_cast<LS::GroupId>(g);
-				p.age = Byte(16 + H(r, 1) % 60u);
-				p.cls = houses.empty() ? 1 : WealthClass(houses[H(r, 2) % houses.size()]);
-				p.edu = Byte(learning * 4 + Unit(H(r, 3)));
-				p.big5[0] = Byte(128 + liberty * 60 + Noise(H(r, 4), 40));
-				p.big5[1] = Byte(128 + Noise(H(r, 5), 40));
-				p.big5[2] = Byte(128 + Noise(H(r, 6), 40));
-				p.big5[3] = Byte(128 - hawk * 60 + Noise(H(r, 7), 40));
-				p.big5[4] = Byte(128 + weariness * 60 + Noise(H(r, 8), 40));
-				if (Roll(H(r, 9), faith)) p.traits = static_cast<uint16_t>(Trait::Pious);
+				LS::Profile p = Synthetic(static_cast<int>(g), r, cv, houses);
 				const cs::Ref<Household>* firm = !firms.empty() && Roll(H(r, 10), 0.5) ? &firms[H(r, 11) % firms.size()] : nullptr;
 				if (firm != nullptr) p.business = static_cast<uint32_t>((*firm)->Business->Id);
 				LS::AgentId a = add(p);
@@ -391,16 +481,120 @@ namespace SpaceGod::Core
 		LS::Config config;
 		config.seed = seed;
 		config.topics = static_cast<uint32_t>(Topic::Count_);
-		// No cheaper tier is registered until distillation (US-T974 follow-up), so the router asks the teacher.
+		// The router asks the teacher until the distilled surrogate is registered (Pump, from engine day DistillDays on).
 		config.policy = LS::Policy::AllSurrogate;
 		std::vector<LS::TopicSpec> topics;
 		for (uint32_t t = 0; t < config.topics; t++) topics.push_back({static_cast<uint8_t>(t), 0.0f, 0.25f, 0.3f});
 
 		state.impl = std::make_unique<LightState::Impl>();
-		// f_I itself runs on the worker; the readout stays empty (every mood neutral) until the first day is stepped.
-		state.impl->runner.Submit([&engine = state.impl->engine, config, profiles = std::move(profiles), edges = std::move(edges),
-									  topics = std::move(topics)](const std::atomic<bool>&) { engine.Init(config, profiles, edges, topics); });
+		// f_I and the distillation run on the worker; the readout stays empty (every mood neutral) until the first day is stepped.
+		state.impl->runner.Submit([&light = *state.impl, config, profiles = std::move(profiles), edges = std::move(edges),
+									  topics = std::move(topics)](const std::atomic<bool>&) {
+			light.engine.Init(config, profiles, edges, topics);
+			Distil(light);
+		});
 		return true;
+	}
+
+	// ---------------------------------------------------------------- join and leave
+
+	void Populace::Census(Civilization& civ, Galaxy& galaxy, double jd)
+	{
+		auto society = Society::Find(galaxy);
+		if (society == nullptr || state.impl == nullptr) return;
+		LightState::Impl& light = *state.impl;
+		const LS::AgentStore& store = light.engine.Store();
+		for (const auto& w : civ.Worlds)
+			if (GroupOf(w->Where) < 0) Groups.Add(w->Where);
+		const size_t G = static_cast<size_t>(Groups.Count());
+		std::vector<char> standing(G);
+		for (size_t g = 0; g < G; g++)
+		{
+			const auto& s = Groups[static_cast<int>(g)];
+			standing[g] = Civilization::Stands(s) && civ.CivicsOf(s) != nullptr;
+		}
+
+		// Who is seated: a fallen world's agents leave with it; the rest are counted by world, the citizens by id.
+		std::vector<std::vector<LS::AgentId>> members(G);
+		std::vector<std::pair<int, LS::AgentId>> seated;
+		store.ForEachActive([&](LS::AgentId a) {
+			const LS::Profile& p = store.GetProfile(a);
+			if (p.group >= G || !standing[p.group])
+			{
+				light.leave.push_back(a);
+				return;
+			}
+			members[p.group].push_back(a);
+			if (p.externalId != 0) seated.emplace_back(static_cast<int>(p.externalId), a);
+		});
+		std::sort(seated.begin(), seated.end());
+
+		const std::uint32_t seed32 = Seed32(galaxy, OriginJd);
+		const std::uint32_t day = light.engine.Day();
+		const uint64_t seed = light.engine.GetConfig().seed ^ (static_cast<uint64_t>(H(day, seed32, 0xB127u)) << 32);
+		const uint32_t cap = static_cast<uint32_t>(cs::Math::Clamp(MaxAgents()->Value, 1.0, static_cast<double>(LS::MaxAgents)));
+		const int perWorld = static_cast<int>(cs::Math::Max(0.0, AgentsPerSettlement()->Value));
+		size_t total = store.ActiveCount() - light.leave.size();
+		auto join = [&](const LS::Profile& p) {
+			LS::AgentId a = NewAgent + static_cast<LS::AgentId>(light.joins.size());
+			light.joins.push_back(p);
+			total++;
+			return a;
+		};
+
+		// The living citizens of standing worlds, house by house: the unseated join, tied to their family.
+		std::vector<int> living;
+		std::vector<std::vector<LS::AgentId>> fresh(G);
+		std::vector<std::vector<cs::Ref<Household>>> housesOf(G);
+		for (const auto& h : society->Houses)
+		{
+			int g = h->Scattered ? -1 : GroupOf(h->Home);
+			if (g < 0 || !standing[static_cast<size_t>(g)]) continue;
+			housesOf[static_cast<size_t>(g)].push_back(h);
+			std::vector<LS::AgentId> family;
+			for (const auto& c : h->Members)
+			{
+				if (!c->Alive()) continue;
+				living.push_back(c->Id);
+				auto it = std::lower_bound(seated.begin(), seated.end(), std::make_pair(c->Id, LS::AgentId(0)));
+				if (it != seated.end() && it->first == c->Id) family.push_back(it->second);
+				else if (total < cap)
+				{
+					LS::AgentId a = join(Anchor(c, h, g, civ.CivicsOf(h->Home), jd, seed32));
+					family.push_back(a);
+					fresh[static_cast<size_t>(g)].push_back(a);
+				}
+			}
+			for (size_t i = 0; i < family.size(); i++)
+				for (size_t j = i + 1; j < family.size(); j++)
+					if (family[i] >= NewAgent || family[j] >= NewAgent)
+						light.links.push_back({family[i], family[j], static_cast<uint8_t>(LS::EdgeKind::Family), 255});
+		}
+
+		// The dead, and citizens whose house scattered or left the standing worlds, leave.
+		std::sort(living.begin(), living.end());
+		for (const auto& [id, a] : seated)
+			if (!std::binary_search(living.begin(), living.end(), id)) light.leave.push_back(a);
+
+		for (size_t g = 0; g < G; g++)
+		{
+			if (!standing[g]) continue;
+			if (members[g].empty())
+			{
+				// A world new to the society: topped up like the first day's, and given its own scale-free web.
+				auto cv = civ.CivicsOf(Groups[static_cast<int>(g)]);
+				std::uint32_t world = H(HashText(Groups[static_cast<int>(g)]->Name), seed32, 0x5E7Bu);
+				for (int k = static_cast<int>(fresh[g].size()); k < perWorld && total < cap; k++)
+					fresh[g].push_back(join(Synthetic(static_cast<int>(g), H(world, static_cast<std::uint32_t>(k)), cv, housesOf[g])));
+				LS::BarabasiAlbert(fresh[g], WithinTies, seed, OpWithin | static_cast<uint32_t>(g), light.links, LS::EdgeKind::Social, 128);
+			}
+			else if (!fresh[g].empty())
+			{
+				// The newborn meet their world as every agent did: a few ties each into it.
+				LS::CrossGroup(fresh[g], members[g], WithinTies * static_cast<uint32_t>(fresh[g].size()), seed,
+					OpWithin | static_cast<uint32_t>(g), light.links, 128);
+			}
+		}
 	}
 
 	SG_SERIALIZE(Populace, "SpaceGod.Core.Populace",

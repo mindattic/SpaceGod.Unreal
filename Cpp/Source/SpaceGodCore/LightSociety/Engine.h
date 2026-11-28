@@ -122,6 +122,16 @@ namespace MindAttic::Society
 		void SetPool(ChunkPool* threads) { pool = threads; }
 
 		/// <summary>
+		/// Adds an agent (a slot freed by <see cref="Leave"/> is reused) with stances drawn around each topic's prior;
+		/// <see cref="NoAgent"/> when the society is full. It has no ties until <see cref="Link"/>.
+		/// </summary>
+		AgentId Join(const Profile& profile);
+		/// <summary>Removes an agent: it stops perceiving, speaking and counting at once; its ties go at the next <see cref="Link"/>.</summary>
+		bool Leave(AgentId id);
+		/// <summary>Rebuilds the graph: keeps the ties between agents still active and adds <paramref name="added"/>.</summary>
+		void Link(std::span<const Edge> added);
+
+		/// <summary>
 		/// Queues events from the environment. Ones on an unknown topic, or with a non-finite time, push or magnitude, are
 		/// skipped; ones in the past are moved to now; push and magnitude are clamped. Returns how many were queued.
 		/// </summary>
@@ -149,6 +159,9 @@ namespace MindAttic::Society
 		bool Read(Reader& r);
 
 	private:
+		AgentId Seat(const Profile& profile, uint32_t draw);
+		void AddLinks(std::span<const Edge> edges, std::vector<Edge>& links) const;
+		void Wire(std::vector<Edge>& links);
 		void RunBatch();
 		void Perceive(std::span<const QueuedEvent> events, std::vector<Perception>& out) const;
 		void Apply(const PolicyOut& out);

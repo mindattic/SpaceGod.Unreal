@@ -105,8 +105,10 @@ namespace MindAttic::Society
 	void Engine::Init(const Config& cfg, std::span<const Profile> profiles, std::span<const Edge> edges, std::span<const TopicSpec> topicSpecs)
 	{
 		IPolicy* keep = external;
+		ChunkPool* keepPool = pool;
 		*this = Engine();
 		external = keep;
+		pool = keepPool;
 
 		config = cfg;
 		config.topics = std::clamp(config.topics, 1u, MaxTopics);
@@ -128,32 +130,82 @@ namespace MindAttic::Society
 		store.Reset(config.topics, config.memoryK);
 		for (const Profile& p : profiles)
 		{
-			const AgentId id = store.Join(p);
-			if (id == NoAgent) break;
-			store.Row(id) = id;
-			store.Express(id) = p.big5[2];
-			store.Trust(id) = p.big5[3];
-			for (uint32_t t = 0; t < config.topics; t++)
-			{
-				const double u = Rng::Unit(Rng::Hash(config.seed, id, 0, OpStance | t));
-				store.Stance(id, t) = ToQ15(topics[t].priorMean + topics[t].priorSpread * static_cast<float>(2.0 * u - 1.0));
-				const double v = Rng::Unit(Rng::Hash(config.seed, id, 0, OpConfidence | t));
-				store.Confidence(id, t) = ToU8(static_cast<float>(0.3 + 0.4 * v));
-			}
+			if (Seat(p, 0) == NoAgent) break;
 			groups.push_back(p.group);
 		}
 		std::sort(groups.begin(), groups.end());
 		groups.erase(std::unique(groups.begin(), groups.end()), groups.end());
 
-		// The graph in CSR, both directions of every edge, each row sorted by target.
-		const uint32_t n = store.Capacity();
 		std::vector<Edge> links;
+		AddLinks(edges, links);
+		Wire(links);
+
+		TakeReadout();
+	}
+
+	AgentId Engine::Seat(const Profile& p, uint32_t draw)
+	{
+		const AgentId id = store.Join(p);
+		if (id == NoAgent) return NoAgent;
+		store.Row(id) = id;
+		store.Express(id) = p.big5[2];
+		store.Trust(id) = p.big5[3];
+		for (uint32_t t = 0; t < config.topics; t++)
+		{
+			const double u = Rng::Unit(Rng::Hash(config.seed, id, draw, OpStance | t));
+			store.Stance(id, t) = ToQ15(topics[t].priorMean + topics[t].priorSpread * static_cast<float>(2.0 * u - 1.0));
+			const double v = Rng::Unit(Rng::Hash(config.seed, id, draw, OpConfidence | t));
+			store.Confidence(id, t) = ToU8(static_cast<float>(0.3 + 0.4 * v));
+		}
+		return id;
+	}
+
+	AgentId Engine::Join(const Profile& profile)
+	{
+		// Drawn in a round past every Init draw (round 0), so a reused slot does not repeat its last tenant's stances.
+		const AgentId id = Seat(profile, day + 1);
+		if (id == NoAgent) return NoAgent;
+		const auto it = std::lower_bound(groups.begin(), groups.end(), profile.group);
+		if (it == groups.end() || *it != profile.group) groups.insert(it, profile.group);
+		const uint32_t T = config.topics;
+		if (static_cast<size_t>(id + 1) * T <= classes.size())
+			for (uint32_t t = 0; t < T; t++) classes[static_cast<size_t>(id) * T + t] = ClassOf(store.Stance(id, t));
+		return id;
+	}
+
+	bool Engine::Leave(AgentId id)
+	{
+		return store.Leave(id);
+	}
+
+	void Engine::Link(std::span<const Edge> added)
+	{
+		std::vector<Edge> links;
+		for (uint32_t a = 0; a + 1 < offsets.size(); a++)
+		{
+			if (!store.IsActive(a)) continue;
+			for (uint32_t k = offsets[a]; k < offsets[a + 1]; k++)
+				if (store.IsActive(targets[k])) links.push_back({a, targets[k], 0, weights[k]});
+		}
+		AddLinks(added, links);
+		Wire(links);
+	}
+
+	void Engine::AddLinks(std::span<const Edge> edges, std::vector<Edge>& links) const
+	{
+		const uint32_t n = store.Capacity();
 		for (const Edge& e : edges)
 		{
 			if (e.a >= n || e.b >= n || e.a == e.b) continue;
 			links.push_back(e);
 			links.push_back({e.b, e.a, e.kind, e.weight});
 		}
+	}
+
+	void Engine::Wire(std::vector<Edge>& links)
+	{
+		// The graph in CSR, both directions of every edge, each row sorted by target.
+		const uint32_t n = store.Capacity();
 		std::sort(links.begin(), links.end(), [](const Edge& x, const Edge& y) {
 			if (x.a != y.a) return x.a < y.a;
 			if (x.b != y.b) return x.b < y.b;
@@ -163,6 +215,8 @@ namespace MindAttic::Society
 		offsets.assign(static_cast<size_t>(n) + 1, 0);
 		for (const Edge& e : links) offsets[e.a + 1]++;
 		for (uint32_t i = 0; i < n; i++) offsets[i + 1] += offsets[i];
+		targets.clear();
+		weights.clear();
 		targets.reserve(links.size());
 		weights.reserve(links.size());
 		for (const Edge& e : links)
@@ -170,8 +224,7 @@ namespace MindAttic::Society
 			targets.push_back(e.b);
 			weights.push_back(e.weight);
 		}
-
-		TakeReadout();
+		store.ForEachActive([&](AgentId a) { store.Row(a) = a; });
 	}
 
 	bool Engine::Admit(EnvEvent& e) const
@@ -538,6 +591,7 @@ namespace MindAttic::Society
 		if (!r.Ok()) return false;
 
 		s.external = external;
+		s.pool = pool;
 		*this = std::move(s);
 		return true;
 	}
